@@ -92,22 +92,6 @@ export default function HomePage() {
                 </Button>
               </div>
             </form>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8">
-              <div>
-                <p className="text-3xl font-bold text-primary">500+</p>
-                <p className="text-sm text-gray-300">Local Shops</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-primary">2000+</p>
-                <p className="text-sm text-gray-300">Active Offers</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-primary">10K+</p>
-                <p className="text-sm text-gray-300">Happy Users</p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
