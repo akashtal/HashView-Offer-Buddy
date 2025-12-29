@@ -43,7 +43,7 @@ export default function VendorDashboard() {
     }
 
     fetchMyProfile();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchMyProfile, router]);
 
   useEffect(() => {
     if (error === 'Vendor profile not found' || error?.includes('not found')) {

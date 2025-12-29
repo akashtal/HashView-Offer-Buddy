@@ -44,7 +44,7 @@ export default function HomePage() {
   useEffect(() => {
     fetchFeaturedProducts(0, 0, 0); // Using 0 for no-location
     fetchProducts(0, 0, 0, { hasOffer: true }, 1); // Using 0 for no-location
-  }, []);
+  }, [fetchFeaturedProducts, fetchProducts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

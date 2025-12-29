@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useAdminStore } from '@/store/adminStore';
 import Button from '@/components/ui/Button';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
@@ -69,7 +70,7 @@ export default function AdminProductsPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 rounded bg-gray-100 flex-shrink-0 overflow-hidden border">
                                                     {product.images?.[0] ? (
-                                                        <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover" />
+                                                        <Image src={product.images[0]} alt={product.title} width={48} height={48} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <FiPackage className="w-6 h-6 m-auto text-gray-400" />
                                                     )}

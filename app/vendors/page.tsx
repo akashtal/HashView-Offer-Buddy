@@ -16,7 +16,7 @@ export default function VendorsPage() {
 
     useEffect(() => {
         fetchVendors(0, 0, 0);
-    }, []);
+    }, [fetchVendors]);
 
     if (isLoading) {
         return <Loading fullScreen text="Finding shops near you..." />;

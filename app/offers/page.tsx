@@ -13,7 +13,7 @@ export default function OffersPage() {
 
     useEffect(() => {
         fetchProducts(0, 0, 0, { hasOffer: true });
-    }, []);
+    }, [fetchProducts]);
 
     return (
         <div className="container-custom py-12">

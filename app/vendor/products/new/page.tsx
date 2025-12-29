@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
@@ -274,7 +275,7 @@ export default function NewProductPage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     {images.map((url, index) => (
                                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
-                                            <img src={url} alt="Product" className="w-full h-full object-cover" />
+                                            <Image src={url} alt="Product" fill className="object-cover" />
                                             <button
                                                 type="button"
                                                 onClick={() => removeImage(index)}

@@ -55,7 +55,7 @@ function SearchContent() {
         if (cat && cat !== selectedCategory) setSelectedCategory(cat);
 
         fetchProducts(0, 0, 0, params);
-    }, [searchParams]);
+    }, [searchParams, fetchProducts, query, selectedCategory]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
