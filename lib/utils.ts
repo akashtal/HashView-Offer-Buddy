@@ -2,41 +2,7 @@ export function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-// Calculate distance between two coordinates (Haversine formula)
-export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Radius of Earth in kilometers
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-
-  return Number(distance.toFixed(2));
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
-}
-
-// Format distance for display
-export function formatDistance(km: number): string {
-  if (km < 1) {
-    return `${Math.round(km * 1000)}m away`;
-  }
-  return `${km.toFixed(1)}km away`;
-}
 
 // Format currency
 export function formatCurrency(amount: number, currency: string = 'INR'): string {
@@ -65,7 +31,7 @@ export function formatRelativeTime(date: Date | string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  
+
   return formatDate(date);
 }
 
@@ -85,21 +51,18 @@ export function truncate(text: string, length: number): string {
   return text.substring(0, length) + '...';
 }
 
-// Validate coordinates
-export function isValidCoordinates(lat: number, lon: number): boolean {
-  return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
-}
+
 
 // Format phone number
 export function formatPhoneNumber(phone: string): string {
   // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, '');
-  
+
   // Format as Indian phone number
   if (cleaned.length === 10) {
     return `+91 ${cleaned.substring(0, 5)} ${cleaned.substring(5)}`;
   }
-  
+
   return phone;
 }
 

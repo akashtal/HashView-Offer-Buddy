@@ -50,7 +50,7 @@ export default function CategoriesPage() {
                     >
                         <div className="w-20 h-20 bg-primary/10 rounded-full mx-auto flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                             {category.icon ? (
-                                <span className="text-4xl">{category.icon}</span>
+                                <i className={`${category.icon} text-4xl text-primary`}></i>
                             ) : (
                                 <FiGrid className="text-3xl text-primary" />
                             )}

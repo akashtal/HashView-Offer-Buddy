@@ -48,7 +48,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/offer-
 async function seed() {
   try {
     console.log('🌱 Starting database seeding...');
-    
+
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
     console.log('✅ Connected to MongoDB');
@@ -80,73 +80,81 @@ async function seed() {
       {
         name: 'Electronics',
         slug: 'electronics',
-        description: 'Phones, laptops, cameras, and more',
-        icon: '📱',
+        description: 'TVs, headphones, smart devices, gaming consoles',
+        icon: 'fi fi-rr-smartphone',
         isActive: true,
         order: 1,
       },
       {
-        name: 'Fashion',
-        slug: 'fashion',
-        description: 'Clothing, shoes, and accessories',
-        icon: '👕',
+        name: 'Home & Kitchen',
+        slug: 'home-kitchen',
+        description: 'Decor, appliances, cookware, furniture',
+        icon: 'fi fi-rr-home',
         isActive: true,
         order: 2,
       },
       {
-        name: 'Food & Groceries',
-        slug: 'food-groceries',
-        description: 'Fresh produce, groceries, and more',
-        icon: '🛒',
+        name: 'Clothing, Shoes & Jewelry',
+        slug: 'clothing-shoes-jewelry',
+        description: 'Apparel, footwear, fashion accessories, watches',
+        icon: 'fi fi-rr-shopping-bag',
         isActive: true,
         order: 3,
       },
       {
-        name: 'Home & Furniture',
-        slug: 'home-furniture',
-        description: 'Furniture, decor, and home essentials',
-        icon: '🏠',
+        name: 'Beauty & Personal Care',
+        slug: 'beauty-personal-care',
+        description: 'Cosmetics, skincare, haircare, fragrances',
+        icon: 'fi fi-rr-star',
         isActive: true,
         order: 4,
       },
       {
-        name: 'Beauty & Personal Care',
-        slug: 'beauty-personal-care',
-        description: 'Cosmetics, skincare, and wellness',
-        icon: '💄',
+        name: 'Health & Household',
+        slug: 'health-household',
+        description: 'Wellness, household supplies, baby care',
+        icon: 'fi fi-rr-heart',
         isActive: true,
         order: 5,
       },
       {
-        name: 'Sports & Fitness',
-        slug: 'sports-fitness',
-        description: 'Sports equipment and fitness gear',
-        icon: '⚽',
+        name: 'Toys & Games',
+        slug: 'toys-games',
+        description: 'Board games, action figures, educational toys',
+        icon: 'fi fi-rr-gamepad',
         isActive: true,
         order: 6,
       },
       {
-        name: 'Books & Stationery',
-        slug: 'books-stationery',
-        description: 'Books, notebooks, and office supplies',
-        icon: '📚',
+        name: 'Books, Music, Movies & TV',
+        slug: 'books-music-movies-tv',
+        description: 'Print books, eBooks, CDs, vinyl',
+        icon: 'fi fi-rr-book',
         isActive: true,
         order: 7,
       },
       {
-        name: 'Restaurants',
-        slug: 'restaurants',
-        description: 'Local restaurants and cafes',
-        icon: '🍽️',
+        name: 'Pet Supplies',
+        slug: 'pet-supplies',
+        description: 'Food, toys, accessories for pets',
+        icon: 'fi fi-rr-paw',
         isActive: true,
         order: 8,
+      },
+      {
+        name: 'Sports & Outdoors',
+        slug: 'sports-outdoors',
+        description: 'Fitness equipment, camping gear, outdoor apparel',
+        icon: 'fi fi-rr-football',
+        isActive: true,
+        order: 9,
       },
     ]);
     console.log(`✅ Created ${categories.length} categories`);
 
     // Create Sample Vendors
     console.log('🏪 Creating sample vendors...');
-    
+
     // Vendor 1
     const vendorUser1 = await User.create({
       name: 'John Electronics',

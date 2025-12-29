@@ -14,23 +14,21 @@ import {
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import axios from 'axios';
-import { useLocationStore } from '@/store/locationStore';
 import { useProductStore } from '@/store/productStore';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Card, { CardBody } from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
-import { formatCurrency, formatDistance, formatRelativeTime } from '@/lib/utils';
+import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = params.id as string;
-  
+
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  const { latitude, longitude } = useLocationStore();
+
   const { trackContact } = useProductStore();
 
   useEffect(() => {
@@ -38,11 +36,6 @@ export default function ProductDetailPage() {
       try {
         setIsLoading(true);
         const params: any = {};
-        if (latitude && longitude) {
-          params.userLat = latitude;
-          params.userLon = longitude;
-        }
-
         const response = await axios.get(`/api/products/${productId}`, { params });
         setProduct(response.data.data.product);
       } catch (err: any) {
@@ -53,12 +46,10 @@ export default function ProductDetailPage() {
     };
 
     fetchProduct();
-  }, [productId, latitude, longitude]);
+  }, [productId]);
 
   const handleContact = async (type: 'call' | 'whatsapp' | 'directions') => {
-    if (latitude && longitude) {
-      await trackContact(productId, type, [latitude, longitude]);
-    }
+    await trackContact(productId, type, [0, 0]);
   };
 
   const handleCall = () => {
@@ -211,7 +202,7 @@ export default function ProductDetailPage() {
                               {Math.round(
                                 ((product.price.original! - product.price.discounted!) /
                                   product.price.original!) *
-                                  100
+                                100
                               )}
                               % OFF
                             </Badge>
@@ -298,12 +289,7 @@ export default function ProductDetailPage() {
                     )}
                   </div>
 
-                  {product.distance && (
-                    <div className="flex items-center justify-center gap-2 text-primary font-medium">
-                      <FiMapPin />
-                      <span>{formatDistance(product.distance)}</span>
-                    </div>
-                  )}
+
 
                   {/* Contact Buttons */}
                   <div className="space-y-3">

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+
 const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
@@ -12,13 +13,13 @@ interface MongooseCache {
 }
 
 declare global {
-  var mongoose: MongooseCache;
+  var mongooseCache: MongooseCache;
 }
 
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
 
-if (!global.mongoose) {
-  global.mongoose = cached;
+if (!global.mongooseCache) {
+  global.mongooseCache = cached;
 }
 
 async function dbConnect(): Promise<typeof mongoose> {
@@ -31,8 +32,9 @@ async function dbConnect(): Promise<typeof mongoose> {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then(async (mongoose) => {
       console.log('✅ MongoDB connected successfully');
+
       return mongoose;
     });
   }
@@ -48,4 +50,3 @@ async function dbConnect(): Promise<typeof mongoose> {
 }
 
 export default dbConnect;
-

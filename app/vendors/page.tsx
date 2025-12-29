@@ -4,22 +4,19 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useVendorStore } from '@/store/vendorStore';
-import { useLocationStore } from '@/store/locationStore';
+
 import { FiMapPin, FiStar } from 'react-icons/fi';
 import Loading from '@/components/ui/Loading';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { formatDistance } from '@/lib/utils';
+
 
 export default function VendorsPage() {
-    const { latitude, longitude, radius, hasPermission } = useLocationStore();
     const { vendors, isLoading, fetchVendors } = useVendorStore();
 
     useEffect(() => {
-        if (hasPermission && latitude && longitude) {
-            fetchVendors(latitude, longitude, radius);
-        }
-    }, [hasPermission, latitude, longitude, radius]);
+        fetchVendors(0, 0, 0);
+    }, []);
 
     if (isLoading) {
         return <Loading fullScreen text="Finding shops near you..." />;
@@ -36,13 +33,7 @@ export default function VendorsPage() {
                 </p>
             </div>
 
-            {!hasPermission ? (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                    <p className="text-lg text-gray-600 mb-4">
-                        Please enable location to see shops near you
-                    </p>
-                </div>
-            ) : vendors.length > 0 ? (
+            {vendors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {vendors.map((vendor) => (
                         <Link key={vendor._id} href={`/vendors/${vendor._id}`}>
@@ -72,9 +63,7 @@ export default function VendorsPage() {
                                         <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
                                             <FiMapPin size={14} />
                                             <span className="truncate">
-                                                {vendor.distance
-                                                    ? formatDistance(vendor.distance)
-                                                    : `${vendor.location.city}`}
+                                                {vendor.location.city}
                                             </span>
                                         </div>
 
@@ -98,7 +87,7 @@ export default function VendorsPage() {
             ) : (
                 <div className="text-center py-12">
                     <p className="text-xl text-gray-600">
-                        No shops found in your area. Try increasing your search radius.
+                        No shops found.
                     </p>
                 </div>
             )}

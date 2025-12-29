@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import dbConnect from '@/lib/mongodb';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -27,13 +28,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Initialize database connection on server startup
+  await dbConnect();
+
   return (
     <html lang="en">
+      <head>
+        <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css' />
+      </head>
       <body className={`${inter.variable} flex flex-col min-h-screen`}>
         <Header />
         <main className="flex-1">{children}</main>

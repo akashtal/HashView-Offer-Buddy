@@ -24,8 +24,15 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await login(formData.email, formData.password);
-      router.push('/');
+      const role = await login(formData.email, formData.password);
+
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (role === 'vendor') {
+        router.push('/vendor/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -116,11 +123,7 @@ export default function LoginPage() {
           </CardBody>
         </Card>
 
-        <div className="mt-6 text-center">
-          <Link href="/vendor/login" className="text-primary hover:text-primary-dark font-medium">
-            Login as Vendor →
-          </Link>
-        </div>
+
       </div>
     </div>
   );

@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiSearch, FiTrendingUp, FiShoppingBag, FiPercent } from 'react-icons/fi';
-import { useLocationStore } from '@/store/locationStore';
 import { useProductStore } from '@/store/productStore';
-import LocationBanner from '@/components/home/LocationBanner';
 import ProductCard from '@/components/products/ProductCard';
 import Button from '@/components/ui/Button';
 import { ProductCardSkeleton } from '@/components/ui/Loading';
@@ -19,7 +17,6 @@ export default function HomePage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-  const { latitude, longitude, radius, hasPermission } = useLocationStore();
   const {
     featuredProducts,
     products,
@@ -45,11 +42,9 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (hasPermission && latitude && longitude) {
-      fetchFeaturedProducts(latitude, longitude, radius);
-      fetchProducts(latitude, longitude, radius, { hasOffer: true }, 1);
-    }
-  }, [latitude, longitude, radius, hasPermission]);
+    fetchFeaturedProducts(0, 0, 0); // Using 0 for no-location
+    fetchProducts(0, 0, 0, { hasOffer: true }, 1); // Using 0 for no-location
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +56,7 @@ export default function HomePage() {
   return (
     <div>
       {/* Location Banner */}
-      <LocationBanner />
+
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-secondary via-secondary-light to-secondary text-white py-16">
@@ -184,69 +179,70 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             {isLoadingCategories
               ? Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="shimmer h-24 rounded-lg"
-                  />
-                ))
+                <div
+                  key={i}
+                  className="shimmer h-24 rounded-lg"
+                />
+              ))
               : categories.map((category) => (
-                  <Link
-                    key={category._id}
-                    href={`/categories/${category.slug}`}
-                    className="card hover:shadow-xl transition-all p-4 text-center space-y-2"
-                  >
-                    {category.icon ? (
-                      <div className="text-4xl">{category.icon}</div>
-                    ) : (
-                      <div className="w-12 h-12 bg-primary/20 rounded-full mx-auto flex items-center justify-center">
-                        <span className="text-2xl font-bold text-primary">
-                          {category.name[0]}
-                        </span>
-                      </div>
-                    )}
-                    <p className="font-semibold text-sm text-secondary">
-                      {category.name}
-                    </p>
-                  </Link>
-                ))}
+                <Link
+                  key={category._id}
+                  href={`/categories/${category.slug}`}
+                  className="card hover:shadow-xl transition-all p-4 text-center space-y-2"
+                >
+                  {category.icon ? (
+                    <div className="flex justify-center mb-2">
+                      <i className={`${category.icon} text-4xl text-primary`}></i>
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-primary/20 rounded-full mx-auto flex items-center justify-center">
+                      <span className="text-2xl font-bold text-primary">
+                        {category.name[0]}
+                      </span>
+                    </div>
+                  )}
+                  <p className="font-semibold text-sm text-secondary">
+                    {category.name}
+                  </p>
+                </Link>
+              ))}
           </div>
         </div>
       </section>
 
       {/* Featured Offers */}
-      {hasPermission && (
-        <section className="py-16 bg-accent-light">
-          <div className="container-custom">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-secondary mb-2">
-                  <FiTrendingUp className="inline mr-2 text-primary" />
-                  Hot Offers Near You
-                </h2>
-                <p className="text-gray-600">
-                  Limited time deals from local shops
-                </p>
-              </div>
-              <Link href="/offers">
-                <Button variant="primary">View All Offers</Button>
-              </Link>
+      <section className="py-16 bg-accent-light">
+        <div className="container-custom">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-secondary mb-2">
+                <FiTrendingUp className="inline mr-2 text-primary" />
+                Hot Offers Near You
+              </h2>
+              <p className="text-gray-600">
+                Limited time deals from local shops
+              </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {isLoading
-                ? Array.from({ length: 4 }).map((_, i) => (
-                    <ProductCardSkeleton key={i} />
-                  ))
-                : featuredProducts.slice(0, 4).map((product) => (
-                    <ProductCard key={product._id} product={product} />
-                  ))}
-            </div>
+            <Link href="/offers">
+              <Button variant="primary">View All Offers</Button>
+            </Link>
           </div>
-        </section>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))
+              : featuredProducts.slice(0, 4).map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+          </div>
+        </div>
+      </section>
+
 
       {/* Recent Products */}
-      {hasPermission && products.length > 0 && (
+      {products.length > 0 && (
         <section className="py-16">
           <div className="container-custom">
             <div className="flex items-center justify-between mb-8">
@@ -276,7 +272,7 @@ export default function HomePage() {
           <p className="text-secondary/80 text-lg mb-8 max-w-2xl mx-auto">
             List your offers and connect with thousands of nearby customers looking to buy now!
           </p>
-          <Link href="/vendor/register">
+          <Link href="/register?role=vendor">
             <Button variant="secondary" size="lg">
               Register Your Shop Today
             </Button>

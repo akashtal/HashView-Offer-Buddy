@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useProductStore } from '@/store/productStore';
-import { useLocationStore } from '@/store/locationStore';
+
 import ProductCard from '@/components/products/ProductCard';
 import { ProductCardSkeleton } from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
@@ -14,7 +14,6 @@ import axios from 'axios';
 function SearchContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { latitude, longitude, radius, hasPermission } = useLocationStore();
     const { products, isLoading, fetchProducts } = useProductStore();
 
     const [query, setQuery] = useState(searchParams.get('q') || '');
@@ -37,28 +36,26 @@ function SearchContent() {
 
     // Fetch products when params or location changes
     useEffect(() => {
-        if (hasPermission && latitude && longitude) {
-            const params: any = {};
+        const params: any = {};
 
-            const q = searchParams.get('q');
-            if (q) params.query = q;
+        const q = searchParams.get('q');
+        if (q) params.query = q;
 
-            const cat = searchParams.get('category');
-            if (cat) params.category = cat;
+        const cat = searchParams.get('category');
+        if (cat) params.category = cat;
 
-            const minPrice = searchParams.get('minPrice');
-            if (minPrice) params.minPrice = minPrice;
+        const minPrice = searchParams.get('minPrice');
+        if (minPrice) params.minPrice = minPrice;
 
-            const maxPrice = searchParams.get('maxPrice');
-            if (maxPrice) params.maxPrice = maxPrice;
+        const maxPrice = searchParams.get('maxPrice');
+        if (maxPrice) params.maxPrice = maxPrice;
 
-            // Reset local state if URL changes
-            if (q && q !== query) setQuery(q);
-            if (cat && cat !== selectedCategory) setSelectedCategory(cat);
+        // Reset local state if URL changes
+        if (q && q !== query) setQuery(q);
+        if (cat && cat !== selectedCategory) setSelectedCategory(cat);
 
-            fetchProducts(latitude, longitude, radius, params);
-        }
-    }, [searchParams, hasPermission, latitude, longitude, radius]);
+        fetchProducts(0, 0, 0, params);
+    }, [searchParams]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -136,43 +133,35 @@ function SearchContent() {
             </div>
 
             {/* Results */}
-            {!hasPermission ? (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                    <p className="text-lg text-gray-600 mb-4">
-                        Please enable location to search for products near you
+            {/* Results */}
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <ProductCardSkeleton key={i} />
+                    ))}
+                </div>
+            ) : products.length > 0 ? (
+                <>
+                    <p className="text-gray-600 mb-4">
+                        Found {products.length} products
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {products.map((product) => (
+                            <ProductCard key={product._id} product={product} />
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="text-center py-12">
+                    <p className="text-xl text-gray-600 mb-4">
+                        No products found matching your search.
+                    </p>
+                    <p className="text-gray-500">
+                        Try adjusting your filters.
                     </p>
                 </div>
-            ) : (
-                <>
-                    {isLoading ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <ProductCardSkeleton key={i} />
-                            ))}
-                        </div>
-                    ) : products.length > 0 ? (
-                        <>
-                            <p className="text-gray-600 mb-4">
-                                Found {products.length} products
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {products.map((product) => (
-                                    <ProductCard key={product._id} product={product} />
-                                ))}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="text-center py-12">
-                            <p className="text-xl text-gray-600 mb-4">
-                                No products found matching your search.
-                            </p>
-                            <p className="text-gray-500">
-                                Try adjusting your filters or search radius.
-                            </p>
-                        </div>
-                    )}
-                </>
             )}
+
         </div>
     );
 }

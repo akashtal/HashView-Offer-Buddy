@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
-    
+
     // Location parameters
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const hasOffer = searchParams.get('hasOffer') === 'true';
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
-    
+
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -63,66 +63,51 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
-    // Filter products by vendor location if coordinates provided
+    // Calculate distance if coordinates provided
     if (latitude && longitude) {
-      const radiusInMeters = radius * 1000;
-
-      // Get nearby vendors
-      const nearbyVendors = await Vendor.find({
-        isActive: true,
-        isApproved: true,
-        'location.coordinates': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            $maxDistance: radiusInMeters,
-          },
-        },
-      }).select('_id');
-
-      const nearbyVendorIds = nearbyVendors.map((v) => v._id.toString());
-
-      // Filter products by nearby vendors
-      products = products.filter((product: any) =>
-        nearbyVendorIds.includes(product.vendorId._id.toString())
-      );
-
-      // Calculate distance for each product
       products = products.map((product: any) => {
         const vendor = product.vendorId;
-        if (vendor && vendor.location && vendor.location.coordinates) {
-          const [vendorLon, vendorLat] = vendor.location.coordinates;
-          const distance = calculateDistance(latitude, longitude, vendorLat, vendorLon);
-          return { ...product, distance };
+        if (vendor?.location?.coordinates?.coordinates) {
+          const [vendorLng, vendorLat] = vendor.location.coordinates.coordinates;
+          product.distance = calculateDistance(latitude, longitude, vendorLat, vendorLng);
         }
         return product;
       });
 
-      // Sort by distance if requested
-      if (sortBy === 'distance') {
-        products.sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
+      // Sort by distance if coordinates provided
+      if (sortBy === 'distance' || sortBy === 'newest') {
+        products.sort((a: any, b: any) => {
+          if (a.distance !== undefined && b.distance !== undefined) {
+            return a.distance - b.distance;
+          }
+          return 0;
+        });
       }
     }
 
-    // Sort by other criteria
-    if (sortBy === 'newest') {
-      products.sort((a: any, b: any) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    } else if (sortBy === 'popular') {
-      products.sort((a: any, b: any) => 
-        (b.analytics?.views || 0) - (a.analytics?.views || 0)
-      );
-    } else if (sortBy === 'price') {
-      products.sort((a: any, b: any) => 
-        (a.price?.discounted || 0) - (b.price?.discounted || 0)
-      );
+    // Sort by other criteria if no location or different sortBy
+    if (!latitude || !longitude || sortBy !== 'distance') {
+      if (sortBy === 'newest') {
+        products.sort((a: any, b: any) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      } else if (sortBy === 'popular') {
+        products.sort((a: any, b: any) =>
+          (b.analytics?.views || 0) - (a.analytics?.views || 0)
+        );
+      } else if (sortBy === 'price_low') {
+        products.sort((a: any, b: any) =>
+          (a.price?.discounted || a.price?.original || 0) - (b.price?.discounted || b.price?.original || 0)
+        );
+      } else if (sortBy === 'price_high') {
+        products.sort((a: any, b: any) =>
+          (b.price?.discounted || b.price?.original || 0) - (a.price?.discounted || a.price?.original || 0)
+        );
+      }
     }
 
     // Get total count
-    const total = products.length;
+    const total = await Product.countDocuments(productQuery);
 
     return NextResponse.json(
       apiSuccess({
@@ -160,7 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Validate input
     const validatedData = createProductSchema.parse(body);
 
@@ -181,37 +166,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Create product
-    const product = await Product.create({
-      ...validatedData,
-      vendorId: vendor._id,
-    });
+    console.log('Creating product with data:', { ...validatedData, vendorId: vendor._id });
+    try {
+      const product = await Product.create({
+        ...validatedData,
+        vendorId: vendor._id,
+      });
 
-    // Update vendor's product count
-    await Vendor.findByIdAndUpdate(vendor._id, {
-      $inc: { 'analytics.totalProducts': 1 },
-    });
+      // Update vendor's product count
+      await Vendor.findByIdAndUpdate(vendor._id, {
+        $inc: { 'analytics.totalProducts': 1 },
+      });
 
-    const populatedProduct = await Product.findById(product._id)
-      .populate('category', 'name slug icon')
-      .populate('vendorId', 'shopName shopLogo location');
+      const populatedProduct = await Product.findById(product._id)
+        .populate('category', 'name slug icon')
+        .populate('vendorId', 'shopName shopLogo location');
 
-    return NextResponse.json(
-      apiSuccess(
-        { product: populatedProduct },
-        'Product created successfully'
-      ),
-      { status: 201 }
-    );
+      return NextResponse.json(
+        apiSuccess(
+          { product: populatedProduct },
+          'Product created successfully'
+        ),
+        { status: 201 }
+      );
+    } catch (innerError: any) {
+      console.log('Database operation failed');
+      throw innerError;
+    }
   } catch (error: any) {
-    console.error('Create product error:', error);
-    
+    // Safely log error
+    console.error('Create product error message:', error?.message);
+    if (error?.stack) console.error('Create product error stack:', error.stack);
+
     if (error.name === 'ZodError') {
       return NextResponse.json(
         apiError(error.errors[0].message),
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       apiError('Failed to create product'),
       { status: 500 }
@@ -233,9 +226,9 @@ function calculateDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c).toFixed(2));

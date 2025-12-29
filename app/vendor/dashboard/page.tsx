@@ -30,6 +30,7 @@ export default function VendorDashboard() {
     myProducts,
     myAnalytics,
     isLoading,
+    error,
     fetchMyProfile,
   } = useVendorStore();
 
@@ -43,6 +44,12 @@ export default function VendorDashboard() {
 
     fetchMyProfile();
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (error === 'Vendor profile not found' || error?.includes('not found')) {
+      router.push('/vendor/onboarding');
+    }
+  }, [error, router]);
 
   if (isLoading || !myVendorProfile) {
     return <Loading fullScreen text="Loading dashboard..." />;
@@ -168,8 +175,8 @@ export default function VendorDashboard() {
             <button
               onClick={() => setActiveTab('overview')}
               className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'overview'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-600 hover:text-secondary'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-600 hover:text-secondary'
                 }`}
             >
               Overview
@@ -177,8 +184,8 @@ export default function VendorDashboard() {
             <button
               onClick={() => setActiveTab('products')}
               className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'products'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-600 hover:text-secondary'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-600 hover:text-secondary'
                 }`}
             >
               Products ({myProducts.length})
@@ -186,8 +193,8 @@ export default function VendorDashboard() {
             <button
               onClick={() => setActiveTab('analytics')}
               className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'analytics'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-600 hover:text-secondary'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-600 hover:text-secondary'
                 }`}
             >
               Analytics
@@ -351,7 +358,19 @@ export default function VendorDashboard() {
                             Edit
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to delete this product?')) {
+                              try {
+                                await useVendorStore.getState().deleteProduct(product._id);
+                              } catch (err) {
+                                alert('Failed to delete product');
+                              }
+                            }
+                          }}
+                        >
                           <FiTrash2 className="text-red-600" />
                         </Button>
                       </div>

@@ -9,13 +9,16 @@ export interface IVendor extends Document {
   shopImages?: string[];
   category: mongoose.Types.ObjectId;
   location: {
-    type: string;
-    coordinates: [number, number]; // [longitude, latitude]
     address: string;
     city: string;
     state: string;
     country: string;
     pincode: string;
+    coordinates?: {
+      type: string;
+      coordinates: [number, number];
+    };
+    googlePlaceId?: string;
   };
   contactInfo: {
     phone: string;
@@ -74,15 +77,6 @@ const VendorSchema = new Schema<IVendor>(
       required: true,
     },
     location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        required: true,
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        required: true,
-      },
       address: {
         type: String,
         required: true,
@@ -103,6 +97,25 @@ const VendorSchema = new Schema<IVendor>(
       pincode: {
         type: String,
         required: true,
+      },
+      coordinates: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point',
+        },
+        coordinates: {
+          type: [Number],
+          validate: {
+            validator: function (v: number[]) {
+              return v.length === 2 && v[0] >= -180 && v[0] <= 180 && v[1] >= -90 && v[1] <= 90;
+            },
+            message: 'Coordinates must be [longitude, latitude] with valid ranges',
+          },
+        },
+      },
+      googlePlaceId: {
+        type: String,
       },
     },
     contactInfo: {
@@ -168,6 +181,7 @@ const VendorSchema = new Schema<IVendor>(
 
 // Create geospatial index for location-based queries
 VendorSchema.index({ 'location.coordinates': '2dsphere' });
+
 VendorSchema.index({ userId: 1 });
 VendorSchema.index({ category: 1 });
 VendorSchema.index({ isApproved: 1, isActive: 1 });

@@ -34,22 +34,10 @@ export async function GET(
       .sort({ createdAt: -1 })
       .limit(20);
 
-    // Calculate distance if user location provided
-    const { searchParams } = new URL(request.url);
-    const userLat = parseFloat(searchParams.get('userLat') || '0');
-    const userLon = parseFloat(searchParams.get('userLon') || '0');
-
-    let distance = null;
-    if (userLat && userLon && vendor.location) {
-      const [vendorLon, vendorLat] = vendor.location.coordinates;
-      distance = calculateDistance(userLat, userLon, vendorLat, vendorLon);
-    }
-
     return NextResponse.json(
       apiSuccess({
         vendor: {
           ...vendor.toObject(),
-          distance,
         },
         products,
       }),
@@ -73,18 +61,25 @@ export async function PUT(
     await dbConnect();
 
     const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'vendor') {
+    if (!user || (user.role !== 'vendor' && user.role !== 'admin')) {
       return NextResponse.json(
         apiError('Unauthorized'),
         { status: 403 }
       );
     }
 
-    // Verify ownership
-    const vendor = await Vendor.findOne({
+    // Verify ownership or check if admin
+    let vendor = await Vendor.findOne({
       _id: params.id,
       userId: user.userId,
     });
+
+    // If not found by ownership, check if admin can find it by ID
+    if (!vendor) {
+      if (user.role === 'admin') {
+        vendor = await Vendor.findById(params.id);
+      }
+    }
 
     if (!vendor) {
       return NextResponse.json(
@@ -111,14 +106,14 @@ export async function PUT(
     );
   } catch (error: any) {
     console.error('Update vendor error:', error);
-    
+
     if (error.name === 'ZodError') {
       return NextResponse.json(
         apiError(error.errors[0].message),
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       apiError('Failed to update vendor profile'),
       { status: 500 }
@@ -135,18 +130,25 @@ export async function DELETE(
     await dbConnect();
 
     const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'vendor') {
+    if (!user || await (user.role !== 'vendor' && user.role !== 'admin')) {
       return NextResponse.json(
         apiError('Unauthorized'),
         { status: 403 }
       );
     }
 
-    // Verify ownership
-    const vendor = await Vendor.findOne({
+    // Verify ownership or admin
+    let vendor = await Vendor.findOne({
       _id: params.id,
       userId: user.userId,
     });
+
+    // If not found by ownership, check if admin can find it by ID
+    if (!vendor) {
+      if (user.role === 'admin') {
+        vendor = await Vendor.findById(params.id);
+      }
+    }
 
     if (!vendor) {
       return NextResponse.json(
@@ -192,9 +194,9 @@ function calculateDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c).toFixed(2));
@@ -203,4 +205,3 @@ function calculateDistance(
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
-

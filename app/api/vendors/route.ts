@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
-    
+
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
     const radius = parseFloat(searchParams.get('radius') || '5'); // km
     const category = searchParams.get('category');
-    
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
@@ -31,50 +31,8 @@ export async function GET(request: NextRequest) {
       query.category = category;
     }
 
-    // Location-based query
-    if (latitude && longitude) {
-      const radiusInMeters = radius * 1000;
-
-      const vendors = await Vendor.find({
-        ...query,
-        'location.coordinates': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            $maxDistance: radiusInMeters,
-          },
-        },
-      })
-        .populate('category', 'name slug icon')
-        .populate('userId', 'name email')
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
-
-      // Calculate distance for each vendor
-      const vendorsWithDistance = vendors.map((vendor: any) => {
-        const [vendorLon, vendorLat] = vendor.location.coordinates;
-        const distance = calculateDistance(latitude, longitude, vendorLat, vendorLon);
-        return { ...vendor, distance };
-      });
-
-      const total = await Vendor.countDocuments(query);
-
-      return NextResponse.json(
-        apiSuccess({
-          vendors: vendorsWithDistance,
-          pagination: {
-            page,
-            limit,
-            total,
-            pages: Math.ceil(total / limit),
-          },
-        }),
-        { status: 200 }
-      );
-    }
+    // Location-based query removed
+    // if (latitude && longitude) { ... }
 
     // No location provided, return all approved vendors
     const vendors = await Vendor.find(query)
@@ -135,8 +93,6 @@ export async function POST(request: NextRequest) {
       ...validatedData,
       userId: user.userId,
       location: {
-        type: 'Point',
-        coordinates: validatedData.location.coordinates,
         address: validatedData.location.address,
         city: validatedData.location.city,
         state: validatedData.location.state,
@@ -162,15 +118,24 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Create vendor error:', error);
-    
+    // Safer logging to avoid circular reference or inspection errors
+    console.error('Create vendor error:', error?.message || error);
+
     if (error.name === 'ZodError') {
+      const message = error.errors?.[0]?.message || 'Validation failed';
       return NextResponse.json(
-        apiError(error.errors[0].message),
+        apiError(message),
         { status: 400 }
       );
     }
-    
+
+    if (error.code === 11000) {
+      return NextResponse.json(
+        apiError('Vendor profile already exists'),
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       apiError('Failed to create vendor profile'),
       { status: 500 }
@@ -191,9 +156,9 @@ function calculateDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c).toFixed(2));

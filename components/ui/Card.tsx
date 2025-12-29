@@ -1,20 +1,18 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
-  onClick?: () => void;
   hoverable?: boolean;
 }
 
 export default function Card({
   children,
   className,
-  onClick,
   hoverable = false,
+  ...props
 }: CardProps) {
   return (
     <div
@@ -23,7 +21,7 @@ export default function Card({
         hoverable && 'cursor-pointer transform hover:-translate-y-1 transition-transform',
         className
       )}
-      onClick={onClick}
+      {...props}
     >
       {children}
     </div>

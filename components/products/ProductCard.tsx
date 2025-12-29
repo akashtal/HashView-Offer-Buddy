@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { FiMapPin, FiTag, FiEye } from 'react-icons/fi';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { formatCurrency, formatDistance } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProductCardProps {
   product: {
@@ -124,9 +124,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             <div className="flex items-center gap-1">
               <FiMapPin size={14} />
               <span>
-                {product.distance
-                  ? formatDistance(product.distance)
-                  : product.vendorId.location.city}
+                {product.vendorId.location.city}
               </span>
             </div>
             <div className="flex items-center gap-1">

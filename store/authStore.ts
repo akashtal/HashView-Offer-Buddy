@@ -11,12 +11,13 @@ interface User {
   avatar?: string;
   isVerified: boolean;
   location?: {
-    coordinates: [number, number];
     address?: string;
     city?: string;
+    state?: string;
+    country?: string;
+    pincode?: string;
   };
   preferences?: {
-    radius: number;
     categories: string[];
   };
 }
@@ -26,10 +27,11 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<string>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   fetchUser: () => Promise<void>;
   setToken: (token: string) => void;
 }
@@ -59,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           const { user, token } = response.data.data;
-          
+
           set({
             user,
             token,
@@ -69,6 +71,8 @@ export const useAuthStore = create<AuthState>()(
 
           // Set axios default header
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+          return user.role;
         } catch (error: any) {
           set({ isLoading: false });
           throw new Error(
@@ -83,7 +87,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await axios.post('/api/auth/register', data);
 
           const { user, token } = response.data.data;
-          
+
           set({
             user,
             token,
@@ -122,13 +126,30 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
 
+      updateProfile: async (data: Partial<User>) => {
+        try {
+          set({ isLoading: true });
+          const response = await axios.put('/api/auth/me', data);
+
+          set({
+            user: response.data.data.user,
+            isLoading: false
+          });
+        } catch (error: any) {
+          set({ isLoading: false });
+          throw new Error(
+            error.response?.data?.error || 'Failed to update profile'
+          );
+        }
+      },
+
       fetchUser: async () => {
         try {
           const { token } = get();
           if (!token) return;
 
           set({ isLoading: true });
-          
+
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const response = await axios.get('/api/auth/me');
 

@@ -36,6 +36,7 @@ interface Vendor {
 
 interface VendorState {
   currentVendor: Vendor | null;
+  currentVendorProducts: any[];
   vendors: Vendor[];
   myVendorProfile: Vendor | null;
   myProducts: any[];
@@ -52,11 +53,13 @@ interface VendorState {
   fetchMyProfile: () => Promise<void>;
   createVendorProfile: (data: any) => Promise<void>;
   updateVendorProfile: (id: string, data: any) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   clearCurrentVendor: () => void;
 }
 
 export const useVendorStore = create<VendorState>((set, get) => ({
   currentVendor: null,
+  currentVendorProducts: [],
   vendors: [],
   myVendorProfile: null,
   myProducts: [],
@@ -111,6 +114,7 @@ export const useVendorStore = create<VendorState>((set, get) => ({
 
       set({
         currentVendor: response.data.data.vendor,
+        currentVendorProducts: response.data.data.products,
         isLoading: false,
       });
     } catch (error: any) {
@@ -177,8 +181,30 @@ export const useVendorStore = create<VendorState>((set, get) => ({
     }
   },
 
+  deleteProduct: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      await axios.delete(`/api/products/${id}`);
+
+      // Optimistic update
+      const currentProducts = get().myProducts;
+      set({
+        myProducts: currentProducts.filter((p) => p._id !== id),
+        isLoading: false,
+      });
+
+      // Also refresh profile stat if needed, but optimistic update is faster
+    } catch (error: any) {
+      set({ isLoading: false });
+      throw new Error(
+        error.response?.data?.error || 'Failed to delete product'
+      );
+    }
+  },
+
   clearCurrentVendor: () => {
-    set({ currentVendor: null });
+    set({ currentVendor: null, currentVendorProducts: [] });
   },
 }));
 

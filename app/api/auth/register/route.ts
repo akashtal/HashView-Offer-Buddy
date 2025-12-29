@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const body = await request.json();
-    
+
     // Validate input
     const validatedData = registerSchema.parse(body);
-    
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: validatedData.email });
     if (existingUser) {
@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
       phone: validatedData.phone,
       role: validatedData.role,
+      location: {
+        address: validatedData.address,
+        city: validatedData.city,
+        state: validatedData.state,
+        country: validatedData.country,
+        pincode: validatedData.pincode,
+      },
     });
 
     // Generate token
@@ -68,14 +75,14 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Registration error:', error);
-    
+
     if (error.name === 'ZodError') {
       return NextResponse.json(
         apiError(error.errors[0].message),
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       apiError('Registration failed. Please try again.'),
       { status: 500 }

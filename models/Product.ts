@@ -91,11 +91,14 @@ const ProductSchema = new Schema<IProduct>(
     offer: {
       type: {
         type: String,
-        enum: ['percentage', 'flat', 'bogo', 'other'],
+        enum: ['percentage', 'flat', 'bogo', 'other', 'clearance', 'discount'],
       },
       value: Number,
       description: String,
-      validFrom: Date,
+      validFrom: {
+        type: Date,
+        default: Date.now
+      },
       validUntil: Date,
     },
     tags: [String],
@@ -161,6 +164,11 @@ ProductSchema.index({ isActive: 1 });
 ProductSchema.index({ isFeatured: 1 });
 ProductSchema.index({ 'offer.validUntil': 1 });
 ProductSchema.index({ title: 'text', description: 'text', tags: 'text' });
+
+// Force model recompilation in development to handle schema changes
+if (process.env.NODE_ENV === 'development') {
+  delete mongoose.models['Product'];
+}
 
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 

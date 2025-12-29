@@ -11,8 +11,6 @@ export interface IUser extends Document {
   isVerified: boolean;
   avatar?: string;
   location?: {
-    type: string;
-    coordinates: [number, number]; // [longitude, latitude]
     address?: string;
     city?: string;
     state?: string;
@@ -20,7 +18,6 @@ export interface IUser extends Document {
     pincode?: string;
   };
   preferences?: {
-    radius: number; // in kilometers
     categories: mongoose.Types.ObjectId[];
   };
   createdAt: Date;
@@ -70,13 +67,6 @@ const UserSchema = new Schema<IUser>(
       type: String,
     },
     location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-      },
       address: String,
       city: String,
       state: String,
@@ -84,10 +74,6 @@ const UserSchema = new Schema<IUser>(
       pincode: String,
     },
     preferences: {
-      radius: {
-        type: Number,
-        default: 5, // 5 km default
-      },
       categories: [
         {
           type: Schema.Types.ObjectId,
@@ -102,8 +88,7 @@ const UserSchema = new Schema<IUser>(
 );
 
 // Create geospatial index for location
-UserSchema.index({ 'location.coordinates': '2dsphere' });
-UserSchema.index({ email: 1 });
+
 UserSchema.index({ role: 1 });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

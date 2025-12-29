@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const parentOnly = searchParams.get('parentOnly') === 'true';
 
     const query: any = { isActive: true };
-    
+
     if (parentOnly) {
       query.parentCategory = null;
     }
@@ -68,15 +68,24 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Create category error:', error);
-    
+    // Safer logging to avoid circular reference or inspection errors
+    console.error('Create category error:', error?.message || error);
+
     if (error.name === 'ZodError') {
+      const message = error.errors?.[0]?.message || 'Validation failed';
       return NextResponse.json(
-        apiError(error.errors[0].message),
+        apiError(message),
         { status: 400 }
       );
     }
-    
+
+    if (error.code === 11000) {
+      return NextResponse.json(
+        apiError('Category with this name or slug already exists'),
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       apiError('Failed to create category'),
       { status: 500 }

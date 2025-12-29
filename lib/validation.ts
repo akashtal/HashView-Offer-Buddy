@@ -5,8 +5,13 @@ export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  phone: z.string().optional(),
+  phone: z.string().min(10, 'Valid phone number is required').optional().or(z.literal('')),
   role: z.enum(['user', 'vendor']).default('user'),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().default('India'),
+  pincode: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -20,7 +25,7 @@ export const updateUserSchema = z.object({
   avatar: z.string().url().optional(),
   location: z
     .object({
-      coordinates: z.tuple([z.number(), z.number()]),
+      coordinates: z.tuple([z.number(), z.number()]).optional(),
       address: z.string().optional(),
       city: z.string().optional(),
       state: z.string().optional(),
@@ -95,10 +100,10 @@ export const createProductSchema = z.object({
     .optional(),
   offer: z
     .object({
-      type: z.enum(['percentage', 'flat', 'bogo', 'other']),
+      type: z.enum(['percentage', 'flat', 'bogo', 'other', 'clearance', 'discount']),
       value: z.number().positive().optional(),
       description: z.string().min(1, 'Offer description is required'),
-      validFrom: z.string().or(z.date()),
+      validFrom: z.string().or(z.date()).default(() => new Date()),
       validUntil: z.string().or(z.date()),
     })
     .optional(),

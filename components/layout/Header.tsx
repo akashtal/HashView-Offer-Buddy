@@ -6,16 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiMenu, FiX, FiMapPin, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
 import { useAuthStore } from '@/store/authStore';
-import { useLocationStore } from '@/store/locationStore';
 import Button from '@/components/ui/Button';
 
 export default function Header() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
+
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { city, address } = useLocationStore();
 
   const handleLogout = async () => {
     await logout();
@@ -31,7 +29,7 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-3">
             <div className="relative w-10 h-10">
               <Image
-                src="/logo-icon.png"
+                src="/logo.jpeg"
                 alt="Offer Buddy"
                 fill
                 className="object-contain"
@@ -44,19 +42,7 @@ export default function Header() {
           </Link>
 
           {/* Location */}
-          <div className="hidden md:flex items-center gap-2 text-sm">
-            <FiMapPin className="text-primary" />
-            <div>
-              <p className="font-medium text-secondary">
-                {city || 'Select Location'}
-              </p>
-              {address && (
-                <p className="text-xs text-gray-500 max-w-xs truncate">
-                  {address}
-                </p>
-              )}
-            </div>
-          </div>
+
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
@@ -67,12 +53,18 @@ export default function Header() {
               Categories
             </Link>
             <Link
+              href="/products"
+              className="text-secondary hover:text-primary font-medium transition-colors"
+            >
+              Products
+            </Link>
+            <Link
               href="/vendors"
               className="text-secondary hover:text-primary font-medium transition-colors"
             >
               Shops
             </Link>
-            
+
             {isAuthenticated ? (
               <div className="relative">
                 <button
@@ -90,8 +82,8 @@ export default function Header() {
                         user?.role === 'vendor'
                           ? '/vendor/dashboard'
                           : user?.role === 'admin'
-                          ? '/admin/dashboard'
-                          : '/profile'
+                            ? '/admin/dashboard'
+                            : '/profile'
                       }
                       className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors"
                       onClick={() => setUserMenuOpen(false)}
@@ -146,13 +138,20 @@ export default function Header() {
                 Categories
               </Link>
               <Link
+                href="/products"
+                className="text-secondary hover:text-primary font-medium transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Products
+              </Link>
+              <Link
                 href="/vendors"
                 className="text-secondary hover:text-primary font-medium transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Shops
               </Link>
-              
+
               {isAuthenticated ? (
                 <>
                   <Link
@@ -160,8 +159,8 @@ export default function Header() {
                       user?.role === 'vendor'
                         ? '/vendor/dashboard'
                         : user?.role === 'admin'
-                        ? '/admin/dashboard'
-                        : '/profile'
+                          ? '/admin/dashboard'
+                          : '/profile'
                     }
                     className="text-secondary hover:text-primary font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
