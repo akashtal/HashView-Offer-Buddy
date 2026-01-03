@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 export default function SignInPage() {
     const router = useRouter();
+    const { login } = useAuthStore();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -21,11 +23,17 @@ export default function SignInPage() {
         setError('');
 
         try {
-            await axios.post('/api/auth/login', formData);
-            router.push('/');
-            router.refresh(); // Refresh to update auth state in header
+            const role = await login(formData.email, formData.password);
+
+            if (role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (role === 'vendor') {
+                router.push('/vendor/dashboard');
+            } else {
+                router.push('/');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
+            setError(err.message || 'Invalid credentials. Please try again.');
         } finally {
             setIsLoading(false);
         }

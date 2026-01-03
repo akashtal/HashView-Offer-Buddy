@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import axios from 'axios';
 import { FiShoppingBag, FiMapPin, FiPhone } from 'react-icons/fi';
@@ -25,8 +26,20 @@ export default function VendorOnboardingPage() {
         state: '',
         pincode: '',
         shopDescription: '',
+        coordinates: [0, 0] as [number, number],
     });
     const [error, setError] = useState('');
+
+    const handleAddressSelect = (details: any) => {
+        setFormData(prev => ({
+            ...prev,
+            address: details.address || prev.address,
+            city: details.city || prev.city,
+            state: details.state || prev.state,
+            pincode: details.pincode || prev.pincode,
+            coordinates: [details.coordinates.longitude, details.coordinates.latitude]
+        }));
+    };
 
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
@@ -90,7 +103,7 @@ export default function VendorOnboardingPage() {
                     state: formData.state,
                     pincode: formData.pincode,
                     country: 'India', // Default
-                    coordinates: [0, 0] // Default until map picker is added
+                    coordinates: formData.coordinates
                 }
             };
 
@@ -187,12 +200,13 @@ export default function VendorOnboardingPage() {
                                     icon={<FiPhone />}
                                 />
 
-                                <Input
+                                <AddressAutocomplete
                                     label="Street Address"
                                     name="address"
-                                    placeholder="Shop No, Street, Area"
+                                    placeholder="Search for your shop location..."
                                     value={formData.address}
-                                    onChange={handleChange}
+                                    onChange={(val) => setFormData({ ...formData, address: val })}
+                                    onSelect={handleAddressSelect}
                                     required
                                 />
 

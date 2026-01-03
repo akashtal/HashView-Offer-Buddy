@@ -157,6 +157,18 @@ export default function Header() {
         <div className="px-4 py-4">
           {/* Top Bar: Location + User */}
           <div className="flex items-center justify-between mb-4">
+            {/* Logo - Mobile */}
+            <Link href="/" className="mr-3 flex-shrink-0">
+              <div className="relative w-10 h-10 bg-white rounded-full overflow-hidden p-1">
+                <Image
+                  src="/logo.jpeg"
+                  alt="Offer Buddy"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            </Link>
+
             {/* Location Search - Mobile Version */}
             <div className="flex-1">
               <LocationSearch className="[&>button]:bg-transparent [&>button]:border-0 [&>button]:p-0 [&>button]:hover:bg-transparent [&>button]:text-white [&_span]:text-white [&_svg]:text-primary" />

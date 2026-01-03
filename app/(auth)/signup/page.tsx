@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import { useAuthStore } from '@/store/authStore';
 import { Mail, Lock, User, Loader2, ArrowRight, Store } from 'lucide-react';
 
 export default function SignUpPage() {
     const router = useRouter();
+    const { register } = useAuthStore();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -23,10 +24,10 @@ export default function SignUpPage() {
         setError('');
 
         try {
-            await axios.post('/api/auth/register', formData);
-            router.push('/signin?registered=true');
+            await register(formData);
+            router.push('/'); // Auto login after register
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Registration failed. Please try again.');
+            setError(err.message || 'Registration failed. Please try again.');
         } finally {
             setIsLoading(false);
         }

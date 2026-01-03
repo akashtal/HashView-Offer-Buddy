@@ -10,14 +10,14 @@ import { usePathname } from 'next/navigation';
 
 export default function RootLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isHomePage = pathname === '/';
+  const isAuthPage = ['/signin', '/signup'].includes(pathname);
 
   return (
     <LocationProvider>
-      <Header />
+      {!isAuthPage && <Header />}
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      <Footer />
-      <MobileBottomNav />
+      {!isAuthPage && <Footer />}
+      {!isAuthPage && <MobileBottomNav />}
     </LocationProvider>
   );
 }
