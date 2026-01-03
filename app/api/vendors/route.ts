@@ -6,54 +6,167 @@ import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createVendorSchema } from '@/lib/validation';
 
-// GET - Get nearby vendors
+// Enable ISR with 2 hour revalidation
+export const revalidate = 7200;
+
+// GET - Get nearby vendors with geospatial filtering
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
 
+    // Location parameters
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
-    const radius = parseFloat(searchParams.get('radius') || '5'); // km
+    const radiusKm = parseFloat(searchParams.get('radius') || '50'); // Default 50km
+    const maxRadius = Math.min(radiusKm, 100); // Cap at 100km for performance
+
     const category = searchParams.get('category');
+    const sortBy = searchParams.get('sortBy') || 'distance'; // distance, rating, newest
 
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
+    const skip = (page - 1) * limit;
 
-    // Build query
-    const query: any = {
-      isActive: true,
-      isApproved: true,
-    };
+    // Use geospatial aggregation if location is provided
+    if (latitude && longitude) {
+      const radiusInMeters = maxRadius * 1000; // Convert km to meters
 
-    if (category) {
-      query.category = category;
-    }
+      // Build aggregation pipeline with $geoNear
+      const pipeline: any[] = [
+        {
+          $geoNear: {
+            near: {
+              type: 'Point' as const,
+              coordinates: [longitude, latitude] as [number, number] // [lng, lat] format for GeoJSON
+            },
+            distanceField: 'distance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            distanceMultiplier: 0.001, // Convert meters to km
+            query: {
+              isActive: true,
+              isApproved: true,
+              ...(category && { category: require('mongoose').Types.ObjectId(category) })
+            }
+          }
+        }
+      ];
 
-    // Location-based query removed
-    // if (latitude && longitude) { ... }
+      // Add sorting
+      if (sortBy === 'rating') {
+        pipeline.push({ $sort: { rating: -1, distance: 1 } });
+      } else if (sortBy === 'newest') {
+        pipeline.push({ $sort: { createdAt: -1 } });
+      }
+      // distance is default sort from $geoNear
 
-    // No location provided, return all approved vendors
-    const vendors = await Vendor.find(query)
-      .populate('category', 'name slug icon')
-      .skip((page - 1) * limit)
-      .limit(limit);
+      // Pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
 
-    const total = await Vendor.countDocuments(query);
+      // Populate category
+      pipeline.push({
+        $lookup: {
+          from: 'categories',
+          localField: 'category',
+          foreignField: '_id',
+          as: 'category'
+        }
+      });
 
-    return NextResponse.json(
-      apiSuccess({
-        vendors,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
+      pipeline.push({
+        $unwind: {
+          path: '$category',
+          preserveNullAndEmptyArrays: true
+        }
+      });
+
+      const vendors = await Vendor.aggregate(pipeline);
+
+      // Get total count with same filters
+      const countPipeline = [
+        {
+          $geoNear: {
+            near: {
+              type: 'Point' as const,
+              coordinates: [longitude, latitude] as [number, number]
+            },
+            distanceField: 'distance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: {
+              isActive: true,
+              isApproved: true,
+              ...(category && { category: require('mongoose').Types.ObjectId(category) })
+            }
+          }
         },
-      }),
-      { status: 200 }
-    );
+        { $count: 'total' }
+      ];
+
+      const countResult = await Vendor.aggregate(countPipeline);
+      const total = countResult[0]?.total || 0;
+
+      return NextResponse.json(
+        apiSuccess({
+          vendors,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+          location: {
+            latitude,
+            longitude,
+            radius: maxRadius
+          }
+        }),
+        { status: 200 }
+      );
+    } else {
+      // No location provided - fallback to simple query
+      const query: any = {
+        isActive: true,
+        isApproved: true,
+      };
+
+      if (category) {
+        query.category = category;
+      }
+
+      let sortOptions: any = {};
+      if (sortBy === 'rating') {
+        sortOptions = { rating: -1 };
+      } else if (sortBy === 'newest') {
+        sortOptions = { createdAt: -1 };
+      } else {
+        sortOptions = { createdAt: -1 }; // Default to newest
+      }
+
+      const vendors = await Vendor.find(query)
+        .populate('category', 'name slug icon')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit);
+
+      const total = await Vendor.countDocuments(query);
+
+      return NextResponse.json(
+        apiSuccess({
+          vendors,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+        }),
+        { status: 200 }
+      );
+    }
   } catch (error) {
     console.error('Get vendors error:', error);
     return NextResponse.json(

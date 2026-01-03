@@ -5,6 +5,9 @@ import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest, hasRole } from '@/lib/auth';
 import { createCategorySchema } from '@/lib/validation';
 
+// Enable ISR with 24 hour revalidation (categories rarely change)
+export const revalidate = 86400;
+
 // GET - Get all categories
 export async function GET(request: NextRequest) {
   try {

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
+import Category from '@/models/Category';
 import Product from '@/models/Product';
 import Vendor from '@/models/Vendor';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createProductSchema } from '@/lib/validation';
 
-// GET - Get all products with location filtering
+// Enable ISR with 1 hour revalidation
+export const revalidate = 3600;
+
+// GET - Get all products with location filtering using MongoDB geospatial queries
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
@@ -16,7 +20,8 @@ export async function GET(request: NextRequest) {
     // Location parameters
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
-    const radius = parseFloat(searchParams.get('radius') || '5'); // km
+    const radiusKm = parseFloat(searchParams.get('radius') || '50'); // Default 50km
+    const maxRadius = Math.min(radiusKm, 100); // Cap at 100km for performance
 
     // Filter parameters
     const category = searchParams.get('category');
@@ -27,100 +32,257 @@ export async function GET(request: NextRequest) {
 
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
     // Sort
     const sortBy = searchParams.get('sortBy') || 'distance';
 
-    // Build query for products
-    const productQuery: any = { isActive: true };
-
-    if (category) {
-      productQuery.category = category;
-    }
-
-    if (query) {
-      productQuery.$text = { $search: query };
-    }
-
-    if (hasOffer) {
-      productQuery.offer = { $exists: true };
-      productQuery['offer.validUntil'] = { $gte: new Date() };
-    }
-
-    if (minPrice || maxPrice) {
-      productQuery['price.discounted'] = {};
-      if (minPrice) productQuery['price.discounted'].$gte = parseFloat(minPrice);
-      if (maxPrice) productQuery['price.discounted'].$lte = parseFloat(maxPrice);
-    }
-
-    // Find products
-    let products = await Product.find(productQuery)
-      .populate('category', 'name slug icon')
-      .populate('vendorId', 'shopName shopLogo location contactInfo rating')
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    // Calculate distance if coordinates provided
+    // Use geospatial aggregation if location is provided
     if (latitude && longitude) {
-      products = products.map((product: any) => {
-        const vendor = product.vendorId;
-        if (vendor?.location?.coordinates?.coordinates) {
-          const [vendorLng, vendorLat] = vendor.location.coordinates.coordinates;
-          product.distance = calculateDistance(latitude, longitude, vendorLat, vendorLng);
-        }
-        return product;
-      });
+      const radiusInMeters = maxRadius * 1000; // Convert km to meters
 
-      // Sort by distance if coordinates provided
-      if (sortBy === 'distance' || sortBy === 'newest') {
-        products.sort((a: any, b: any) => {
-          if (a.distance !== undefined && b.distance !== undefined) {
-            return a.distance - b.distance;
+      const pipeline: any[] = [
+        // Stage 1: Lookup vendors with their location data
+        {
+          $lookup: {
+            from: 'vendors',
+            localField: 'vendorId',
+            foreignField: '_id',
+            as: 'vendor'
           }
-          return 0;
-        });
-      }
-    }
-
-    // Sort by other criteria if no location or different sortBy
-    if (!latitude || !longitude || sortBy !== 'distance') {
-      if (sortBy === 'newest') {
-        products.sort((a: any, b: any) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      } else if (sortBy === 'popular') {
-        products.sort((a: any, b: any) =>
-          (b.analytics?.views || 0) - (a.analytics?.views || 0)
-        );
-      } else if (sortBy === 'price_low') {
-        products.sort((a: any, b: any) =>
-          (a.price?.discounted || a.price?.original || 0) - (b.price?.discounted || b.price?.original || 0)
-        );
-      } else if (sortBy === 'price_high') {
-        products.sort((a: any, b: any) =>
-          (b.price?.discounted || b.price?.original || 0) - (a.price?.discounted || a.price?.original || 0)
-        );
-      }
-    }
-
-    // Get total count
-    const total = await Product.countDocuments(productQuery);
-
-    return NextResponse.json(
-      apiSuccess({
-        products,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
         },
-      }),
-      { status: 200 }
-    );
+        {
+          $unwind: {
+            path: '$vendor',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        // Stage 2: Add distance calculation field
+        {
+          $addFields: {
+            distance: {
+              $cond: {
+                if: {
+                  $and: [
+                    { $ifNull: ['$vendor.location.coordinates.coordinates', false] },
+                    { $isArray: '$vendor.location.coordinates.coordinates' }
+                  ]
+                },
+                then: {
+                  $let: {
+                    vars: {
+                      lon1: { $multiply: [longitude, Math.PI / 180] },
+                      lat1: { $multiply: [latitude, Math.PI / 180] },
+                      lon2: { $multiply: [{ $arrayElemAt: ['$vendor.location.coordinates.coordinates', 0] }, Math.PI / 180] },
+                      lat2: { $multiply: [{ $arrayElemAt: ['$vendor.location.coordinates.coordinates', 1] }, Math.PI / 180] }
+                    },
+                    in: {
+                      $multiply: [
+                        6371, // Earth's radius in km
+                        {
+                          $multiply: [
+                            2,
+                            {
+                              $asin: {
+                                $sqrt: {
+                                  $add: [
+                                    {
+                                      $pow: [
+                                        { $sin: { $divide: [{ $subtract: ['$$lat2', '$$lat1'] }, 2] } },
+                                        2
+                                      ]
+                                    },
+                                    {
+                                      $multiply: [
+                                        { $cos: '$$lat1' },
+                                        { $cos: '$$lat2' },
+                                        {
+                                          $pow: [
+                                            { $sin: { $divide: [{ $subtract: ['$$lon2', '$$lon1'] }, 2] } },
+                                            2
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                else: 999999 // Very high distance for items without location
+              }
+            }
+          }
+        },
+        // Stage 3: Filter by radius
+        {
+          $match: {
+            distance: { $lte: maxRadius }
+          }
+        }
+      ];
+
+      // Add product filters
+      const matchStage: any = {
+        isActive: true
+      };
+
+      if (category) {
+        matchStage.category = { $eq: require('mongoose').Types.ObjectId(category) };
+      }
+
+      if (hasOffer) {
+        matchStage.offer = { $exists: true };
+        matchStage['offer.validUntil'] = { $gte: new Date() };
+      }
+
+      if (minPrice || maxPrice) {
+        matchStage['price.discounted'] = {};
+        if (minPrice) matchStage['price.discounted'].$gte = parseFloat(minPrice);
+        if (maxPrice) matchStage['price.discounted'].$lte = parseFloat(maxPrice);
+      }
+
+      if (query) {
+        matchStage.$text = { $search: query };
+      }
+
+      // Insert match stage at the beginning
+      pipeline.unshift({ $match: matchStage });
+
+      // Stage 4: Sort
+      if (sortBy === 'distance') {
+        pipeline.push({ $sort: { distance: 1, createdAt: -1 } });
+      } else if (sortBy === 'newest') {
+        pipeline.push({ $sort: { createdAt: -1 } });
+      } else if (sortBy === 'popular') {
+        pipeline.push({ $sort: { 'analytics.views': -1 } });
+      } else if (sortBy === 'price_low') {
+        pipeline.push({ $sort: { 'price.discounted': 1, 'price.original': 1 } });
+      } else if (sortBy === 'price_high') {
+        pipeline.push({ $sort: { 'price.discounted': -1, 'price.original': -1 } });
+      }
+
+      // Stage 5: Pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
+
+      // Stage 6: Populate references
+      pipeline.push(
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'category'
+          }
+        },
+        {
+          $unwind: {
+            path: '$category',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        // Replace vendor array with single vendor object and keep distance
+        {
+          $addFields: {
+            vendorId: '$vendor'
+          }
+        },
+        {
+          $project: {
+            vendor: 0 // Remove the temporary vendor field
+          }
+        }
+      );
+
+      const products = await Product.aggregate(pipeline);
+
+      // Get total count for pagination
+      const countPipeline = pipeline.slice(0, -3); // Remove skip, limit, and final stages
+      countPipeline.push({ $count: 'total' });
+      const countResult = await Product.aggregate(countPipeline);
+      const total = countResult[0]?.total || 0;
+
+      return NextResponse.json(
+        apiSuccess({
+          products,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+          location: {
+            latitude,
+            longitude,
+            radius: maxRadius
+          }
+        }),
+        { status: 200 }
+      );
+    } else {
+      // No location provided - fallback to simple query
+      const productQuery: any = { isActive: true };
+
+      if (category) {
+        productQuery.category = category;
+      }
+
+      if (query) {
+        productQuery.$text = { $search: query };
+      }
+
+      if (hasOffer) {
+        productQuery.offer = { $exists: true };
+        productQuery['offer.validUntil'] = { $gte: new Date() };
+      }
+
+      if (minPrice || maxPrice) {
+        productQuery['price.discounted'] = {};
+        if (minPrice) productQuery['price.discounted'].$gte = parseFloat(minPrice);
+        if (maxPrice) productQuery['price.discounted'].$lte = parseFloat(maxPrice);
+      }
+
+      let sortOptions: any = {};
+      if (sortBy === 'newest') {
+        sortOptions = { createdAt: -1 };
+      } else if (sortBy === 'popular') {
+        sortOptions = { 'analytics.views': -1 };
+      } else if (sortBy === 'price_low') {
+        sortOptions = { 'price.discounted': 1, 'price.original': 1 };
+      } else if (sortBy === 'price_high') {
+        sortOptions = { 'price.discounted': -1, 'price.original': -1 };
+      }
+
+      const products = await Product.find(productQuery)
+        .populate('category', 'name slug icon')
+        .populate('vendorId', 'shopName shopLogo location contactInfo rating')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const total = await Product.countDocuments(productQuery);
+
+      return NextResponse.json(
+        apiSuccess({
+          products,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+        }),
+        { status: 200 }
+      );
+    }
   } catch (error) {
     console.error('Get products error:', error);
     return NextResponse.json(

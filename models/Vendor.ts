@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import './Category'; // Ensure Category model is registered
 
 export interface IVendor extends Document {
   _id: mongoose.Types.ObjectId;

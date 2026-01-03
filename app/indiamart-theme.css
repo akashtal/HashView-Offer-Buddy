@@ -1,0 +1,222 @@
+/* Swiggy Theme Styles */
+
+:root {
+  /* Swiggy Color Palette */
+  --swiggy-orange: #FD9139;
+  --swiggy-orange-light: #FCA65E;
+  --swiggy-orange-dark: #AD4728;
+  --swiggy-black: #282C3F;
+  --swiggy-gray: #686B78;
+  --swiggy-gray-light: #F5F5F5;
+  --swiggy-white: #FFFFFF;
+  --swiggy-border: #E9E9EB;
+  --swiggy-green: #48C479;
+}
+
+/* Swiggy specific components */
+.swiggy-btn-primary {
+  @apply bg-[#FD9139] hover:bg-[#AD4728] text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+.swiggy-btn-secondary {
+  @apply bg-white hover:bg-gray-50 text-[#282C3F] font-semibold px-6 py-3 rounded-lg border border-[#E9E9EB] transition-all duration-200;
+}
+
+.swiggy-btn-outline {
+  @apply border-2 border-[#FD9139] text-[#FD9139] hover:bg-[#FD9139] hover:text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200;
+}
+
+.swiggy-search-bar {
+  @apply w-full px-4 py-3 border border-[#E9E9EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD9139] focus:border-transparent bg-white;
+}
+
+.swiggy-card {
+  @apply bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-[#E9E9EB];
+}
+
+.swiggy-category-card {
+  @apply flex flex-col items-center text-center cursor-pointer;
+}
+
+.swiggy-badge {
+  @apply inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-[#FD9139] text-white;
+}
+
+.swiggy-rating-badge {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded bg-[#48C479] text-white text-xs font-bold;
+}
+
+.swiggy-section-title {
+  @apply text-2xl md:text-3xl font-bold text-[#282C3F] mb-6;
+}
+
+.swiggy-link {
+  @apply text-[#FD9139] hover:text-[#AD4728] hover:underline transition-colors duration-200;
+}
+
+/* Mobile specific */
+.mobile-bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t border-[#E9E9EB] z-50 md:hidden;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-bottom-nav-item {
+  @apply flex-1 flex flex-col items-center justify-center py-2 px-1 text-[#686B78] transition-colors duration-200;
+}
+
+.mobile-bottom-nav-item.active {
+  @apply text-[#FD9139] font-semibold;
+}
+
+.mobile-bottom-nav-icon {
+  @apply text-2xl mb-1;
+}
+
+.mobile-bottom-nav-label {
+  @apply text-xs;
+}
+
+/* Mobile content padding to prevent overlap with bottom nav */
+@media (max-width: 768px) {
+  .mobile-content-wrapper {
+    @apply pb-20;
+  }
+}
+
+/* Price tag styling */
+.price-tag {
+  @apply text-[#282C3F] font-bold text-xl;
+}
+
+/* Restaurant card specific */
+.restaurant-card-image {
+  @apply relative w-full h-48 bg-gray-100;
+}
+
+.delivery-info {
+  @apply text-sm text-[#686B78] flex items-center gap-2;
+}
+
+.cuisine-tags {
+  @apply text-sm text-[#686B78] truncate;
+}
+
+/* Offer badge */
+.offer-badge {
+  @apply absolute bottom-0 left-0 bg-gradient-to-r from-[#FD9139] to-[#FCA65E] text-white px-3 py-1 text-xs font-bold uppercase;
+}
+
+/* Category carousel */
+.category-carousel {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.category-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.category-item {
+  @apply flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer;
+}
+
+.category-image {
+  @apply w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-transparent hover:border-[#FD9139] transition-all;
+}
+
+/* Filter chips */
+.filter-chip {
+  @apply px-4 py-2 rounded-full border border-[#E9E9EB] text-sm font-medium text-[#686B78] hover:border-[#FD9139] hover:text-[#FD9139] transition-all cursor-pointer whitespace-nowrap;
+}
+
+.filter-chip.active {
+  @apply bg-[#FD9139] text-white border-[#FD9139];
+}
+
+/* ================================ */
+/* INDIAMART THEME (Other Pages)   */
+/* ================================ */
+
+:root {
+  /* IndiaMART Color Palette */
+  --indiamart-yellow: #FDB913;
+  --indiamart-yellow-dark: #E5A600;
+  --indiamart-yellow-light: #FFD700;
+  --indiamart-black: #000000;
+  --indiamart-black-light: #1a1a1a;
+  --indiamart-green: #00A651;
+}
+
+/* IndiaMART Buttons */
+.indiamart-btn-primary {
+  @apply bg-[#FDB913] hover:bg-[#E5A600] text-black font-bold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+.indiamart-btn-secondary {
+  @apply bg-black hover:bg-[#1a1a1a] text-white font-bold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+.indiamart-btn-outline {
+  @apply border-2 border-[#FDB913] text-[#FDB913] hover:bg-[#FDB913] hover:text-black font-bold px-6 py-3 rounded-lg transition-all duration-200;
+}
+
+/* Get Best Price Button */
+.get-best-price-btn {
+  @apply bg-[#FDB913] hover:bg-[#E5A600] text-black font-bold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+/* IndiaMART Cards */
+.indiamart-card {
+  @apply bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden border border-gray-200;
+}
+
+.indiamart-product-card {
+  @apply bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer;
+}
+
+/* IndiaMART Section Title */
+.indiamart-section-title {
+  @apply text-2xl md:text-3xl font-bold text-black mb-6;
+}
+
+/* IndiaMART Badges */
+.indiamart-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#FDB913] text-black;
+}
+
+.verified-badge {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-[#FDB913] to-[#FFD700] text-black;
+}
+
+.offer-badge-indiamart {
+  @apply absolute top-2 left-2 bg-red-500 text-white px-3 py-1 rounded-md font-bold text-xs uppercase z-10;
+}
+
+/* IndiaMART Location & Distance */
+.location-badge {
+  @apply inline-flex items-center gap-1 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full;
+}
+
+.distance-badge {
+  @apply inline-flex items-center gap-1 text-xs text-[#00A651] font-bold;
+}
+
+/* IndiaMART Price */
+.indiamart-price {
+  @apply text-[#FDB913] font-bold text-2xl;
+}
+
+/* IndiaMART Category Card */
+.indiamart-category-card {
+  @apply bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-[#FDB913] cursor-pointer;
+}
+
+/* Supplier Card */
+.supplier-card {
+  @apply bg-white rounded-lg p-6 shadow-md hover:shadow-xl transition-all duration-200 border border-gray-200;
+}

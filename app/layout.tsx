@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import './indiamart-theme.css';
+import RootLayoutClient from '@/components/layout/RootLayoutClient';
 import dbConnect from '@/lib/mongodb';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -42,9 +42,7 @@ export default async function RootLayout({
         <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css' />
       </head>
       <body className={`${inter.variable} flex flex-col min-h-screen`}>
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>
   );

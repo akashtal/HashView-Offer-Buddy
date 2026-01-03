@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { FiGrid } from 'react-icons/fi';
 import Loading from '@/components/ui/Loading';
-import Button from '@/components/ui/Button';
+import { getCategoryIcon } from '@/lib/category-icons';
 
 export default function CategoriesPage() {
     const [categories, setCategories] = useState<any[]>([]);
@@ -42,29 +41,32 @@ export default function CategoriesPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {categories.map((category) => (
-                    <Link
-                        key={category._id}
-                        href={`/search?category=${category._id}`}
-                        className="card hover:shadow-xl transition-all p-8 text-center space-y-4 group"
-                    >
-                        <div className="w-20 h-20 bg-primary/10 rounded-full mx-auto flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                            {category.icon ? (
-                                <i className={`${category.icon} text-4xl text-primary`}></i>
-                            ) : (
-                                <FiGrid className="text-3xl text-primary" />
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-secondary mb-1">
-                                {category.name}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                                Browse collection
-                            </p>
-                        </div>
-                    </Link>
-                ))}
+                {categories.map((category) => {
+                    const { icon: IconComponent, color, bgColor } = getCategoryIcon(category.name);
+
+                    return (
+                        <Link
+                            key={category._id}
+                            href={`/products?category=${category._id}`}
+                            className="card hover:shadow-xl transition-all p-8 text-center space-y-4 group"
+                        >
+                            <div
+                                className="w-20 h-20 rounded-full mx-auto flex items-center justify-center group-hover:scale-110 transition-transform"
+                                style={{ backgroundColor: bgColor }}
+                            >
+                                <IconComponent size={40} style={{ color }} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-secondary mb-1">
+                                    {category.name}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                    Browse collection
+                                </p>
+                            </div>
+                        </Link>
+                    );
+                })}
             </div>
         </div>
     );
