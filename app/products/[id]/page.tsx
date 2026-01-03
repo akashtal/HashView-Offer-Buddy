@@ -248,12 +248,18 @@ export default function ProductDetailPage() {
               {/* Product Details Table */}
               <div className="mb-6">
                 <h3 className="font-bold text-lg mb-3 border-b pb-2">Product Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 text-sm">
-                  {product.description && (
-                    <div className="col-span-full text-gray-700 leading-relaxed mb-4">
+
+                {/* Description - More Prominent */}
+                {product.description && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Description</h4>
+                    <p className="text-gray-700 leading-relaxed text-base">
                       {product.description}
-                    </div>
-                  )}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 text-sm">
                   {product.brand && (
                     <div className="flex border-b border-gray-100 pb-2">
                       <span className="text-gray-500 w-32">Brand</span>

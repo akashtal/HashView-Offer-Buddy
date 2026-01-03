@@ -91,9 +91,12 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
                                 <div
                                     key={category._id}
                                     onClick={() => onCategorySelect?.(category._id)}
-                                    className={`category-item ${selectedCategory === category._id ? 'ring-2 ring-[#FD9139]' : ''}`}
+                                    className="category-item outline-none focus:outline-none"
+                                    style={{
+                                        outline: 'none',
+                                    }}
                                 >
-                                    <div className="category-image">
+                                    <div className={`category-image ${selectedCategory === category._id ? 'border-[#FD9139] shadow-md' : ''}`}>
                                         {category.image ? (
                                             <Image
                                                 src={category.image}
@@ -112,7 +115,9 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
                                             </div>
                                         )}
                                     </div>
-                                    <span className="text-sm font-medium text-[#282C3F]">{category.name}</span>
+                                    <span className={`category-name ${selectedCategory === category._id ? 'text-[#FD9139] font-bold' : 'text-[#282C3F]'}`}>
+                                        {category.name}
+                                    </span>
                                 </div>
                             );
                         })}

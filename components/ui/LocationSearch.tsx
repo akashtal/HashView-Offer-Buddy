@@ -60,31 +60,47 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
     };
 
     const handleUseMyLocation = async () => {
+        console.log('🟢 LocationSearch: Use My Location button clicked!');
         setIsGettingLocation(true);
         try {
             if (!navigator.geolocation) {
+                console.error('❌ Geolocation NOT supported by browser');
                 alert('Geolocation is not supported by your browser');
+                setIsGettingLocation(false);
                 return;
             }
 
+            console.log('✅ Geolocation is supported, requesting position...');
+
+            // Mobile-optimized geolocation options
+            const options = {
+                enableHighAccuracy: false, // Start with low accuracy for faster response on mobile
+                timeout: 30000, // 30 seconds - longer for mobile
+                maximumAge: 300000 // 5 minutes - use cached location if available
+            };
+
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const locationData = {
-                        coordinates: {
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude
-                        },
-                        city: location?.city || 'Current Location',
-                        country: 'India'
+                async (position) => {
+                    console.log('✅ SUCCESS! Got position:', position.coords);
+
+                    const coords = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
                     };
 
+                    // Call reverse geocoding to get actual city name
+                    console.log('🌍 Starting reverse geocoding...');
+                    const { reverseGeocode } = await import('@/lib/location-utils');
+                    const locationData = await reverseGeocode(coords);
+
+                    console.log('✅ Calling setManualLocation with:', locationData);
                     setManualLocation(locationData);
 
                     if (onLocationSelect) {
                         onLocationSelect({
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            city: 'Current Location'
+                            latitude: coords.latitude,
+                            longitude: coords.longitude,
+                            city: locationData.city || 'Current Location'
                         });
                     }
 
@@ -92,21 +108,33 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
                     setIsGettingLocation(false);
                 },
                 (error) => {
-                    console.error('Error getting location:', error);
-                    alert('Failed to get your location. Please enable location services.');
+                    console.error('❌ GEOLOCATION ERROR:', error);
+                    console.error('❌ Error code:', error.code);
+                    console.error('❌ Error message:', error.message);
+
+                    let errorMessage = '';
+                    if (error.code === 1) {
+                        errorMessage = '📍 Please turn on location permissions in your browser settings.';
+                    } else if (error.code === 2) {
+                        errorMessage = '📍 Turn on your device location (GPS) to continue.';
+                    } else if (error.code === 3) {
+                        errorMessage = '📍 Location request timed out. Please try again.';
+                    } else {
+                        errorMessage = '📍 Unable to get location. Please enable location services.';
+                    }
+
+                    alert(errorMessage);
                     setIsGettingLocation(false);
                 },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 300000 // 5 minutes
-                }
+                options
             );
         } catch (error) {
-            console.error('Error:', error);
+            console.error('❌ Unexpected error:', error);
+            alert('An error occurred while getting your location.');
             setIsGettingLocation(false);
         }
     };
+
 
     return (
         <div className={`relative ${className}`} ref={dropdownRef}>

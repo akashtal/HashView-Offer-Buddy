@@ -87,9 +87,9 @@ export async function getCurrentLocation(): Promise<Coordinates | null> {
                 resolve(null);
             },
             {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 300000, // 5 minutes
+                enableHighAccuracy: false, // Start with low accuracy for faster response on mobile
+                timeout: 30000, // 30 seconds - longer for mobile devices
+                maximumAge: 300000, // 5 minutes - use cached location
             }
         );
     });
@@ -165,3 +165,77 @@ export const INDIAN_CITIES = [
     { name: 'Patna', state: 'Bihar', coordinates: { latitude: 25.5941, longitude: 85.1376 } },
     { name: 'Vadodara', state: 'Gujarat', coordinates: { latitude: 22.3072, longitude: 73.1812 } },
 ];
+
+/**
+ * Reverse geocode coordinates to get city, state, country using Google API
+ * @param coords Coordinates to reverse geocode
+ * @returns LocationData with city, state, country
+ */
+export async function reverseGeocode(coords: Coordinates): Promise<LocationData> {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    console.log('🌍 Reverse geocoding coordinates:', coords);
+
+    if (!apiKey) {
+        console.warn('⚠️ Google Maps API key not found, using coordinates only');
+        return {
+            coordinates: coords,
+            city: `Location (${coords.latitude.toFixed(2)}, ${coords.longitude.toFixed(2)})`,
+            country: 'India'
+        };
+    }
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=${apiKey}`;
+        console.log('🌍 Calling Google Geocoding API...');
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+            console.error('❌ Geocoding failed:', data.status);
+            throw new Error('Geocoding failed');
+        }
+
+        console.log('✅ Geocoding response:', data.results[0]);
+
+        // Extract address components
+        const result = data.results[0];
+        let city = '';
+        let state = '';
+        let country = '';
+
+        for (const component of result.address_components) {
+            const types = component.types;
+
+            if (types.includes('locality')) {
+                city = component.long_name;
+            } else if (types.includes('administrative_area_level_2') && !city) {
+                city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+                state = component.long_name;
+            } else if (types.includes('country')) {
+                country = component.long_name;
+            }
+        }
+
+        const locationData: LocationData = {
+            coordinates: coords,
+            city: city || 'Unknown City',
+            state: state,
+            country: country || 'India',
+            address: result.formatted_address
+        };
+
+        console.log('✅ Reverse geocoded to:', locationData);
+        return locationData;
+    } catch (error) {
+        console.error('❌ Reverse geocoding error:', error);
+        // Fallback to coordinates
+        return {
+            coordinates: coords,
+            city: `Location (${coords.latitude.toFixed(2)}, ${coords.longitude.toFixed(2)})`,
+            country: 'India'
+        };
+    }
+}

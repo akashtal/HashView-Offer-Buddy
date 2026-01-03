@@ -26,13 +26,17 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     const hasAttemptedAutoDetect = useRef(false);
 
     const requestLocation = useCallback(async () => {
+        console.log('🔵 Location request started...');
         setIsLoading(true);
         setError(null);
 
         try {
+            console.log('🔵 Calling getCurrentLocation()...');
             const coords = await getCurrentLocation();
+            console.log('✅ Location received:', coords);
 
             if (!coords) {
+                console.error('❌ No coordinates returned');
                 setError('Unable to get your location. Please select a city manually.');
                 setIsLoading(false);
                 return;
@@ -41,16 +45,34 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             // Store the timestamp of this location request
             localStorage.setItem('lastLocationRequest', Date.now().toString());
 
-            // For now, just store coordinates
-            // In future, can use Google Geocoding API for reverse geocoding
-            setLocation({
-                coordinates: coords,
-                city: 'Detected Location',
-            });
-        } catch (err) {
-            setError('Location access denied. Please select a city manually.');
+            // Use reverse geocoding to get actual city name
+            console.log('🌍 Reverse geocoding coordinates...');
+            const { reverseGeocode } = await import('@/lib/location-utils');
+            const locationData = await reverseGeocode(coords);
+
+            console.log('✅ Setting location:', locationData);
+            setLocation(locationData);
+        } catch (err: any) {
+            console.error('❌ Location error:', err);
+            console.error('Error code:', err?.code);
+            console.error('Error message:', err?.message);
+
+            // Better error messages based on error type
+            if (err?.code === 1) {
+                // PERMISSION_DENIED
+                setError('📍 Please turn on your location and grant permission to continue.');
+            } else if (err?.code === 2) {
+                // POSITION_UNAVAILABLE
+                setError('📍 Turn on your location to find nearby products.');
+            } else if (err?.code === 3) {
+                // TIMEOUT
+                setError('📍 Location request timed out. Please turn on your location and try again.');
+            } else {
+                setError('📍 Turn on your location to see nearby products.');
+            }
         } finally {
             setIsLoading(false);
+            console.log('🔵 Location request finished');
         }
     }, []);
 

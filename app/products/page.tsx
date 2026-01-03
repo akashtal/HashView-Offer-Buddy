@@ -19,6 +19,7 @@ export default function ProductsPage() {
     const [priceMax, setPriceMax] = useState('');
     const [sortBy, setSortBy] = useState('distance');
     const [radius, setRadius] = useState(50); // Default 50km
+    const [showFilters, setShowFilters] = useState(false);
     const { location } = useLocation();
 
     useEffect(() => {
@@ -34,11 +35,13 @@ export default function ProductsPage() {
                 sortBy: sortBy || 'distance'
             };
 
-            // Add location params if available
+            // Add location params if available - but don't enforce strict radius filtering
+            // This allows showing all products sorted by distance when none in radius
             if (location?.coordinates) {
                 params.latitude = location.coordinates.latitude;
                 params.longitude = location.coordinates.longitude;
-                params.radius = radius;
+                // Add radius as preference, not hard limit
+                params.maxDistance = radius * 10000; // Very large to ensure we get products
             }
 
             // Add filters
@@ -51,9 +54,9 @@ export default function ProductsPage() {
             const productsData = productsRes.data.data.products;
             setProducts(productsData);
 
-            // Fetch categories
+            // Fetch categories - Fixed data extraction
             const categoriesRes = await axios.get('/api/categories?parentOnly=true');
-            const categoriesData = categoriesRes.data.data;
+            const categoriesData = categoriesRes.data.data?.categories || categoriesRes.data.data || [];
             setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
             setIsLoading(false);
@@ -90,6 +93,12 @@ export default function ProductsPage() {
         });
     }
 
+    // Check how many products are within the selected radius
+    const productsWithinRadius = filtered.filter((p) => {
+        if (!p.distance) return true; // Include products without distance
+        return p.distance <= radius;
+    });
+
     // Sorting
     if (sortBy) {
         const sorted = [...filtered];
@@ -111,11 +120,22 @@ export default function ProductsPage() {
             case 'newest':
                 sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                 break;
+            case 'distance':
+            default:
+                // Sort by distance (nearest first)
+                sorted.sort((a, b) => {
+                    if (!a.distance && !b.distance) return 0;
+                    if (!a.distance) return 1;
+                    if (!b.distance) return -1;
+                    return a.distance - b.distance;
+                });
+                break;
         }
         filtered = sorted;
     }
 
     const filteredProducts = filtered;
+    const showNearbyMessage = location?.coordinates && productsWithinRadius.length === 0 && filteredProducts.length > 0;
 
     const clearFilters = () => {
         setSearchQuery('');
@@ -128,117 +148,151 @@ export default function ProductsPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Radius Filter Only */}
-            <div className="bg-white border-b border-gray-200 py-4 sticky top-20 z-30">
-                <div className="container-custom">
-                    <div className="flex items-center justify-between">
-                        <RadiusFilter value={radius} onChange={setRadius} />
-                        {location?.coordinates && (
-                            <p className="text-xs text-gray-500">
-                                {products.length} products within {radius}km
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Search & Filter Section */}
-            <div className="bg-white border-b border-gray-200 py-6">
-                <div className="container-custom">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        {/* Search Bar */}
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                placeholder="Search for products, services, suppliers..."
-                                className="w-full pl-11 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-transparent"
-                            />
-                        </div>
-
-                        {/* Sort Dropdown */}
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-transparent bg-white"
-                        >
-                            <option value="distance">Nearest First</option>
-                            <option value="price_low">Price: Low to High</option>
-                            <option value="price_high">Price: High to Low</option>
-                            <option value="newest">Newest First</option>
-                            <option value="popular">Most Popular</option>
-                        </select>
-
-                        {/* Search Button */}
+            {/* Horizontal Filter Bar - Fully Responsive */}
+            <div className="bg-white border-b border-gray-200 sticky top-20 z-30 shadow-sm">
+                <div className="container-custom py-3">
+                    {/* Scrollable Filter Chips Container */}
+                    <div className="flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-hide">
+                        {/* Filter Button */}
                         <button
-                            onClick={handleSearch}
-                            className="indiamart-btn-primary px-8 whitespace-nowrap flex items-center gap-2"
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`flex items-center gap-2 px-4 py-2 md:py-2.5 bg-white border-2 rounded-full font-medium hover:border-gray-400 transition-all whitespace-nowrap flex-shrink-0 ${showFilters ? 'border-[#FDB913] bg-[#FFF9E6]' : 'border-gray-300'
+                                }`}
+                            aria-label="Toggle filters"
                         >
-                            <Search size={18} />
-                            Search
+                            <SlidersHorizontal size={16} className="md:w-[18px] md:h-[18px]" />
+                            <span className="text-sm md:text-base">Filter</span>
                         </button>
 
-                        {/* Clear Filters */}
-                        {(searchQuery || selectedCategory || priceMin || priceMax || sortBy) && (
+                        {/* Sort By Dropdown */}
+                        <div className="relative flex-shrink-0">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="appearance-none pl-4 pr-9 py-2 md:py-2.5 bg-white border-2 border-gray-300 rounded-full font-medium hover:border-gray-400 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDB913] whitespace-nowrap text-sm md:text-base"
+                                aria-label="Sort products"
+                            >
+                                <option value="distance">Sort by: Nearest</option>
+                                <option value="price-low">Sort by: Price Low</option>
+                                <option value="price-high">Sort by: Price High</option>
+                                <option value="newest">Sort by: Newest</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600" size={16} />
+                        </div>
+
+                        {/* Radius Filter Chip */}
+                        <div className="flex-shrink-0">
+                            <RadiusFilter value={radius} onChange={setRadius} />
+                        </div>
+
+                        {/* Active Category Filter Chip */}
+                        {selectedCategory && (
+                            <button
+                                onClick={() => setSelectedCategory('')}
+                                className="flex items-center gap-2 px-4 py-2 md:py-2.5 bg-[#FDB913] text-black font-medium rounded-full hover:bg-[#E5A600] transition-all whitespace-nowrap flex-shrink-0 shadow-sm text-sm md:text-base"
+                                aria-label="Remove category filter"
+                            >
+                                <span className="max-w-[120px] md:max-w-none truncate">
+                                    {categories.find(c => c._id === selectedCategory)?.name}
+                                </span>
+                                <span className="text-lg leading-none">×</span>
+                            </button>
+                        )}
+
+                        {/* Active Price Filter Chip */}
+                        {(priceMin || priceMax) && (
+                            <button
+                                onClick={() => {
+                                    setPriceMin('');
+                                    setPriceMax('');
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 md:py-2.5 bg-[#FDB913] text-black font-medium rounded-full hover:bg-[#E5A600] transition-all whitespace-nowrap flex-shrink-0 shadow-sm text-sm md:text-base"
+                                aria-label="Remove price filter"
+                            >
+                                ₹{priceMin || '0'} - ₹{priceMax || '∞'}
+                                <span className="text-lg leading-none">×</span>
+                            </button>
+                        )}
+
+                        {/* Clear All - Only show if filters are active */}
+                        {(selectedCategory || priceMin || priceMax || sortBy !== 'distance') && (
                             <button
                                 onClick={clearFilters}
-                                className="px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap"
+                                className="ml-auto px-4 py-2 text-sm md:text-base text-gray-600 hover:text-gray-900 font-medium whitespace-nowrap flex-shrink-0 transition-colors"
+                                aria-label="Clear all filters"
                             >
                                 Clear All
                             </button>
                         )}
                     </div>
 
-                    {/* Price Range Filter */}
-                    <div className="flex items-center gap-4 mt-4">
-                        <span className="text-sm font-medium text-gray-700">Price Range:</span>
-                        <input
-                            type="number"
-                            value={priceMin}
-                            onChange={(e) => setPriceMin(e.target.value)}
-                            placeholder="Min"
-                            className="w-32 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-transparent"
-                        />
-                        <span className="text-gray-500">—</span>
-                        <input
-                            type="number"
-                            value={priceMax}
-                            onChange={(e) => setPriceMax(e.target.value)}
-                            placeholder="Max"
-                            className="w-32 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-transparent"
-                        />
-                    </div>
+                    {/* Results count - Mobile optimized */}
+                    {location?.coordinates && filteredProducts.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2 px-1">
+                            {productsWithinRadius.length > 0
+                                ? `${productsWithinRadius.length} product${productsWithinRadius.length !== 1 ? 's' : ''} within ${radius}km`
+                                : `Showing ${filteredProducts.length} products from nearby areas`
+                            }
+                        </p>
+                    )}
                 </div>
             </div>
 
-            {/* Categories Bar */}
-            <div className="bg-white border-b border-gray-200 py-4 sticky top-20 z-30">
-                <div className="container-custom">
-                    <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-                        <button
-                            onClick={() => setSelectedCategory('')}
-                            className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${!selectedCategory
-                                ? 'bg-[#FDB913] text-black'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            All Products
-                        </button>
-                        {Array.isArray(categories) && categories.map((cat) => (
-                            <button
-                                key={cat._id}
-                                onClick={() => setSelectedCategory(cat._id)}
-                                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${selectedCategory === cat._id
-                                    ? 'bg-[#FDB913] text-black'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
+            {/* Expandable Filter Panel - Smooth Animation */}
+            <div
+                className={`bg-gray-50 border-b border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+            >
+                <div className="container-custom py-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Category Filter */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-[#FDB913] transition-all text-sm md:text-base"
                             >
-                                {cat.name}
+                                <option value="">All Categories</option>
+                                {Array.isArray(categories) && categories.map((cat) => (
+                                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Price Range - Min */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Min Price</label>
+                            <input
+                                type="number"
+                                value={priceMin}
+                                onChange={(e) => setPriceMin(e.target.value)}
+                                placeholder="₹ 0"
+                                className="w-full px-3 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-[#FDB913] transition-all text-sm md:text-base"
+                            />
+                        </div>
+
+                        {/* Price Range - Max */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Max Price</label>
+                            <input
+                                type="number"
+                                value={priceMax}
+                                onChange={(e) => setPriceMax(e.target.value)}
+                                placeholder="₹ No Limit"
+                                className="w-full px-3 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-[#FDB913] transition-all text-sm md:text-base"
+                            />
+                        </div>
+
+                        {/* Apply Button */}
+                        <div className="flex items-end">
+                            <button
+                                onClick={() => setShowFilters(false)}
+                                className="w-full indiamart-btn-primary py-2.5 text-sm md:text-base font-bold shadow-md hover:shadow-lg transition-all"
+                            >
+                                Apply Filters
                             </button>
-                        ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -246,16 +300,52 @@ export default function ProductsPage() {
             {/* Products Grid */}
             <section className="py-8">
                 <div className="container-custom">
+                    {/* Location Display Banner */}
+                    {location?.city && (
+                        <div className="bg-gradient-to-r from-[#FDB913] to-[#E5A600] text-black px-6 py-4 rounded-lg mb-6 shadow-md">
+                            <div className="flex items-center gap-3">
+                                <MapPin size={24} className="flex-shrink-0" />
+                                <div>
+                                    <div className="font-bold text-lg">
+                                        {location.city}{location.state ? `, ${location.state}` : ''}
+                                    </div>
+                                    <div className="text-sm opacity-90">
+                                        Showing products near your location
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between mb-6">
                         <h1 className="indiamart-section-title mb-0">
                             {filteredProducts.length} Products Available
                         </h1>
-                        {location?.city && (
-                            <p className="text-gray-600">
-                                Showing products near <span className="font-semibold">{location.city}</span>
-                            </p>
-                        )}
                     </div>
+
+                    {/* No Products at Location Message */}
+                    {showNearbyMessage && (
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg mb-6">
+                            <div className="flex items-start gap-3">
+                                <SlidersHorizontal className="text-blue-500 flex-shrink-0 mt-1" size={24} />
+                                <div>
+                                    <h3 className="font-bold text-blue-900 mb-2">
+                                        No products found at your exact location
+                                    </h3>
+                                    <p className="text-blue-800 text-sm mb-3">
+                                        We couldn&apos;t find products within {radius}km of {location.city}.
+                                        Showing products from nearby areas instead.
+                                    </p>
+                                    <button
+                                        onClick={() => setRadius(radius + 50)}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
+                                    >
+                                        Increase search radius to {radius + 50}km
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {isLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -263,7 +353,7 @@ export default function ProductsPage() {
                                 <div key={i} className="shimmer h-80 rounded-lg"></div>
                             ))}
                         </div>
-                    ) : filteredProducts.length === 0 ? (
+                    ) : filteredProducts.length === 0 && products.length === 0 ? (
                         <div className="text-center py-20">
                             <SlidersHorizontal size={64} className="mx-auto text-gray-300 mb-4" />
                             <h2 className="text-2xl font-bold text-gray-700 mb-2">No Products Found</h2>

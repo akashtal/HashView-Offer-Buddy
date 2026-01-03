@@ -122,11 +122,20 @@
 }
 
 .category-item {
-  @apply flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer;
+  @apply flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer outline-none focus:outline-none;
+  width: 100px; /* Fixed width for consistency */
 }
 
 .category-image {
   @apply w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-transparent hover:border-[#FD9139] transition-all;
+}
+
+.category-name {
+  @apply text-center text-xs md:text-sm font-medium line-clamp-2;
+  max-width: 100px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Filter chips */
