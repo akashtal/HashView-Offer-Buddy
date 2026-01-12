@@ -211,6 +211,10 @@ export async function POST(request: NextRequest) {
         state: validatedData.location.state,
         country: validatedData.location.country,
         pincode: validatedData.location.pincode,
+        coordinates: {
+          type: 'Point',
+          coordinates: validatedData.location.coordinates
+        }
       },
     });
 

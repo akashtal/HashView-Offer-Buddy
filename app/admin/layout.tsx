@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         if (!authLoading && (!isAuthenticated || user?.role !== 'admin')) {
-            router.push('/login');
+            router.push('/signin');
         }
     }, [isAuthenticated, user, authLoading, router]);
 
@@ -46,8 +46,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             key={item.name}
                             href={item.href}
                             className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${isActive(item.href)
-                                    ? 'bg-primary text-white'
-                                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                ? 'bg-primary text-white'
+                                : 'text-gray-300 hover:bg-white/10 hover:text-white'
                                 }`}
                         >
                             <item.icon className="w-5 h-5" />
@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </div>
                     <button
-                        onClick={() => logout().then(() => router.push('/login'))}
+                        onClick={() => logout().then(() => router.push('/signin'))}
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:bg-white/10 transition-colors"
                     >
                         <FiLogOut className="w-5 h-5" />

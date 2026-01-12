@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     // Location parameters
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
-    const radiusKm = parseFloat(searchParams.get('radius') || '50'); // Default 50km
-    const maxRadius = Math.min(radiusKm, 100); // Cap at 100km for performance
+    const radiusKm = parseFloat(searchParams.get('radius') || '10000000'); // Default 10M km to show all products (even those with no location)
+    const maxRadius = radiusKm; // Removed 100km cap to allow finding distant products
 
     // Filter parameters
     const category = searchParams.get('category');
@@ -120,12 +120,12 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        // Stage 3: Filter by radius
-        {
-          $match: {
-            distance: { $lte: maxRadius }
-          }
-        }
+        // Stage 3: Filter by radius - REMOVED to show all products sorted by distance
+        // {
+        //   $match: {
+        //     distance: { $lte: maxRadius }
+        //   }
+        // }
       ];
 
       // Add product filters

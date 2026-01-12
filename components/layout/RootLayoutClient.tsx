@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 
 export default function RootLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isHomePage = pathname === '/';
+  const isAuthPage = ['/signin', '/signup'].includes(pathname);
 
   return (
     <LocationProvider>

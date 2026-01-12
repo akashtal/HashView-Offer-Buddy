@@ -1,42 +1,38 @@
 [
   {
-    "_id": "6950591782ad33c72dce0b2a",
+    "_id": "6959622d4855b4ef5cfeb4aa",
     "name": "Electronics"
   },
   {
-    "_id": "6950591782ad33c72dce0b2b",
+    "_id": "6959622d4855b4ef5cfeb4ab",
     "name": "Home & Kitchen"
   },
   {
-    "_id": "6950591782ad33c72dce0b2c",
+    "_id": "6959622d4855b4ef5cfeb4ac",
     "name": "Clothing, Shoes & Jewelry"
   },
   {
-    "_id": "6950591782ad33c72dce0b2d",
+    "_id": "6959622d4855b4ef5cfeb4ad",
     "name": "Beauty & Personal Care"
   },
   {
-    "_id": "6950591782ad33c72dce0b2e",
+    "_id": "6959622d4855b4ef5cfeb4ae",
     "name": "Health & Household"
   },
   {
-    "_id": "6950591782ad33c72dce0b2f",
+    "_id": "6959622d4855b4ef5cfeb4af",
     "name": "Toys & Games"
   },
   {
-    "_id": "6950591782ad33c72dce0b30",
+    "_id": "6959622d4855b4ef5cfeb4b0",
     "name": "Books, Music, Movies & TV"
   },
   {
-    "_id": "6950591782ad33c72dce0b31",
+    "_id": "6959622d4855b4ef5cfeb4b1",
     "name": "Pet Supplies"
   },
   {
-    "_id": "6950591782ad33c72dce0b32",
+    "_id": "6959622d4855b4ef5cfeb4b2",
     "name": "Sports & Outdoors"
-  },
-  {
-    "_id": "69505c248e3268e850da5c04",
-    "name": "Car"
   }
 ]

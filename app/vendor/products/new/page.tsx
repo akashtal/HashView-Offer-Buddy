@@ -38,7 +38,7 @@ export default function NewProductPage() {
     // Auth & Profile Check
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
-            router.push('/login');
+            router.push('/signin');
             return;
         }
         fetchMyProfile().catch(() => router.push('/vendor/onboarding'));

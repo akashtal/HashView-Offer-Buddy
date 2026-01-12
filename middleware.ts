@@ -12,8 +12,8 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/_next') ||
         pathname.startsWith('/static') ||
         pathname.startsWith('/api/auth') || // Login/Register APIs must be public
-        pathname === '/login' ||
-        pathname === '/register' ||
+        pathname === '/signin' ||
+        pathname === '/signup' ||
         pathname === '/' ||
         pathname === '/pricing' ||
         pathname.startsWith('/products') || // Public product view
@@ -28,14 +28,14 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get('token')?.value;
 
     // 3. Define protected routes patterns
-    const isVendorRoute = pathname.startsWith('/vendor');
-    const isAdminRoute = pathname.startsWith('/admin');
+    const isVendorRoute = pathname.startsWith('/vendor/');
+    const isAdminRoute = pathname.startsWith('/admin/');
     const isProtectedApi = pathname.startsWith('/api') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/public');
 
     // If no token and trying to access protected route
     if (!token) {
         if (isVendorRoute || isAdminRoute) {
-            const url = new URL('/login', request.url);
+            const url = new URL('/signin', request.url);
             url.searchParams.set('from', pathname);
             return NextResponse.redirect(url);
         }
@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
     } catch (error) {
         // Token invalid or expired
         if (isVendorRoute || isAdminRoute) {
-            return NextResponse.redirect(new URL('/login', request.url));
+            return NextResponse.redirect(new URL('/signin', request.url));
         }
         return NextResponse.next();
     }

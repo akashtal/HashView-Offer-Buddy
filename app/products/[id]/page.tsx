@@ -15,11 +15,17 @@ import {
   MessageSquare,
   Star,
   ChevronLeft,
-  ZoomIn
+  ZoomIn,
+  ShoppingCart,
+  Minus,
+  Plus
 } from 'lucide-react';
 import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
 import { calculateDistance } from '@/lib/location-utils';
+import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -31,6 +37,14 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+
+  // Stores
+  const { addItem } = useCartStore();
+  const { toggleItem, isLiked } = useWishlistStore();
+  const { showToast, ToastContainer } = useToast();
+
+  const liked = isLiked(productId);
 
   useEffect(() => {
     loadProductData();
@@ -72,6 +86,52 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    addItem({
+      productId: product._id,
+      title: product.title,
+      price: product.price?.discounted || product.price?.original || 0,
+      image: product.images?.[0] || '',
+      vendorId: product.vendorId?._id,
+    }, quantity);
+
+    showToast(`Added ${quantity} ${product.title} to cart!`, 'success');
+    setQuantity(1); // Reset quantity
+  };
+
+  const handleToggleWishlist = () => {
+    toggleItem(productId);
+    showToast(
+      liked ? 'Removed from wishlist' : 'Added to wishlist!',
+      liked ? 'info' : 'success'
+    );
+  };
+
+  const handleShare = async () => {
+    if (!product) return;
+
+    const shareData = {
+      title: product.title,
+      text: `Check out ${product.title} on Offer Buddy!`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        showToast('Shared successfully!', 'success');
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(window.location.href);
+        showToast('Link copied to clipboard!', 'success');
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white p-4">
@@ -98,6 +158,9 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#F3F3F3]">
+      {/* Toast Notifications */}
+      <ToastContainer />
+
       {/* Breadcrumbs */}
       <div className="bg-white border-b border-gray-200 py-3">
         <div className="container-custom flex items-center text-sm text-gray-500 overflow-x-auto whitespace-nowrap">
@@ -138,10 +201,17 @@ export default function ProductDetailPage() {
 
                   {/* Action Buttons */}
                   <div className="absolute top-3 right-3 flex gap-2">
-                    <button className="p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg hover:bg-white transition-all hover:scale-110 text-gray-600 hover:text-red-500">
-                      <Heart size={18} />
+                    <button
+                      onClick={handleToggleWishlist}
+                      className={`p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg hover:bg-white transition-all hover:scale-110 ${liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
+                        }`}
+                    >
+                      <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
                     </button>
-                    <button className="p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg hover:bg-white transition-all hover:scale-110 text-gray-600">
+                    <button
+                      onClick={handleShare}
+                      className="p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg hover:bg-white transition-all hover:scale-110 text-gray-600"
+                    >
                       <Share2 size={18} />
                     </button>
                   </div>
@@ -220,6 +290,37 @@ export default function ProductDetailPage() {
 
               {/* Lead Form / Buttons */}
               <div className="bg-[#FFF9E6] p-4 rounded-lg border border-[#FFEBA1] mb-6">
+                {/* Quantity Selector & Add to Cart */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium mr-3">Quantity:</span>
+                    <div className="flex items-center border border-gray-300 rounded-lg">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="p-2 hover:bg-gray-100 transition-colors"
+                        disabled={quantity <= 1}
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="px-4 py-2 min-w-[50px] text-center font-medium">{quantity}</span>
+                      <button
+                        onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                        className="p-2 hover:bg-gray-100 transition-colors"
+                        disabled={quantity >= 10}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#FDB913] hover:bg-[#E5A600] text-black font-bold px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg"
+                  >
+                    <ShoppingCart size={20} />
+                    Add to Cart
+                  </button>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => setShowEnquiryModal(true)}

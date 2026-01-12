@@ -30,7 +30,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!isAuthenticated) {
-            router.push('/login');
+            router.push('/signin');
         } else if (user) {
             setFormData({
                 name: user.name,
@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
     const handleLogout = async () => {
         await logout();
-        router.push('/login');
+        router.push('/signin');
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -108,7 +108,7 @@ export default function ProfilePage() {
                                 <h2 className="text-xl font-bold text-secondary">{user.name}</h2>
                                 <p className="text-gray-500 mb-2">{user.email}</p>
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'vendor' ? 'bg-purple-100 text-purple-800' :
-                                        user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                                    user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                                     }`}>
                                     <FiShield className="mr-1" /> {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                                 </span>

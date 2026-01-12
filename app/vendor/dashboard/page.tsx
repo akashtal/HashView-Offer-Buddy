@@ -38,7 +38,7 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'vendor') {
-      router.push('/login');
+      router.push('/signin');
       return;
     }
 

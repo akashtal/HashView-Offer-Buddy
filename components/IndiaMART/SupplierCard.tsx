@@ -111,7 +111,7 @@ export default function SupplierCard({
                     Contact
                 </button>
                 <Link
-                    href={`/vendor/${id}`}
+                    href={`/vendors/${id}`}
                     className="flex-1 indiamart-btn-outline py-2.5 text-sm text-center"
                 >
                     View Profile

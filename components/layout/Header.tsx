@@ -1,18 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiMapPin, FiUser, FiSearch, FiTag, FiHelpCircle, FiShoppingCart, FiChevronDown, FiBriefcase, FiGrid } from 'react-icons/fi';
+import { FiMapPin, FiUser, FiSearch, FiTag, FiHelpCircle, FiShoppingCart, FiChevronDown, FiBriefcase, FiGrid, FiHeart } from 'react-icons/fi';
 import { useAuthStore } from '@/store/authStore';
 import LocationSearch from '@/components/ui/LocationSearch';
+import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
 
 export default function Header() {
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuthStore();
+
+  // Client-side only counts to avoid hydration errors
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Subscribe to store changes
+    const unsubCart = useCartStore.subscribe(
+      (state) => setCartCount(state.getItemCount())
+    );
+    const unsubWishlist = useWishlistStore.subscribe(
+      (state) => setWishlistCount(state.getCount())
+    );
+
+    // Set initial values
+    setCartCount(useCartStore.getState().getItemCount());
+    setWishlistCount(useWishlistStore.getState().getCount());
+
+    return () => {
+      unsubCart();
+      unsubWishlist();
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -81,6 +108,28 @@ export default function Header() {
                 <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[9px] px-1.5 py-0.5 rounded font-bold">
                   NEW
                 </span>
+              </Link>
+
+              {/* Wishlist/Likes */}
+              <Link href="/wishlist" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors relative">
+                <FiHeart size={18} />
+                <span className="text-sm font-medium">Wishlist</span>
+                {mounted && wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Cart */}
+              <Link href="/cart" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors relative">
+                <FiShoppingCart size={18} />
+                <span className="text-sm font-medium">Cart</span>
+                {mounted && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
 
               {/* User Profile or Sign In */}
@@ -157,12 +206,44 @@ export default function Header() {
         <div className="px-4 py-4">
           {/* Top Bar: Location + User */}
           <div className="flex items-center justify-between mb-4">
+            {/* Logo - Mobile */}
+            <Link href="/" className="mr-3 flex-shrink-0">
+              <div className="relative w-10 h-10 bg-white rounded-full overflow-hidden p-1">
+                <Image
+                  src="/logo.jpeg"
+                  alt="Offer Buddy"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            </Link>
+
             {/* Location Search - Mobile Version */}
             <div className="flex-1">
               <LocationSearch className="[&>button]:bg-transparent [&>button]:border-0 [&>button]:p-0 [&>button]:hover:bg-transparent [&>button]:text-white [&_span]:text-white [&_svg]:text-primary" />
             </div>
-            <div className="hidden md:flex items-center gap-2">
-              <Link href={isAuthenticated ? "/profile" : "/signin"} className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              {/* Wishlist - Mobile */}
+              <Link
+                href="/wishlist"
+                className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm relative"
+              >
+                <FiHeart size={20} className="text-gray-700" />
+                {mounted && wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center shadow-sm">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Profile - Mobile */}
+              <Link
+                href={isAuthenticated
+                  ? (user?.role === 'vendor' ? '/vendor/dashboard' : user?.role === 'admin' ? '/admin/dashboard' : '/profile')
+                  : '/signin'
+                }
+                className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm"
+              >
                 <FiUser size={20} className="text-gray-700" />
               </Link>
             </div>

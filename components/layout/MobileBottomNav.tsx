@@ -2,12 +2,31 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiHome, FiGrid, FiTag, FiUser, FiUsers } from 'react-icons/fi';
+import { FiHome, FiGrid, FiTag, FiUser, FiUsers, FiShoppingCart } from 'react-icons/fi';
+import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
+import { useState, useEffect } from 'react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { isAuthenticated, user } = useAuthStore();
+  const cart = useCartStore();
+  const [mounted, setMounted] = useState(false);
 
-  const navItems = [
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const cartCount = mounted ? cart.getItemCount() : 0;
+
+  interface NavItem {
+    name: string;
+    href: string;
+    icon: any;
+    badge?: number;
+  }
+
+  const navItems: NavItem[] = [
     {
       name: 'Home',
       href: '/',
@@ -29,9 +48,10 @@ export default function MobileBottomNav() {
       icon: FiTag,
     },
     {
-      name: 'Profile',
-      href: '/profile',
-      icon: FiUser,
+      name: 'Cart',
+      href: '/cart',
+      icon: FiShoppingCart,
+      badge: cartCount,
     },
   ];
 
@@ -55,7 +75,14 @@ export default function MobileBottomNav() {
               href={item.href}
               className={`mobile-bottom-nav-item ${active ? 'active' : ''}`}
             >
-              <Icon className="mobile-bottom-nav-icon" size={24} />
+              <div className="relative">
+                <Icon className="mobile-bottom-nav-icon" size={24} />
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-sm">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
               <span className="mobile-bottom-nav-label">{item.name}</span>
             </Link>
           );

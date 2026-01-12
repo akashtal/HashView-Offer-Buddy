@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Search, Navigation, ChevronDown } from 'lucide-react';
 import { INDIAN_CITIES } from '@/lib/location-utils';
 import { useLocation } from '@/lib/LocationContext';
+import PlacesAutocomplete from './PlacesAutocomplete';
 
 interface LocationSearchProps {
     onLocationSelect?: (location: { latitude: number; longitude: number; city: string }) => void;
@@ -24,6 +25,9 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
             city.state.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : INDIAN_CITIES;
+
+    // Debug log
+    console.log(`🔍 Search query: "${searchQuery}", Found ${filteredCities.length} cities`);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -57,6 +61,43 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
 
         setShowDropdown(false);
         setSearchQuery('');
+    };
+
+    const handlePlaceSelect = async (placeId: string, description: string) => {
+        console.log('📍 Place selected:', description);
+        try {
+            // Fetch place details to get coordinates
+            const response = await fetch(`/api/google/places/details?placeId=${placeId}`);
+            const data = await response.json();
+
+            if (data.coordinates) {
+                const [lng, lat] = data.coordinates;
+                const locationData = {
+                    coordinates: { latitude: lat, longitude: lng },
+                    city: data.city || description.split(',')[0],
+                    state: data.state,
+                    country: data.country || 'India',
+                    address: data.formattedAddress
+                };
+
+                console.log('✅ Setting location from place:', locationData);
+                setManualLocation(locationData);
+
+                if (onLocationSelect) {
+                    onLocationSelect({
+                        latitude: lat,
+                        longitude: lng,
+                        city: data.city || description.split(',')[0]
+                    });
+                }
+
+                setShowDropdown(false);
+                setSearchQuery('');
+            }
+        } catch (error) {
+            console.error('❌ Error getting place details:', error);
+            alert('Failed to get location details. Please try again.');
+        }
     };
 
     const handleUseMyLocation = async () => {
@@ -206,25 +247,43 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
                         </div>
                     </div>
 
-                    {/* Cities List */}
+                    {/* Results List - Google Places + Cities */}
                     <div className="overflow-y-auto flex-1">
-                        {filteredCities.length > 0 ? (
-                            filteredCities.map((city) => (
-                                <button
-                                    key={`${city.name}-${city.state}`}
-                                    onClick={() => handleCitySelect(city)}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                                >
-                                    <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900">{city.name}</p>
-                                        <p className="text-xs text-gray-500">{city.state}</p>
+                        {/* Google Places Results (when user types) */}
+                        {searchQuery.length >= 2 && (
+                            <PlacesAutocomplete
+                                searchQuery={searchQuery}
+                                onPlaceSelect={handlePlaceSelect}
+                            />
+                        )}
+
+                        {/* Fallback to static cities (when no search or as additional options) */}
+                        {(searchQuery.length === 0 || searchQuery.length >= 2) && filteredCities.length > 0 && (
+                            <>
+                                {searchQuery.length >= 2 && (
+                                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-t border-gray-200">
+                                        Popular Cities
                                     </div>
-                                </button>
-                            ))
-                        ) : (
+                                )}
+                                {filteredCities.slice(0, 5).map((city) => (
+                                    <button
+                                        key={`${city.name}-${city.state}`}
+                                        onClick={() => handleCitySelect(city)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                                    >
+                                        <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900">{city.name}</p>
+                                            <p className="text-xs text-gray-500">{city.state}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </>
+                        )}
+
+                        {searchQuery && filteredCities.length === 0 && searchQuery.length < 2 && (
                             <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                                No cities found
+                                Type at least 2 characters to search
                             </div>
                         )}
                     </div>

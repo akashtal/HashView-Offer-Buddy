@@ -40,7 +40,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     // Auth & Profile Check
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
-            router.push('/login');
+            router.push('/signin');
             return;
         }
         fetchMyProfile().catch(() => router.push('/vendor/onboarding'));

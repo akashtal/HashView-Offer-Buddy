@@ -12,7 +12,7 @@ export default function AuthLayout({
                 <div className="text-center">
                     <Link href="/" className="inline-block">
                         <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                            <span className="text-[#FDB913]">India</span>MART
+                            <span className="text-[#FDB913]">Offer</span>Buddy
                             <span className="text-xs font-normal ml-1 bg-gray-100 px-2 py-0.5 rounded text-gray-500">Clone</span>
                         </h1>
                     </Link>

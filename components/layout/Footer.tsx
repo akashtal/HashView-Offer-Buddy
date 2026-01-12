@@ -90,12 +90,12 @@ export default function Footer() {
             <h3 className="font-semibold text-lg mb-4">For Business</h3>
             <ul className="space-y-2 text-gray-400">
               <li>
-                <Link href="/vendor/register" className="hover:text-primary transition-colors">
+                <Link href="/signup" className="hover:text-primary transition-colors">
                   Register Your Shop
                 </Link>
               </li>
               <li>
-                <Link href="/vendor/login" className="hover:text-primary transition-colors">
+                <Link href="/signin" className="hover:text-primary transition-colors">
                   Vendor Login
                 </Link>
               </li>

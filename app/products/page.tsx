@@ -41,7 +41,7 @@ export default function ProductsPage() {
                 params.latitude = location.coordinates.latitude;
                 params.longitude = location.coordinates.longitude;
                 // Add radius as preference, not hard limit
-                params.maxDistance = radius * 10000; // Very large to ensure we get products
+                params.radius = 10000000; // Very large to explicitly ensure we get all products (including those with no location)
             }
 
             // Add filters

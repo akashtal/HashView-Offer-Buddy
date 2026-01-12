@@ -38,7 +38,7 @@ export default function PricingPage() {
                             <span>Standard support</span>
                         </li>
                     </ul>
-                    <Link href="/register?role=vendor">
+                    <Link href="/signup?role=vendor">
                         <Button variant="outline" fullWidth>Get Started</Button>
                     </Link>
                 </div>
@@ -71,7 +71,7 @@ export default function PricingPage() {
                             <span>Priority support</span>
                         </li>
                     </ul>
-                    <Link href="/register?role=vendor">
+                    <Link href="/signup?role=vendor">
                         <Button variant="primary" fullWidth>Start Free Trial</Button>
                     </Link>
                 </div>
