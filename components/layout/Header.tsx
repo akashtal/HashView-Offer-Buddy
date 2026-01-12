@@ -52,12 +52,12 @@ export default function Header() {
       {/* Desktop Header */}
       <header className="hidden md:block sticky top-0 z-40 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-20 gap-4">
             {/* Left Section: Logo + Location */}
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6 flex-shrink-0">
               {/* Logo */}
               <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-                <div className="relative w-12 h-12">
+                <div className="relative w-10 h-10">
                   <Image
                     src="/logo.jpeg"
                     alt="Offer Buddy"
@@ -65,137 +65,136 @@ export default function Header() {
                     className="object-contain"
                   />
                 </div>
-                <div>
+                <div className="hidden lg:block">
                   <span className="text-xl font-bold text-secondary">offer</span>
                   <span className="text-xl font-bold text-primary">buddy</span>
                 </div>
               </Link>
 
-              {/* Location Search Component */}
-              <LocationSearch className="min-w-[200px]" />
+              {/* Location Search Component - More compact */}
+              <div className="max-w-[180px]">
+                <LocationSearch className="text-sm" />
+              </div>
+            </div>
+
+            {/* Middle Section: Search Bar */}
+            <div className="flex-1 max-w-md hidden lg:block">
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="Search for products, shops..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-full py-2.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      router.push(`/products?search=${e.currentTarget.value}`);
+                    }
+                  }}
+                />
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={18} />
+              </div>
             </div>
 
             {/* Right Section: Navigation Links */}
-            <nav className="flex items-center gap-8">
-              {/* Categories */}
-              <Link href="/categories" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                <FiGrid size={18} />
-                <span className="text-sm font-medium">Categories</span>
-              </Link>
-
-              {/* Products */}
-              <Link href="/products" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                <FiBriefcase size={18} />
-                <span className="text-sm font-medium">Products</span>
-              </Link>
-
-              {/* Suppliers */}
-              <Link href="/suppliers" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                <FiUser size={18} />
-                <span className="text-sm font-medium">Suppliers</span>
-              </Link>
-
-              {/* Search */}
-              <Link href="/products" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                <FiSearch size={18} />
-                <span className="text-sm font-medium">Search</span>
-              </Link>
-
-              {/* Offers */}
-              <Link href="/offers" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors relative">
-                <FiTag size={18} />
-                <span className="text-sm font-medium">Offers</span>
-                <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[9px] px-1.5 py-0.5 rounded font-bold">
-                  NEW
-                </span>
-              </Link>
-
-              {/* Wishlist/Likes */}
-              <Link href="/wishlist" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors relative">
-                <FiHeart size={18} />
-                <span className="text-sm font-medium">Wishlist</span>
-                {mounted && wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
-                    {wishlistCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* Cart */}
-              <Link href="/cart" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors relative">
-                <FiShoppingCart size={18} />
-                <span className="text-sm font-medium">Cart</span>
-                {mounted && cartCount > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* User Profile or Sign In */}
-              {isAuthenticated ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors"
-                  >
-                    <FiUser size={18} />
-                    <span className="text-sm font-medium">{user?.name}</span>
-                  </button>
-
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-50">
-                      <Link
-                        href={
-                          user?.role === 'vendor'
-                            ? '/vendor/dashboard'
-                            : user?.role === 'admin'
-                              ? '/admin/dashboard'
-                              : '/profile'
-                        }
-                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                      <Link
-                        href="/profile"
-                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Profile
-                      </Link>
-                      <Link
-                        href="/categories"
-                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Categories
-                      </Link>
-                      <Link
-                        href="/products"
-                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Products
-                      </Link>
-                      <hr className="my-2" />
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link href="/signin" className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                  <FiUser size={18} />
-                  <span className="text-sm font-medium">Sign In</span>
+            <nav className="flex items-center gap-4 xl:gap-6">
+              {/* Core Nav - Grouped */}
+              <div className="flex items-center gap-4 pr-4 border-r">
+                <Link href="/categories" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors group">
+                  <FiGrid size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden lg:inline">Categories</span>
                 </Link>
-              )}
 
+                <Link href="/products" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors group">
+                  <FiBriefcase size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden lg:inline">Products</span>
+                </Link>
+
+                <Link href="/suppliers" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors group">
+                  <FiUser size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden lg:inline">Suppliers</span>
+                </Link>
+              </div>
+
+              {/* Utilities - Grouped */}
+              <div className="flex items-center gap-4 xl:gap-6">
+                <Link href="/offers" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors relative group">
+                  <FiTag size={18} className="group-hover:scale-110 transition-transform text-primary" />
+                  <span className="text-sm font-medium hidden xl:inline">Offers</span>
+                  <span className="absolute -top-1 -right-1 bg-primary text-secondary text-[8px] px-1 rounded-full font-bold">
+                    NEW
+                  </span>
+                </Link>
+
+                <Link href="/wishlist" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors relative group">
+                  <FiHeart size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden xl:inline">Wishlist</span>
+                  {mounted && wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link href="/cart" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors relative group">
+                  <FiShoppingCart size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden xl:inline">Cart</span>
+                  {mounted && cartCount > 0 && (
+                    <span className="absolute -top-1 -right-2 bg-primary text-secondary text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* User Profile or Sign In */}
+                {isAuthenticated ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full transition-colors border"
+                    >
+                      <FiUser size={18} />
+                      <span className="text-sm font-medium max-w-[80px] truncate">{user?.name}</span>
+                      <FiChevronDown size={14} className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <Link
+                          href={
+                            user?.role === 'vendor'
+                              ? '/vendor/dashboard'
+                              : user?.role === 'admin'
+                                ? '/admin/dashboard'
+                                : '/profile'
+                          }
+                          className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/profile"
+                          className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          Profile
+                        </Link>
+                        <hr className="my-2 border-gray-100" />
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors font-medium"
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link href="/signin" className="flex items-center gap-2 bg-primary text-secondary px-4 py-2 rounded-full hover:bg-primary-dark transition-all font-medium text-sm shadow-sm hover:shadow-md">
+                    <FiUser size={18} />
+                    <span>Sign In</span>
+                  </Link>
+                )}
+              </div>
             </nav>
           </div>
         </div>
