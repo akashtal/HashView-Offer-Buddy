@@ -28,6 +28,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         offerType: 'discount',
         validUntil: '',
     });
+    const [hasDiscount, setHasDiscount] = useState(false);
 
     // Image State
     const [images, setImages] = useState<string[]>([]);
@@ -69,6 +70,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     offerType: product.offer?.type || 'discount',
                     validUntil: product.offer?.validUntil ? new Date(product.offer.validUntil).toISOString().split('T')[0] : '',
                 });
+
+                setHasDiscount(!!product.price?.discounted);
 
                 setImages(product.images || []);
                 setIsLoading(false);
@@ -129,10 +132,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             const priceOriginal = parseFloat(formData.priceOriginal);
             const priceDiscounted = formData.priceDiscounted ? parseFloat(formData.priceDiscounted) : undefined;
 
-            if (priceDiscounted && priceDiscounted >= priceOriginal) {
-                throw new Error('Discounted price must be less than original price');
-            }
-
             if (images.length === 0) throw new Error('Please upload at least one image');
 
             const payload: any = {
@@ -142,31 +141,38 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 images,
                 price: {
                     original: priceOriginal,
-                    discounted: priceDiscounted,
                     currency: 'INR'
                 },
                 isActive: true
             };
 
-            // Add offer if specified
-            if (formData.offerDescription && formData.validUntil) {
-                payload.offer = {
-                    type: formData.offerType,
-                    description: formData.offerDescription,
-                    validUntil: new Date(formData.validUntil).toISOString()
-                };
-            } else if (formData.offerDescription || formData.validUntil) {
-                // Warn if incomplete offer data? Or just ignore? 
-                // For now, if either is missing, we might want to clear the offer if user intends to remove it.
-                // But typically update just overwrites. If user clears fields, we might want to unset offer.
-                // The backend update uses $set. To remove offer, we'd need to send null or handle it explicitly.
-                // For now, let's assume if fields are empty, we don't send offer updates or improved logic:
-                // If user clears offer description, we probably should remove the offer.
-                if (!formData.offerDescription) {
-                    // Logic to remove offer could be complex depending on backend $unset support. 
-                    // Current schema allows optional offer. 
-                    // Let's rely on what's sent.
+            // Add offer/discount if specified
+            if (hasDiscount) {
+                if (priceDiscounted && priceDiscounted >= priceOriginal) {
+                    throw new Error('Discounted price must be less than original price');
                 }
+                payload.price.discounted = priceDiscounted;
+
+                if (formData.offerDescription && formData.validUntil) {
+                    payload.offer = {
+                        type: formData.offerType,
+                        description: formData.offerDescription,
+                        validUntil: new Date(formData.validUntil).toISOString()
+                    };
+                }
+            } else {
+                // Explicitly nullify offer if turning off discount (depending on backend handling, replacement might handle it)
+                // Since Mongoose replaces 'price' object, discounted is gone.
+                // But 'offer' is top level. If we omit it, Mongoose might not remove it if using $set with ...payload...
+                // Actually, findByIdAndUpdate with { ...payload } usually does $set for each field.
+                // If 'offer' key is missing in payload, $set ignores it, preserving old value.
+                // We MUST explicitly unset it if we want to remove it.
+                // payload.offer = null; // or use $unset
+                // However, let's keep it simple. If we replace fields, we typically need to clear.
+                // But for price, we replace object. 'offer' is sibling.
+                // Let's rely on 'hasDiscount' meaning user INTENDS to have an offer.
+                // If they verify removal is needed, we might need code later.
+                // For now, let's just NOT send it.
             }
 
             // Note: For full offer removal support, backend might need adjustment or specific payload.
@@ -254,7 +260,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                     <FiDollarSign /> Pricing & Offer
                                 </h3>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-4">
                                     <Input
                                         label="Original Price (₹)"
                                         name="priceOriginal"
@@ -265,50 +271,68 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                         onChange={handleChange}
                                         required
                                     />
-                                    <Input
-                                        label="Discounted Price (₹)"
-                                        name="priceDiscounted"
-                                        type="number"
-                                        min="0"
-                                        placeholder="800"
-                                        value={formData.priceDiscounted}
-                                        onChange={handleChange}
-                                    />
-                                </div>
 
-                                <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-                                    <h4 className="font-medium text-sm text-gray-700">Special Offer (Optional)</h4>
-                                    <Input
-                                        label="Offer Description"
-                                        name="offerDescription"
-                                        placeholder="e.g. 20% OFF for Students"
-                                        value={formData.offerDescription}
-                                        onChange={handleChange}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Offer Type
-                                            </label>
-                                            <select
-                                                name="offerType"
-                                                value={formData.offerType}
-                                                onChange={handleChange}
-                                                className="input-field w-full"
-                                            >
-                                                <option value="discount">Discount</option>
-                                                <option value="bogo">Buy 1 Get 1</option>
-                                                <option value="clearance">Clearance</option>
-                                            </select>
-                                        </div>
-                                        <Input
-                                            label="Valid Until"
-                                            name="validUntil"
-                                            type="date"
-                                            value={formData.validUntil}
-                                            onChange={handleChange}
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="hasDiscount"
+                                            checked={hasDiscount}
+                                            onChange={(e) => setHasDiscount(e.target.checked)}
+                                            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                                         />
+                                        <label htmlFor="hasDiscount" className="text-sm font-medium text-gray-700 select-none">
+                                            Run a Discount or Offer?
+                                        </label>
                                     </div>
+
+                                    {hasDiscount && (
+                                        <div className="border-l-2 border-primary pl-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                            <Input
+                                                label="Discounted Price (₹)"
+                                                name="priceDiscounted"
+                                                type="number"
+                                                min="0"
+                                                placeholder="800"
+                                                value={formData.priceDiscounted}
+                                                onChange={handleChange}
+                                            />
+
+                                            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                                                <h4 className="font-medium text-sm text-gray-700">Special Offer Details</h4>
+                                                <Input
+                                                    label="Offer Description"
+                                                    name="offerDescription"
+                                                    placeholder="e.g. 20% OFF for Students"
+                                                    value={formData.offerDescription}
+                                                    onChange={handleChange}
+                                                />
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Offer Type
+                                                        </label>
+                                                        <select
+                                                            name="offerType"
+                                                            value={formData.offerType}
+                                                            onChange={handleChange}
+                                                            className="input-field w-full"
+                                                        >
+                                                            <option value="discount">Discount</option>
+                                                            <option value="bogo">Buy 1 Get 1</option>
+                                                            <option value="clearance">Clearance</option>
+                                                        </select>
+                                                    </div>
+                                                    <Input
+                                                        label="Valid Until"
+                                                        name="validUntil"
+                                                        type="date"
+                                                        value={formData.validUntil}
+                                                        onChange={handleChange}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

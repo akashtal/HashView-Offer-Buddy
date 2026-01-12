@@ -14,10 +14,10 @@ export default function RootLayoutClient({ children }: { children: ReactNode }) 
 
   return (
     <LocationProvider>
-      <Header />
+      {!isAuthPage && <Header />}
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      <Footer />
-      <MobileBottomNav />
+      {!isAuthPage && <Footer />}
+      {!isAuthPage && <MobileBottomNav />}
     </LocationProvider>
   );
 }
