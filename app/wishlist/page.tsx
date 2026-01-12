@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, X } from 'lucide-react';
@@ -17,11 +17,7 @@ export default function WishlistPage() {
     const [products, setProducts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        loadWishlistProducts();
-    }, [wishlistIds]);
-
-    const loadWishlistProducts = async () => {
+    const loadWishlistProducts = useCallback(async () => {
         if (wishlistIds.length === 0) {
             setProducts([]);
             setIsLoading(false);
@@ -40,7 +36,11 @@ export default function WishlistPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [wishlistIds]);
+
+    useEffect(() => {
+        loadWishlistProducts();
+    }, [wishlistIds, loadWishlistProducts]);
 
     const handleRemove = (productId: string, title: string) => {
         toggleItem(productId);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Search, MapPin, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
@@ -22,11 +22,7 @@ export default function ProductsPage() {
     const [showFilters, setShowFilters] = useState(false);
     const { location } = useLocation();
 
-    useEffect(() => {
-        loadData();
-    }, [location, radius, selectedCategory, sortBy]); // Reload when these change
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setIsLoading(true);
 
@@ -64,7 +60,11 @@ export default function ProductsPage() {
             console.error('Failed to load data:', error);
             setIsLoading(false);
         }
-    };
+    }, [location, selectedCategory, sortBy]);
+
+    useEffect(() => {
+        loadData();
+    }, [location, radius, selectedCategory, sortBy, loadData]); // Reload when these change
 
     const handleSearch = () => {
         if (searchQuery.trim()) {

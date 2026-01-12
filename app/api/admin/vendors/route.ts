@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
 import Vendor from '@/models/Vendor';
 import { apiSuccess, apiError } from '@/lib/utils';
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
 
     const query: any = {};
-    
+
     if (status === 'pending') {
       query.isApproved = false;
       query.isActive = true;

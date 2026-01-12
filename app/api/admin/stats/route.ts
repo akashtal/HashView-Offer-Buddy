@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Vendor from '@/models/Vendor';
@@ -24,15 +26,15 @@ export async function GET(request: NextRequest) {
     // Get counts
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalVendors = await Vendor.countDocuments({ isApproved: true });
-    const pendingVendors = await Vendor.countDocuments({ 
-      isApproved: false, 
-      isActive: true 
+    const pendingVendors = await Vendor.countDocuments({
+      isApproved: false,
+      isActive: true
     });
     const totalProducts = await Product.countDocuments({ isActive: true });
 
     // Get analytics for last 30 days
     const last30Days = subDays(new Date(), 30);
-    
+
     const analyticsData = await Analytics.aggregate([
       {
         $match: {
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Format analytics for charts
     const chartData: any[] = [];
-    
+
     for (let i = 29; i >= 0; i--) {
       const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
       const views = analyticsData.find(

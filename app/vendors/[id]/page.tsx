@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -31,11 +31,7 @@ export default function VendorDetailPage() {
     const [activeTab, setActiveTab] = useState('products');
     const [showEnquiryModal, setShowEnquiryModal] = useState(false);
 
-    useEffect(() => {
-        loadVendorData();
-    }, [vendorId]);
-
-    const loadVendorData = async () => {
+    const loadVendorData = useCallback(async () => {
         try {
             setIsLoading(true);
             // Fetch vendor details
@@ -70,7 +66,11 @@ export default function VendorDetailPage() {
             console.error('Failed to load vendor:', error);
             setIsLoading(false);
         }
-    };
+    }, [vendorId, location]);
+
+    useEffect(() => {
+        loadVendorData();
+    }, [vendorId, loadVendorData]);
 
     if (isLoading) {
         return <div className="min-h-screen bg-gray-50 p-8 text-center">Loading Supplier Profile...</div>;

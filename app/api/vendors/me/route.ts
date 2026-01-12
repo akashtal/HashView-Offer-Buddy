@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
 import Vendor from '@/models/Vendor';
 import Product from '@/models/Product';
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // Get analytics for last 30 days
     const last30Days = subDays(new Date(), 30);
-    
+
     const analyticsData = await Analytics.aggregate([
       {
         $match: {
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
     // Format analytics for charts
     const viewsData: any[] = [];
     const contactsData: any[] = [];
-    
+
     for (let i = 29; i >= 0; i--) {
       const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
       const views = analyticsData.find(

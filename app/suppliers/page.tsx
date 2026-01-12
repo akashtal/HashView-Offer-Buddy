@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Search, MapPin, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
@@ -15,11 +15,7 @@ export default function SuppliersPage() {
     const [showLocationDropdown, setShowLocationDropdown] = useState(false);
     const { location, setManualLocation } = useLocation();
 
-    useEffect(() => {
-        loadSuppliers();
-    }, [location]);
-
-    const loadSuppliers = async () => {
+    const loadSuppliers = useCallback(async () => {
         try {
             const response = await axios.get('/api/vendors');
             let suppliersData = response.data.data.vendors || response.data.data || [];
@@ -35,7 +31,11 @@ export default function SuppliersPage() {
             console.error('Failed to load suppliers:', error);
             setIsLoading(false);
         }
-    };
+    }, [location]);
+
+    useEffect(() => {
+        loadSuppliers();
+    }, [location, loadSuppliers]);
 
     const filteredSuppliers = searchQuery
         ? suppliers.filter((s) =>
