@@ -54,7 +54,7 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-20 gap-4">
             {/* Left Section: Logo + Location */}
-            <div className="flex items-center gap-6 flex-shrink-0">
+            <div className="flex items-center gap-4 flex-shrink-0">
               {/* Logo */}
               <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                 <div className="relative w-10 h-10">
@@ -71,19 +71,19 @@ export default function Header() {
                 </div>
               </Link>
 
-              {/* Location Search Component - More compact */}
-              <div className="max-w-[180px]">
-                <LocationSearch className="text-sm" />
+              {/* Location Search Component - Now even more compact */}
+              <div className="max-w-[140px] border-l pl-4 border-gray-100">
+                <LocationSearch variant="compact" />
               </div>
             </div>
 
-            {/* Middle Section: Search Bar */}
-            <div className="flex-1 max-w-md hidden lg:block">
+            {/* Middle Section: Search Bar - Expanded */}
+            <div className="flex-1 max-w-xl hidden lg:block">
               <div className="relative group">
                 <input
                   type="text"
-                  placeholder="Search for products, shops..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-full py-2.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  placeholder="Search for products, shops, categories..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm shadow-sm group-hover:bg-white"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       router.push(`/products?search=${e.currentTarget.value}`);

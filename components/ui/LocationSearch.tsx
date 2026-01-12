@@ -9,9 +9,10 @@ import PlacesAutocomplete from './PlacesAutocomplete';
 interface LocationSearchProps {
     onLocationSelect?: (location: { latitude: number; longitude: number; city: string }) => void;
     className?: string;
+    variant?: 'default' | 'compact';
 }
 
-export default function LocationSearch({ onLocationSelect, className = '' }: LocationSearchProps) {
+export default function LocationSearch({ onLocationSelect, className = '', variant = 'default' }: LocationSearchProps) {
     const { location, setManualLocation, isLoading } = useLocation();
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -182,7 +183,10 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
             {/* Location Button */}
             <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-lg border border-gray-300 hover:border-[#FDB913] hover:bg-gray-50 transition-all group"
+                className={`flex items-center gap-2 group transition-all text-left ${variant === 'compact'
+                        ? 'px-0 py-1 bg-transparent border-0'
+                        : 'px-4 py-2.5 bg-white rounded-lg border border-gray-300 hover:border-[#FDB913] hover:bg-gray-50'
+                    }`}
             >
                 {isLoading ? (
                     <>
@@ -190,24 +194,24 @@ export default function LocationSearch({ onLocationSelect, className = '' }: Loc
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <div className="flex flex-col items-start">
-                            <span className="text-xs text-gray-500 font-medium">Detecting...</span>
-                            <span className="text-sm font-bold text-gray-900">Finding location</span>
+                        <div className="flex flex-col items-start min-w-[80px]">
+                            {variant === 'default' && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Detecting...</span>}
+                            <span className="text-sm font-bold text-gray-900 truncate">Finding...</span>
                         </div>
                     </>
                 ) : (
                     <>
-                        <MapPin size={18} className="text-gray-600 group-hover:text-[#FDB913] transition-colors" />
-                        <div className="flex flex-col items-start">
-                            <span className="text-xs text-gray-500 font-medium">Showing near</span>
-                            <span className="text-sm font-bold text-gray-900 truncate max-w-[150px]">
+                        <MapPin size={variant === 'compact' ? 16 : 18} className="text-gray-600 group-hover:text-[#FDB913] transition-colors flex-shrink-0" />
+                        <div className="flex flex-col items-start min-w-0">
+                            {variant === 'default' && <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Showing near</span>}
+                            <span className={`text-sm font-bold text-gray-900 truncate ${variant === 'compact' ? 'max-w-[80px]' : 'max-w-[150px]'}`}>
                                 {location?.city || 'Select Location'}
                             </span>
                         </div>
                     </>
                 )}
                 <ChevronDown
-                    size={16}
+                    size={14}
                     className={`text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                 />
             </button>

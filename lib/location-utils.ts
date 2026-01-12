@@ -167,70 +167,35 @@ export const INDIAN_CITIES = [
 ];
 
 /**
- * Reverse geocode coordinates to get city, state, country using Google API
+ * Reverse geocode coordinates to get city, state, country using internal API
  * @param coords Coordinates to reverse geocode
  * @returns LocationData with city, state, country
  */
 export async function reverseGeocode(coords: Coordinates): Promise<LocationData> {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-    console.log('🌍 Reverse geocoding coordinates:', coords);
-
-    if (!apiKey) {
-        console.warn('⚠️ Google Maps API key not found, using coordinates only');
-        return {
-            coordinates: coords,
-            city: `Location (${coords.latitude.toFixed(2)}, ${coords.longitude.toFixed(2)})`,
-            country: 'India'
-        };
-    }
+    console.log('🌍 Requesting reverse geocode for:', coords);
 
     try {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=${apiKey}`;
-        console.log('🌍 Calling Google Geocoding API...');
+        const url = `/api/google/reverse-geocode?lat=${coords.latitude}&lng=${coords.longitude}`;
+        console.log('🌍 Calling internal reverse-geocode API...');
 
         const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`API response error: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log('✅ Internal API response:', data);
 
-        if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-            console.error('❌ Geocoding failed:', data.status);
-            throw new Error('Geocoding failed');
-        }
-
-        console.log('✅ Geocoding response:', data.results[0]);
-
-        // Extract address components
-        const result = data.results[0];
-        let city = '';
-        let state = '';
-        let country = '';
-
-        for (const component of result.address_components) {
-            const types = component.types;
-
-            if (types.includes('locality')) {
-                city = component.long_name;
-            } else if (types.includes('administrative_area_level_2') && !city) {
-                city = component.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-                state = component.long_name;
-            } else if (types.includes('country')) {
-                country = component.long_name;
-            }
-        }
-
-        const locationData: LocationData = {
+        return {
             coordinates: coords,
-            city: city || 'Unknown City',
-            state: state,
-            country: country || 'India',
-            address: result.formatted_address
+            city: data.city,
+            state: data.state,
+            country: data.country,
+            address: data.address
         };
-
-        console.log('✅ Reverse geocoded to:', locationData);
-        return locationData;
     } catch (error) {
-        console.error('❌ Reverse geocoding error:', error);
+        console.error('❌ Reverse geocoding error (internal API):', error);
         // Fallback to coordinates
         return {
             coordinates: coords,
