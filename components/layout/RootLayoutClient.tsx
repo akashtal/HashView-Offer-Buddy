@@ -11,13 +11,14 @@ import { usePathname } from 'next/navigation';
 export default function RootLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = ['/signin', '/signup'].includes(pathname);
+  const isChatPage = pathname.startsWith('/chat');
 
   return (
     <LocationProvider>
-      {!isAuthPage && <Header />}
-      <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      {!isAuthPage && <Footer />}
-      {!isAuthPage && <MobileBottomNav />}
+      {!isChatPage && <Header />}
+      <main className={`flex-1 ${!isChatPage && 'pb-16 md:pb-0'}`}>{children}</main>
+      {!isChatPage && <Footer />}
+      {!isChatPage && <MobileBottomNav />}
     </LocationProvider>
   );
 }

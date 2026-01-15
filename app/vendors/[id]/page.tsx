@@ -19,6 +19,7 @@ import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
 import { calculateDistance } from '@/lib/location-utils';
 import IndiaMArtProductCard from '@/components/IndiaMART/ProductCard';
+import ChatButton from '@/components/chat/ChatButton';
 
 export default function VendorDetailPage() {
     const params = useParams();
@@ -144,6 +145,11 @@ export default function VendorDetailPage() {
                                         WhatsApp
                                     </a>
                                 )}
+                                <ChatButton
+                                    recipientId={vendor._id}
+                                    recipientModel="Vendor"
+                                    recipientName={vendor.shopName}
+                                />
                             </div>
                         </div>
                     </div>

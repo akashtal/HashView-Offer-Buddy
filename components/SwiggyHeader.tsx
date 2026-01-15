@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, ChevronDown, Search } from 'lucide-react';
+import { MapPin, ChevronDown, Search, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocation } from '@/lib/LocationContext';
@@ -96,6 +96,10 @@ export default function SwiggyHeader() {
                         </Link>
                         <Link href="/signin" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors">
                             Sign In
+                        </Link>
+                        <Link href="/chat" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors flex items-center gap-1">
+                            <MessageCircle size={18} />
+                            Messages
                         </Link>
                         <Link href="/cart" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors flex items-center gap-1">
                             Cart

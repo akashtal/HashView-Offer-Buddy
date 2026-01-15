@@ -20,6 +20,9 @@ export interface IUser extends Document {
   preferences?: {
     categories: mongoose.Types.ObjectId[];
   };
+  resetPasswordToken?: string;
+  resetPasswordOTP?: string;
+  resetPasswordExpire?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +84,9 @@ const UserSchema = new Schema<IUser>(
         },
       ],
     },
+    resetPasswordToken: String,
+    resetPasswordOTP: String,
+    resetPasswordExpire: Date,
   },
   {
     timestamps: true,
