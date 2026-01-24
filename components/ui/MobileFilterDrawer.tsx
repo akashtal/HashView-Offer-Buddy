@@ -115,7 +115,7 @@ export default function MobileFilterDrawer({
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1001] animate-in fade-in duration-200"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2001] animate-in fade-in duration-200"
                 onClick={onClose}
                 style={{
                     animation: 'fadeIn 0.2s ease-out'
@@ -123,9 +123,9 @@ export default function MobileFilterDrawer({
             />
 
             {/* Bottom Sheet Container */}
-            <div className="fixed inset-0 z-[1002] flex items-end sm:items-center justify-center pointer-events-none p-0 sm:p-4">
+            <div className="fixed inset-0 z-[2002] flex items-end justify-center pointer-events-none p-0 sm:p-4">
                 <div
-                    className="w-full bg-white rounded-t-[32px] sm:max-w-md sm:rounded-2xl shadow-2xl flex flex-col max-h-[75dvh] sm:h-[80vh] overflow-hidden pointer-events-auto"
+                    className="w-full bg-white rounded-t-[32px] sm:max-w-md sm:rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] h-auto overflow-hidden pointer-events-auto"
                     style={{
                         animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
                     }}
