@@ -123,7 +123,7 @@ export default function MobileFilterDrawer({
             />
 
             {/* Bottom Sheet Container */}
-            <div className="fixed inset-0 z-[2002] flex items-end justify-center pointer-events-none p-0 sm:p-4">
+            <div className="fixed inset-0 z-[2002] flex items-end justify-center pointer-events-none pb-16 sm:p-4">
                 <div
                     className="w-full bg-white rounded-t-[32px] sm:max-w-md sm:rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] h-auto overflow-hidden pointer-events-auto"
                     style={{
