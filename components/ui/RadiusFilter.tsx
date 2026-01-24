@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Plus, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RadiusFilterProps {
     value: number;
@@ -29,61 +30,73 @@ export default function RadiusFilter({ value, onChange, className = '' }: Radius
     };
 
     return (
-        <div className={`flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${className}`}>
-            {/* Icon only on mobile, icon + label on desktop */}
-            <MapPin size={16} className="text-gray-500 flex-shrink-0" />
-            <span className="hidden sm:inline text-sm font-medium text-gray-700 whitespace-nowrap">Within:</span>
+        <div className={`flex items-center gap-2 flex-shrink-0 ${className}`}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-gray-700 text-sm font-medium">
+                <MapPin size={14} className="text-[#FDB913]" />
+                <span className="hidden sm:inline">Range:</span>
+            </div>
 
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="flex items-center gap-1.5 bg-gray-100/50 p-1 rounded-full border border-gray-100 relative">
                 {presetRadii.map((radius) => (
                     <button
                         key={radius}
                         onClick={() => handlePresetClick(radius)}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${value === radius && !showCustom
-                                ? 'bg-[#FDB913] text-black shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 z-10 relative ${value === radius && !showCustom
+                            ? 'text-black'
+                            : 'text-gray-500 hover:text-gray-900'
                             }`}
                     >
                         {radius}km
+                        {value === radius && !showCustom && (
+                            <motion.div
+                                layoutId="radius-pill"
+                                className="absolute inset-0 bg-[#FDB913] rounded-full shadow-sm z-[-1]"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                        )}
                     </button>
                 ))}
 
                 {!showCustom ? (
                     <button
                         onClick={() => setShowCustom(true)}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${!presetRadii.includes(value)
-                                ? 'bg-[#FDB913] text-black shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        className={`relative w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold transition-all duration-200 ${!presetRadii.includes(value)
+                            ? 'text-black'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
                             }`}
                     >
-                        {!presetRadii.includes(value) ? `${value}km` : '+'}
+                        <span className="z-10">{!presetRadii.includes(value) ? `${value}` : <Plus size={14} />}</span>
+                        {!presetRadii.includes(value) && (
+                            <motion.div
+                                layoutId="radius-pill"
+                                className="absolute inset-0 bg-[#FDB913] rounded-full shadow-sm z-0"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                            />
+                        )}
                     </button>
                 ) : (
-                    <div className="flex items-center gap-1">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="flex items-center gap-1 pl-1"
+                    >
                         <input
                             type="number"
                             value={customValue}
                             onChange={(e) => setCustomValue(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleCustomSubmit()}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}
                             placeholder="km"
-                            min="1"
-                            max="100"
-                            className="w-14 sm:w-20 px-1.5 sm:px-2 py-1 text-xs sm:text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FDB913] focus:border-transparent"
+                            className="w-10 bg-transparent text-center text-xs font-bold text-gray-900 outline-none border-b border-gray-300 focus:border-[#FDB913]"
                             autoFocus
                         />
                         <button
                             onClick={handleCustomSubmit}
-                            className="px-1.5 sm:px-2 py-1 bg-[#FDB913] text-black text-xs sm:text-sm font-medium rounded-md hover:bg-[#e5a812] transition-colors"
+                            className="w-6 h-6 flex items-center justify-center bg-[#FDB913] text-black rounded-full hover:bg-[#E5A600]"
                         >
-                            ✓
+                            <Check size={12} />
                         </button>
-                        <button
-                            onClick={() => setShowCustom(false)}
-                            className="px-1.5 sm:px-2 py-1 bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium rounded-md hover:bg-gray-300 transition-colors"
-                        >
-                            ✕
-                        </button>
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div>
