@@ -26,7 +26,6 @@ import { calculateDistance } from '@/lib/location-utils';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useToast } from '@/components/ui/Toast';
-import ChatButton from '@/components/chat/ChatButton';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -341,11 +340,6 @@ export default function ProductDetailPage() {
                       Chat on WhatsApp
                     </a>
                   )}
-                  <ChatButton
-                    recipientId={vendor._id}
-                    recipientModel="Vendor"
-                    recipientName={vendor.shopName}
-                  />
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   Call {vendor.contactInfo?.phone} for instant details
