@@ -90,8 +90,8 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
                             return (
                                 <div
                                     key={category._id}
-                                    onClick={() => onCategorySelect?.(category._id)}
-                                    className="category-item outline-none focus:outline-none"
+                                    onClick={() => onCategorySelect?.(selectedCategory === category._id ? '' : category._id)}
+                                    className="category-item outline-none focus:outline-none cursor-pointer"
                                     style={{
                                         outline: 'none',
                                     }}

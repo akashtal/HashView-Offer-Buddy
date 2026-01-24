@@ -11,7 +11,6 @@ import { useLocation } from '@/lib/LocationContext';
 
 export default function HomePage() {
   const [products, setProducts] = useState<any[]>([]);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]); // Added categories state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
@@ -20,6 +19,7 @@ export default function HomePage() {
     hasOffer: false
   });
   const [radius, setRadius] = useState(50); // Default 50km
+  const [facets, setFacets] = useState<any>(null); // State for facets
   const [isLoading, setIsLoading] = useState(true);
   const { location } = useLocation();
 
@@ -36,136 +36,64 @@ export default function HomePage() {
     fetchCategories();
   }, []);
 
-  const applyFilters = useCallback((productList: any[], filterOptions: FilterOptions) => {
-    let filtered = [...productList];
+  // Products are now fully managed by server-side filtering
+  // This effect triggers whenever filters, location, or radius changes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const params: any = {
+          limit: 50,
+          sortBy: filters.sortBy || 'distance'
+        };
 
-    // Apply category filter
-    if (selectedCategory) {
-      filtered = filtered.filter(p =>
-        p.category?._id === selectedCategory || p.category === selectedCategory
-      );
-    }
-    // Also support category from filterOptions if set via Modal
-    if (filterOptions.category && !selectedCategory) {
-      filtered = filtered.filter(p =>
-        p.category?._id === filterOptions.category || p.category === filterOptions.category
-      );
-    }
+        // Add location params
+        if (location?.coordinates) {
+          params.latitude = location.coordinates.latitude;
+          params.longitude = location.coordinates.longitude;
+          params.radius = radius;
+        }
 
-    // Apply rating filter
-    if (filterOptions.rating && filterOptions.rating > 0) {
-      filtered = filtered.filter(p => (p.rating || 4.2) >= filterOptions.rating!);
-    }
+        // Add Filters to API Params
+        if (selectedCategory) params.category = selectedCategory;
+        if (filters.category && !selectedCategory) params.category = filters.category;
 
-    // Apply price filter
-    if (filterOptions.minPrice && filterOptions.minPrice > 0) {
-      filtered = filtered.filter(p => (p.price?.original || 0) >= filterOptions.minPrice!);
-    }
-    if (filterOptions.maxPrice && filterOptions.maxPrice < 50000) {
-      filtered = filtered.filter(p => (p.price?.original || 0) <= filterOptions.maxPrice!);
-    }
+        if (filters.hasOffer) params.hasOffer = true;
+        if (filters.rating) params.rating = filters.rating;
+        if (filters.minPrice) params.minPrice = filters.minPrice;
+        if (filters.maxPrice) params.maxPrice = filters.maxPrice;
 
-    // Apply sort filter
-    if (filterOptions.sortBy) {
-      const sorted = [...filtered];
-      switch (filterOptions.sortBy) {
-        case 'distance':
-          sorted.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-          break;
-        case 'rating':
-          sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-          break;
-        case 'price-low':
-          sorted.sort((a, b) => {
-            const priceA = a.price?.discounted || a.price?.original || 0;
-            const priceB = b.price?.discounted || b.price?.original || 0;
-            return priceA - priceB;
-          });
-          break;
-        case 'price-high':
-          sorted.sort((a, b) => {
-            const priceA = a.price?.discounted || a.price?.original || 0;
-            const priceB = b.price?.discounted || b.price?.original || 0;
-            return priceB - priceA;
-          });
-          break;
+        const response = await axios.get('/api/products', { params });
+        const fetchedProducts = response.data.data.products;
+        const fetchedFacets = response.data.data.facets;
+
+        setProducts(fetchedProducts || []);
+
+        // Update facets if available (usually on first load or relevant queries)
+        if (fetchedFacets) {
+          setFacets(fetchedFacets);
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Failed to load products:', error);
+        setProducts([]); // Clear products on error instead of using hardcoded mock data
+        setIsLoading(false);
       }
-      filtered = sorted;
-    }
+    };
 
-    // Apply Offers
-    if (filterOptions.hasOffer) {
-      // Mock filtering for offers if backend doesn't handle it fully or we are doing client side
-      // Assuming every product has 'offer' object if it has offer.
-      filtered = filtered.filter(p => p.offer && (p.offer.value > 0 || p.offer.description));
-    }
-
-    setProducts(filtered);
-  }, [selectedCategory]);
-
-  const loadProducts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const params: any = {
-        limit: 50,
-        sortBy: filters.sortBy || 'distance'
-      };
-
-      // Add location params if available
-      if (location?.coordinates) {
-        params.latitude = location.coordinates.latitude;
-        params.longitude = location.coordinates.longitude;
-        params.radius = radius;
-      }
-
-      // Add offer filter - passed to API too
-      if (filters.hasOffer) {
-        params.hasOffer = true;
-      }
-
-      const response = await axios.get('/api/products', { params });
-      const fetchedProducts = response.data.data.products;
-      setAllProducts(fetchedProducts);
-      applyFilters(fetchedProducts, filters);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Failed to load products:', error);
-      // Fallback data
-      setProducts([
-        // ... (Keep existing fallback data if needed, but for brevity not duplicating all mock data here unless user needs it. 
-        // I should probably keep it to avoid regression if API fails.)
-        { _id: '1', title: 'Industrial Heavy Duty Lathe Machine', images: ['https://5.imimg.com/data5/SELLER/Default/2023/3/YP/OA/XW/3397943/lathe-machine-500x500.jpg'], price: { original: 450000 }, offer: { value: 10, description: 'Best Price' }, description: 'High precision industrial lathe machine', distance: 2.5, rating: 4.5 },
-        { _id: '2', title: 'Hydraulic Scissor Lift Table', images: ['https://5.imimg.com/data5/SELLER/Default/2022/6/OV/YB/MC/2517878/hydraulic-scissor-lift-table-500x500.jpg'], price: { original: 85000 }, offer: { value: 15, description: 'Factory Price' }, description: 'Heavy duty hydraulic lift table', distance: 12.0, rating: 4.0 },
-        { _id: '3', title: 'SS 304 Industrial Storage Tank', images: ['https://5.imimg.com/data5/SELLER/Default/2023/1/VM/QY/YC/2386862/ss-storage-tank-500x500.jpg'], price: { original: 125000 }, description: 'Stainless steel storage tank', distance: 5.0, rating: 4.8 },
-      ]);
-      setAllProducts([
-        { _id: '1', title: 'Industrial Heavy Duty Lathe Machine', images: ['https://5.imimg.com/data5/SELLER/Default/2023/3/YP/OA/XW/3397943/lathe-machine-500x500.jpg'], price: { original: 450000 }, offer: { value: 10, description: 'Best Price' }, description: 'High precision industrial lathe machine', distance: 2.5, rating: 4.5 },
-        { _id: '2', title: 'Hydraulic Scissor Lift Table', images: ['https://5.imimg.com/data5/SELLER/Default/2022/6/OV/YB/MC/2517878/hydraulic-scissor-lift-table-500x500.jpg'], price: { original: 85000 }, offer: { value: 15, description: 'Factory Price' }, description: 'Heavy duty hydraulic lift table', distance: 12.0, rating: 4.0 },
-        { _id: '3', title: 'SS 304 Industrial Storage Tank', images: ['https://5.imimg.com/data5/SELLER/Default/2023/1/VM/QY/YC/2386862/ss-storage-tank-500x500.jpg'], price: { original: 125000 }, description: 'Stainless steel storage tank', distance: 5.0, rating: 4.8 },
-      ]);
-      setIsLoading(false);
-    }
-  }, [location, radius, filters.sortBy, filters.hasOffer]); // Updated dependencies
+    fetchProducts();
+  }, [location, radius, filters, selectedCategory]);
 
   const handleFilterChange = (newFilters: FilterOptions) => {
     setFilters(newFilters);
-    // If category changed in modal, sync it
+    // Sync category selection from modal
     if (newFilters.category !== undefined && newFilters.category !== selectedCategory) {
-      setSelectedCategory(newFilters.category);
+      setSelectedCategory(newFilters.category || '');
     }
-    applyFilters(allProducts, newFilters);
   };
 
-  useEffect(() => {
-    loadProducts();
-  }, [location, radius, loadProducts]);
-
-  // Reapply filters when category or filters change
-  useEffect(() => {
-    applyFilters(allProducts, filters);
-  }, [selectedCategory, allProducts, filters, applyFilters]);
-
-  // Sync selectedCategory with filters for Chips
+  // Sync selectedCategory with filters for Chips display
   const currentFiltersForChips = {
     ...filters,
     category: selectedCategory || filters.category
@@ -189,27 +117,51 @@ export default function HomePage() {
                   onApplyFilters={handleFilterChange}
                   currentFilters={filters}
                   categories={categories}
+                  facets={facets}
                 />
               </div>
-              {/* Count for Desktop */}
+              {/* Desktop: keep chips INLINE (no second row) */}
+              <div className="hidden lg:flex items-center gap-3 min-w-0">
+                {(selectedCategory || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0) && (
+                  <div className="max-w-[42vw] min-w-0">
+                    <FilterChips
+                      currentFilters={currentFiltersForChips}
+                      categories={categories}
+                      onApplyFilters={(f) => {
+                        handleFilterChange(f);
+                        if (f.category === undefined) setSelectedCategory('');
+                      }}
+                    />
+                  </div>
+                )}
+                {location?.coordinates && (
+                  <p className="text-xs font-medium text-gray-500 whitespace-nowrap">
+                    {products.length} items near you
+                  </p>
+                )}
+              </div>
+
+              {/* Tablet/Desktop (below lg): count only */}
               {location?.coordinates && (
-                <p className="hidden sm:block text-xs font-medium text-gray-500 whitespace-nowrap">
+                <p className="hidden sm:block lg:hidden text-xs font-medium text-gray-500 whitespace-nowrap">
                   {products.length} items near you
                 </p>
               )}
             </div>
 
-            {/* Bottom Row: Chips (if active) */}
-            {(selectedCategory || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0) && (
-              <FilterChips
-                currentFilters={currentFiltersForChips}
-                categories={categories}
-                onApplyFilters={(f) => {
-                  handleFilterChange(f);
-                  if (f.category === undefined) setSelectedCategory('');
-                }}
-              />
-            )}
+            {/* Bottom Row: Chips (mobile/tablet only) */}
+            <div className="lg:hidden">
+              {(selectedCategory || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0) && (
+                <FilterChips
+                  currentFilters={currentFiltersForChips}
+                  categories={categories}
+                  onApplyFilters={(f) => {
+                    handleFilterChange(f);
+                    if (f.category === undefined) setSelectedCategory('');
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

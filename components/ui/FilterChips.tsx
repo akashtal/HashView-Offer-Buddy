@@ -43,12 +43,14 @@ export default function FilterChips({ currentFilters, onApplyFilters, categories
     if (chips.length === 0) return null;
 
     return (
-        <div className={`flex flex-wrap gap-2 ${className}`}>
+        <div
+            className={`flex gap-2 overflow-x-auto scrollbar-hide whitespace-nowrap ${className}`}
+        >
             {chips.map((chip: any) => (
                 <button
                     key={chip.key}
                     onClick={() => handleRemove(chip.key === 'price' ? 'minPrice' : chip.key)} // For price, reset min/max logic roughly
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-200 transition-colors"
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-200 transition-colors"
                 >
                     {chip.label}
                     <X size={12} className="text-gray-500" />
@@ -56,7 +58,7 @@ export default function FilterChips({ currentFilters, onApplyFilters, categories
             ))}
             <button
                 onClick={() => onApplyFilters({})}
-                className="px-3 py-1.5 text-xs font-semibold text-[#B45309] hover:underline"
+                className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-[#B45309] hover:underline"
             >
                 Clear All
             </button>

@@ -14,14 +14,20 @@ export interface FilterOptions {
     query?: string;
 }
 
+export interface Facets {
+    minPrice: number;
+    maxPrice: number;
+}
+
 interface ComprehensiveFiltersProps {
     onApplyFilters: (filters: FilterOptions) => void;
     currentFilters?: FilterOptions;
     categories: any[];
     className?: string; // Allow styling positioning
+    facets?: Facets;
 }
 
-export default function ComprehensiveFilters({ onApplyFilters, currentFilters = {}, categories = [], className = '' }: ComprehensiveFiltersProps) {
+export default function ComprehensiveFilters({ onApplyFilters, currentFilters = {}, categories = [], className = '', facets }: ComprehensiveFiltersProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     const activeFiltersCount = Object.keys(currentFilters).filter(key => {
@@ -58,6 +64,7 @@ export default function ComprehensiveFilters({ onApplyFilters, currentFilters = 
                 currentFilters={currentFilters}
                 categories={categories}
                 onApplyFilters={onApplyFilters}
+                facets={facets}
             />
         </div>
     );

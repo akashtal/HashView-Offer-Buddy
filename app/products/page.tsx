@@ -21,12 +21,13 @@ function ProductGrid() {
     const [categories, setCategories] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [totalProducts, setTotalProducts] = useState(0);
+    const [facets, setFacets] = useState<any>(null); // State for facets
 
     // Current filter state derived from URL
     const currentFilters: FilterOptions = useMemo(() => ({
         category: searchParams.get('category') || undefined,
-        minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : 0,
-        maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : 50000,
+        minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
+        maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
         sortBy: (searchParams.get('sortBy') as any) || 'distance',
         rating: searchParams.get('rating') ? Number(searchParams.get('rating')) : 0,
         hasOffer: searchParams.get('hasOffer') === 'true',
@@ -66,6 +67,12 @@ function ProductGrid() {
             const res = await axios.get('/api/products', { params });
             setProducts(res.data.data.products || []);
             setTotalProducts(res.data.data.pagination?.total || 0);
+
+            // Update facets if provided
+            if (res.data.data.facets) {
+                setFacets(res.data.data.facets);
+            }
+
         } catch (error) {
             console.error('Failed to load products:', error);
         } finally {
@@ -87,7 +94,7 @@ function ProductGrid() {
         if (newFilters.minPrice !== undefined && newFilters.minPrice > 0) params.set('minPrice', newFilters.minPrice.toString());
         else params.delete('minPrice');
 
-        if (newFilters.maxPrice !== undefined && newFilters.maxPrice < 50000) params.set('maxPrice', newFilters.maxPrice.toString());
+        if (newFilters.maxPrice !== undefined) params.set('maxPrice', newFilters.maxPrice.toString());
         else params.delete('maxPrice');
 
         if (newFilters.sortBy) params.set('sortBy', newFilters.sortBy);
@@ -119,6 +126,7 @@ function ProductGrid() {
                             categories={categories}
                             onApplyFilters={handleApplyFilters}
                             className="flex-shrink-0"
+                            facets={facets}
                         />
 
                         {/* Horizontal Chips Scroll */}
@@ -153,7 +161,7 @@ function ProductGrid() {
                     {/* Main Content Area */}
                     <div className="flex-1 min-w-0">
                         {/* Desktop Header Info */}
-                        <div className="hidden lg:flex items-center justify-between mb-6">
+                        <div className="hidden lg:flex items-center justify-between mb-6 gap-4">
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Industrial Products</h1>
                                 <p className="text-gray-500 text-sm mt-1">
@@ -162,11 +170,13 @@ function ProductGrid() {
                             </div>
 
                             {/* Filter Chips Desktop */}
-                            <FilterChips
-                                currentFilters={currentFilters}
-                                onApplyFilters={handleApplyFilters}
-                                categories={categories}
-                            />
+                            <div className="max-w-[48vw] min-w-0">
+                                <FilterChips
+                                    currentFilters={currentFilters}
+                                    onApplyFilters={handleApplyFilters}
+                                    categories={categories}
+                                />
+                            </div>
                         </div>
 
                         {/* Products Grid */}
