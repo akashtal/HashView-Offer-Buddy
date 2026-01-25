@@ -33,7 +33,7 @@ export default function MobileBottomNav() {
       icon: FiHome,
     },
     {
-      name: 'Products',
+      name: 'Shop',
       href: '/products',
       icon: FiGrid,
     },

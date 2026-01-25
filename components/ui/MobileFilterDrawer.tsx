@@ -59,7 +59,7 @@ export default function MobileFilterDrawer({
                 document.body.style.overflow = originalOverflowRef.current;
             }
         };
-    }, [isOpen, currentFilters]);
+    }, [isOpen, currentFilters, maxPriceLimit]);
 
     const handleLocalChange = (key: keyof FilterOptions, value: any) => {
         setLocalFilters(prev => ({ ...prev, [key]: value }));
