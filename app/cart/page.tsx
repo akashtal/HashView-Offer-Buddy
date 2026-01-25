@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useToast } from '@/components/ui/Toast';
+import ChatButton from '@/components/chat/ChatButton';
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, clearCart, getTotal } = useCartStore();
@@ -91,12 +92,17 @@ export default function CartPage() {
                                     <p className="text-sm text-gray-600 mb-2">
                                         Quantity: {item.quantity}
                                     </p>
-                                    <Link
-                                        href={`/products/${item.productId}`}
-                                        className="inline-flex items-center gap-1 text-sm text-[#FDB913] hover:text-[#E5A600] font-medium"
-                                    >
-                                        Contact Vendor →
-                                    </Link>
+                                    {item.vendorId && (
+                                        <div className="mt-2">
+                                            <ChatButton
+                                                recipientId={item.vendorId}
+                                                recipientModel="Vendor"
+                                                recipientName="Vendor"
+                                                variant="ghost"
+                                                className="!p-0 !h-auto text-[#FDB913] hover:text-[#E5A600] hover:bg-transparent font-medium"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Actions */}

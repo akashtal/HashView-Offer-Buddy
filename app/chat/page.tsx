@@ -28,7 +28,7 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="h-screen bg-white flex flex-col overflow-hidden">
+        <div className="h-[calc(100dvh-130px)] md:h-[calc(100dvh-150px)] bg-white flex flex-col overflow-hidden">
             <main className="flex-1 flex overflow-hidden w-full max-w-full">
                 {/* Inbox Sidebar - Hidden on mobile if a conversation is active */}
                 <div className={`

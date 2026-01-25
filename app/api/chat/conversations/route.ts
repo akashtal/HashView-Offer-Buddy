@@ -23,12 +23,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(apiError('Recipient information is required'), { status: 400 });
         }
 
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(currentUser.userId) || !mongoose.Types.ObjectId.isValid(recipientId)) {
+            return NextResponse.json(apiError('Invalid user or recipient ID'), { status: 400 });
+        }
+
+        const userObjectId = new mongoose.Types.ObjectId(currentUser.userId);
+        const recipientObjectId = new mongoose.Types.ObjectId(recipientId);
+
         // Check if conversation already exists
         let conversation = await Conversation.findOne({
             participants: {
                 $all: [
-                    { $elemMatch: { participantId: currentUser.userId } },
-                    { $elemMatch: { participantId: recipientId } },
+                    { $elemMatch: { participantId: userObjectId } },
+                    { $elemMatch: { participantId: recipientObjectId } },
                 ],
             },
         });
@@ -38,11 +46,11 @@ export async function POST(request: NextRequest) {
             conversation = await Conversation.create({
                 participants: [
                     {
-                        participantId: currentUser.userId,
+                        participantId: userObjectId,
                         participantModel: currentUser.role === 'user' ? 'User' : (currentUser.role === 'vendor' ? 'Vendor' : 'User'), // Handle admin if needed
                     },
                     {
-                        participantId: recipientId,
+                        participantId: recipientObjectId,
                         participantModel: recipientModel,
                     },
                 ],

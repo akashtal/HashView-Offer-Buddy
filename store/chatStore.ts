@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 import { pusherClient } from '@/lib/pusher-client';
+import { useAuthStore } from './authStore';
 
 interface Message {
     _id: string;
@@ -55,7 +56,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     fetchConversations: async () => {
         try {
             set({ isLoading: true });
-            const response = await axios.get('/api/chat/conversations');
+            const token = useAuthStore.getState().token;
+            if (!token) return;
+
+            const response = await axios.get('/api/chat/conversations', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             set({ conversations: response.data.data, isLoading: false });
         } catch (error) {
             console.error('Fetch conversations error:', error);
@@ -75,7 +81,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     fetchMessages: async (conversationId: string) => {
         try {
             set({ isLoading: true });
-            const response = await axios.get(`/api/chat/messages/${conversationId}`);
+            const token = useAuthStore.getState().token;
+            if (!token) return;
+
+            const response = await axios.get(`/api/chat/messages/${conversationId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             set({ messages: response.data.data, isLoading: false });
         } catch (error) {
             console.error('Fetch messages error:', error);
@@ -85,7 +96,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     sendMessage: async (conversationId: string, content: string) => {
         try {
-            await axios.post('/api/chat/messages', { conversationId, content });
+            const token = useAuthStore.getState().token;
+            if (!token) return;
+
+            await axios.post('/api/chat/messages',
+                { conversationId, content },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
         } catch (error) {
             console.error('Send message error:', error);
         }
@@ -122,10 +139,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     initiateChat: async (recipientId: string, recipientModel: 'User' | 'Vendor') => {
         try {
-            const response = await axios.post('/api/chat/conversations', {
-                recipientId,
-                recipientModel,
-            });
+            const token = useAuthStore.getState().token;
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await axios.post('/api/chat/conversations',
+                { recipientId, recipientModel },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             const conversation = response.data.data;
 
             // Refresh list to include new conversation if not already there

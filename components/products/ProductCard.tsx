@@ -6,6 +6,7 @@ import { FiMapPin, FiTag, FiEye } from 'react-icons/fi';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { formatCurrency } from '@/lib/utils';
+import ChatButton from '@/components/chat/ChatButton';
 
 interface ProductCardProps {
   product: {
@@ -88,21 +89,33 @@ export default function ProductCard({ product }: ProductCardProps) {
           </h3>
 
           {/* Vendor */}
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            {product.vendorId.shopLogo ? (
-              <Image
-                src={product.vendorId.shopLogo}
-                alt={product.vendorId.shopName}
-                width={20}
-                height={20}
-                className="rounded-full"
+          <div className="flex items-center justify-between gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              {product.vendorId.shopLogo ? (
+                <Image
+                  src={product.vendorId.shopLogo}
+                  alt={product.vendorId.shopName}
+                  width={20}
+                  height={20}
+                  className="rounded-full"
+                />
+              ) : (
+                <div className="w-5 h-5 bg-primary/20 rounded-full flex items-center justify-center text-xs font-bold">
+                  {product.vendorId.shopName[0]}
+                </div>
+              )}
+              <span className="font-medium">{product.vendorId.shopName}</span>
+            </div>
+
+            {/* Chat Button (Icon only) */}
+            <div className="relative z-10">
+              <ChatButton
+                recipientId={product.vendorId._id}
+                recipientModel="Vendor"
+                recipientName={product.vendorId.shopName}
+                variant="icon"
               />
-            ) : (
-              <div className="w-5 h-5 bg-primary/20 rounded-full flex items-center justify-center text-xs font-bold">
-                {product.vendorId.shopName[0]}
-              </div>
-            )}
-            <span className="font-medium">{product.vendorId.shopName}</span>
+            </div>
           </div>
 
           {/* Price */}
@@ -137,4 +150,3 @@ export default function ProductCard({ product }: ProductCardProps) {
     </Link>
   );
 }
-

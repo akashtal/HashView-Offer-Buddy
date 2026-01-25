@@ -25,6 +25,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/ui/Toast';
+import ChatButton from '@/components/chat/ChatButton';
 
 // Types
 interface Review {
@@ -425,6 +426,16 @@ export default function ProductDetailPage() {
                 {vendor.isApproved && (
                   <CheckCircle2 size={20} className="text-green-500" />
                 )}
+                {/* Chat Button */}
+                <div className="ml-4">
+                  <ChatButton
+                    recipientId={vendor._id}
+                    recipientModel="Vendor"
+                    recipientName={vendor.shopName}
+                    variant="primary"
+                    className="!bg-[#4A7C59] hover:!bg-[#3d6b4a]"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -691,6 +702,6 @@ export default function ProductDetailPage() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

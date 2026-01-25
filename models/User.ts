@@ -39,7 +39,6 @@ const UserSchema = new Schema<IUser>(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
@@ -96,6 +95,7 @@ const UserSchema = new Schema<IUser>(
 // Create geospatial index for location
 
 UserSchema.index({ role: 1 });
+UserSchema.index({ email: 1, role: 1 }, { unique: true });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 

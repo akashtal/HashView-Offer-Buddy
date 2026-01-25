@@ -1,15 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 export default function SignInPage() {
     const router = useRouter();
-    const { login } = useAuthStore();
+    const searchParams = useSearchParams();
+    const { login, isAuthenticated } = useAuthStore();
+    // ... rest of state
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            const from = searchParams.get('from') || '/';
+            router.replace(from);
+        }
+    }, [isAuthenticated, router, searchParams]);
     const [formData, setFormData] = useState({
         email: '',
         password: '',

@@ -15,10 +15,14 @@ export async function POST(request: NextRequest) {
     const validatedData = registerSchema.parse(body);
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: validatedData.email });
+    const existingUser = await User.findOne({
+      email: validatedData.email,
+      role: validatedData.role
+    });
+
     if (existingUser) {
       return NextResponse.json(
-        apiError('User with this email already exists'),
+        apiError(`A ${validatedData.role} account with this email already exists`),
         { status: 400 }
       );
     }
