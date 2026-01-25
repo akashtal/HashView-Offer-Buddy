@@ -14,6 +14,8 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/api/auth') || // Login/Register APIs must be public
         pathname === '/signin' ||
         pathname === '/signup' ||
+        pathname === '/vendor/login' ||
+        pathname === '/vendor/register' ||
         pathname === '/' ||
         pathname === '/pricing' ||
         pathname.startsWith('/products') || // Public product view

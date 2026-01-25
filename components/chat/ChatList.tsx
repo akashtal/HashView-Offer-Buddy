@@ -64,7 +64,7 @@ const ChatList: React.FC = () => {
             <div className="flex-1">
                 {conversations.map((conv) => {
                     const otherParticipant = conv.participants.find(
-                        (p) => p.participantId !== user?.id
+                        (p) => String(p.participantId) !== String(user?.id)
                     );
 
                     if (!otherParticipant) return null;
@@ -72,7 +72,7 @@ const ChatList: React.FC = () => {
                     const isVendor = otherParticipant.participantModel === 'Vendor';
                     const name = isVendor
                         ? otherParticipant.details?.shopName
-                        : otherParticipant.details?.name;
+                        : (otherParticipant.details?.name || otherParticipant.details?.email?.split('@')[0] || 'User');
                     const avatar = isVendor
                         ? otherParticipant.details?.logo
                         : otherParticipant.details?.avatar;

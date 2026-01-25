@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createProductSchema } from '@/lib/validation';
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createProductSchema.parse(body);
 
     // Get vendor
-    const vendor = await Vendor.findOne({ userId: user.userId, isActive: true });
+    const vendor = await Store.findOne({ vendorId: user.userId, isActive: true });
     if (!vendor) {
       return NextResponse.json(
         apiError('Vendor profile not found. Please create your shop profile first.'),
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Update vendor's product count
-      await Vendor.findByIdAndUpdate(vendor._id, {
+      await Store.findByIdAndUpdate(vendor._id, {
         $inc: { 'analytics.totalProducts': 1 },
       });
 

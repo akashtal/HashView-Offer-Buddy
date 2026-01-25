@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import Product from '@/models/Product';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
@@ -14,9 +14,9 @@ export async function GET(
   try {
     await dbConnect();
 
-    const vendor = await Vendor.findById(params.id)
+    const vendor = await Store.findById(params.id)
       .populate('category', 'name slug icon')
-      .populate('userId', 'name email');
+      .populate('vendorId', 'name email');
 
     if (!vendor) {
       return NextResponse.json(
@@ -69,15 +69,15 @@ export async function PUT(
     }
 
     // Verify ownership or check if admin
-    let vendor = await Vendor.findOne({
+    let vendor = await Store.findOne({
       _id: params.id,
-      userId: user.userId,
+      vendorId: user.userId,
     });
 
     // If not found by ownership, check if admin can find it by ID
     if (!vendor) {
       if (user.role === 'admin') {
-        vendor = await Vendor.findById(params.id);
+        vendor = await Store.findById(params.id);
       }
     }
 
@@ -92,13 +92,13 @@ export async function PUT(
     const validatedData = updateVendorSchema.parse(body);
 
     // Update vendor
-    const updatedVendor = await Vendor.findByIdAndUpdate(
+    const updatedVendor = await Store.findByIdAndUpdate(
       params.id,
       { $set: validatedData },
       { new: true, runValidators: true }
     )
       .populate('category', 'name slug icon')
-      .populate('userId', 'name email');
+      .populate('vendorId', 'name email');
 
     return NextResponse.json(
       apiSuccess({ vendor: updatedVendor }, 'Vendor profile updated successfully'),
@@ -138,15 +138,15 @@ export async function DELETE(
     }
 
     // Verify ownership or admin
-    let vendor = await Vendor.findOne({
+    let vendor = await Store.findOne({
       _id: params.id,
-      userId: user.userId,
+      vendorId: user.userId,
     });
 
     // If not found by ownership, check if admin can find it by ID
     if (!vendor) {
       if (user.role === 'admin') {
-        vendor = await Vendor.findById(params.id);
+        vendor = await Store.findById(params.id);
       }
     }
 
@@ -158,7 +158,7 @@ export async function DELETE(
     }
 
     // Soft delete
-    await Vendor.findByIdAndUpdate(params.id, {
+    await Store.findByIdAndUpdate(params.id, {
       isActive: false,
     });
 

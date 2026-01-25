@@ -17,7 +17,8 @@ import * as path from 'path';
 
 // Import models
 import User from '../models/User';
-import Vendor from '../models/Vendor';
+import VendorAuth from '../models/VendorAuth';
+import Store from '../models/Store';
 import Product from '../models/Product';
 import Category from '../models/Category';
 
@@ -57,7 +58,8 @@ async function seed() {
     console.log('🗑️  Clearing existing data...');
     await Promise.all([
       User.deleteMany({}),
-      Vendor.deleteMany({}),
+      Store.deleteMany({}),
+      VendorAuth.deleteMany({}),
       Product.deleteMany({}),
       Category.deleteMany({}),
     ]);
@@ -165,16 +167,15 @@ async function seed() {
     console.log('🏪 Creating sample vendors...');
 
     // Vendor 1
-    const vendorUser1 = await User.create({
-      name: 'John Electronics',
+    const vendorAuth1 = await VendorAuth.create({
       email: 'john@electronics.com',
       password: await bcrypt.hash('vendor123', 10),
       role: 'vendor',
-      phone: '+91 9876543210',
+      isVerified: true
     });
 
-    const vendor1 = await Vendor.create({
-      userId: vendorUser1._id,
+    const vendor1 = await Store.create({
+      vendorId: vendorAuth1._id,
       shopName: 'Tech Paradise',
       shopDescription: 'Your one-stop shop for all electronics needs',
       category: categories[0]._id,
@@ -199,16 +200,15 @@ async function seed() {
     });
 
     // Vendor 2
-    const vendorUser2 = await User.create({
-      name: 'Sarah Fashion',
+    const vendorAuth2 = await VendorAuth.create({
       email: 'sarah@fashion.com',
       password: await bcrypt.hash('vendor123', 10),
       role: 'vendor',
-      phone: '+91 9876543211',
+      isVerified: true
     });
 
-    const vendor2 = await Vendor.create({
-      userId: vendorUser2._id,
+    const vendor2 = await Store.create({
+      vendorId: vendorAuth2._id,
       shopName: 'Style Studio',
       shopDescription: 'Latest fashion trends at unbeatable prices',
       category: categories[1]._id,
@@ -314,10 +314,10 @@ async function seed() {
     console.log(`✅ Created ${products.length} sample products`);
 
     // Update vendor product counts
-    await Vendor.findByIdAndUpdate(vendor1._id, {
+    await Store.findByIdAndUpdate(vendor1._id, {
       $set: { 'analytics.totalProducts': 2 },
     });
-    await Vendor.findByIdAndUpdate(vendor2._id, {
+    await Store.findByIdAndUpdate(vendor2._id, {
       $set: { 'analytics.totalProducts': 2 },
     });
 

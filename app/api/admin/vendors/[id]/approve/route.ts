@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest, hasRole } from '@/lib/auth';
 
@@ -20,7 +20,7 @@ export async function POST(
       );
     }
 
-    const vendor = await Vendor.findByIdAndUpdate(
+    const vendor = await Store.findByIdAndUpdate(
       params.id,
       { isApproved: true },
       { new: true }

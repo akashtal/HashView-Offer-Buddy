@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import Product from '@/models/Product';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
@@ -22,7 +22,7 @@ export async function PUT(
         // Use partial schema for updates
         const validatedData = updateVendorSchema.parse(body);
 
-        const vendor = await Vendor.findByIdAndUpdate(
+        const vendor = await Store.findByIdAndUpdate(
             params.id,
             { $set: validatedData },
             { new: true, runValidators: true }
@@ -49,7 +49,7 @@ export async function DELETE(
             return NextResponse.json(apiError('Unauthorized'), { status: 401 });
         }
 
-        const vendor = await Vendor.findByIdAndDelete(params.id);
+        const vendor = await Store.findByIdAndDelete(params.id);
         if (!vendor) return NextResponse.json(apiError('Vendor not found'), { status: 404 });
 
         // Also delete associated products
@@ -80,7 +80,7 @@ export async function PATCH(
         if (typeof isActive === 'boolean') update.isActive = isActive;
         if (typeof isApproved === 'boolean') update.isApproved = isApproved;
 
-        const vendor = await Vendor.findByIdAndUpdate(
+        const vendor = await Store.findByIdAndUpdate(
             params.id,
             { $set: update },
             { new: true }

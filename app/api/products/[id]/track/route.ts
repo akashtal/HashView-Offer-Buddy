@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import Analytics from '@/models/Analytics';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
@@ -52,12 +52,12 @@ export async function POST(
 
     // Update vendor analytics
     if (['contact', 'call', 'whatsapp', 'directions'].includes(type)) {
-      await Vendor.findByIdAndUpdate(product.vendorId, {
+      await Store.findByIdAndUpdate(product.vendorId, {
         $inc: { 'analytics.totalContacts': 1 },
       });
     }
 
-    await Vendor.findByIdAndUpdate(product.vendorId, {
+    await Store.findByIdAndUpdate(product.vendorId, {
       $inc: { 'analytics.totalViews': 1 },
     });
 

@@ -28,7 +28,9 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<string>;
+  loginVendor: (email: string, password: string) => Promise<string>;
   register: (data: any) => Promise<void>;
+  registerVendor: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -81,6 +83,35 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginVendor: async (email: string, password: string) => {
+        try {
+          set({ isLoading: true });
+          const response = await axios.post('/api/auth/vendor/login', {
+            email,
+            password,
+          });
+
+          const { user, token } = response.data.data;
+
+          set({
+            user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+
+          // Set axios default header
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+          return user.role;
+        } catch (error: any) {
+          set({ isLoading: false });
+          throw new Error(
+            error.response?.data?.error || 'Vendor login failed'
+          );
+        }
+      },
+
       register: async (data: any) => {
         try {
           set({ isLoading: true });
@@ -101,6 +132,30 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false });
           throw new Error(
             error.response?.data?.error || 'Registration failed'
+          );
+        }
+      },
+
+      registerVendor: async (data: any) => {
+        try {
+          set({ isLoading: true });
+          const response = await axios.post('/api/auth/vendor/register', data);
+
+          const { user, token } = response.data.data;
+
+          set({
+            user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+
+          // Set axios default header
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        } catch (error: any) {
+          set({ isLoading: false });
+          throw new Error(
+            error.response?.data?.error || 'Vendor registration failed'
           );
         }
       },

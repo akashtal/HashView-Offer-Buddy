@@ -12,19 +12,24 @@ import {
   FiPhone,
   FiPackage,
   FiTrendingUp,
+  FiMessageSquare,
 } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
+import { useChatStore } from '@/store/chatStore';
 import Button from '@/components/ui/Button';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Loading from '@/components/ui/Loading';
+import ChatList from '@/components/chat/ChatList';
+import ChatWindow from '@/components/chat/ChatWindow';
 import { formatCurrency } from '@/lib/utils';
 
 export default function VendorDashboard() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { activeConversationId } = useChatStore();
   const {
     myVendorProfile,
     myProducts,
@@ -34,7 +39,7 @@ export default function VendorDashboard() {
     fetchMyProfile,
   } = useVendorStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'analytics' | 'messages'>('overview');
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'vendor') {
@@ -171,10 +176,10 @@ export default function VendorDashboard() {
 
         {/* Tabs */}
         <div className="mb-6 border-b">
-          <div className="flex gap-6">
+          <div className="flex gap-6 overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'overview'
+              className={`pb-3 px-1 font-medium transition-colors whitespace-nowrap ${activeTab === 'overview'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-gray-600 hover:text-secondary'
                 }`}
@@ -183,7 +188,7 @@ export default function VendorDashboard() {
             </button>
             <button
               onClick={() => setActiveTab('products')}
-              className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'products'
+              className={`pb-3 px-1 font-medium transition-colors whitespace-nowrap ${activeTab === 'products'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-gray-600 hover:text-secondary'
                 }`}
@@ -192,12 +197,21 @@ export default function VendorDashboard() {
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`pb-3 px-1 font-medium transition-colors ${activeTab === 'analytics'
+              className={`pb-3 px-1 font-medium transition-colors whitespace-nowrap ${activeTab === 'analytics'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-gray-600 hover:text-secondary'
                 }`}
             >
               Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`pb-3 px-1 font-medium transition-colors whitespace-nowrap ${activeTab === 'messages'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-600 hover:text-secondary'
+                }`}
+            >
+              Messages
             </button>
           </div>
         </div>
@@ -431,8 +445,21 @@ export default function VendorDashboard() {
             </Card>
           </div>
         )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden h-[calc(100vh-250px)] min-h-[500px] flex">
+            {/* Chat List - Hidden on mobile when chat open */}
+            <div className={`${activeConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 md:min-w-[320px] max-w-sm border-r flex-col`}>
+              <ChatList />
+            </div>
+            {/* Chat Window - Visible on mobile when chat open */}
+            <div className={`${activeConversationId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gray-50`}>
+              <ChatWindow />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
+    "seed:db": "tsx scripts/seed-database.ts",
     "clean:db": "tsx scripts/clean_db.ts",
     "add-category-images": "tsx scripts/add-category-images.ts",
     "revert-category-images": "tsx scripts/revert-category-images.ts"

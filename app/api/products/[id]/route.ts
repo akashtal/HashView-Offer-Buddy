@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createProductSchema, updateProductSchema } from '@/lib/validation';
@@ -13,16 +13,44 @@ export async function GET(
 ) {
   try {
     await dbConnect();
+
+    // Fetch product without populate first to avoid errors with legacy vendorIds
     const product = await Product.findById(params.id)
-      .populate('vendorId', 'shopName shopLogo location contactInfo')
       .populate('category', 'name slug');
 
     if (!product) {
       return NextResponse.json(apiError('Product not found'), { status: 404 });
     }
 
-    return NextResponse.json(apiSuccess({ product }), { status: 200 });
+    // Try to populate vendor info from Store, but don't fail if it doesn't exist
+    let vendorInfo = null;
+    try {
+      const store = await Store.findById(product.vendorId);
+      if (store) {
+        vendorInfo = {
+          _id: store._id,
+          shopName: store.shopName,
+          shopLogo: store.shopLogo,
+          location: store.location,
+          contactInfo: store.contactInfo
+        };
+      }
+    } catch (err) {
+      // vendorId might point to old User record, just set vendorInfo to null
+      console.warn(`Could not fetch vendor for product ${params.id}:`, err);
+    }
+
+    return NextResponse.json(
+      apiSuccess({
+        product: {
+          ...product.toObject(),
+          vendorId: vendorInfo || product.vendorId
+        }
+      }),
+      { status: 200 }
+    );
   } catch (error) {
+    console.error('Product fetch error:', error);
     return NextResponse.json(apiError('Failed to fetch product'), { status: 500 });
   }
 }
@@ -49,7 +77,7 @@ export async function DELETE(
     // Admin can delete anything. Vendor can only delete their own.
     if (user.role !== 'admin') {
       // Find vendor associated with this user
-      const vendor = await Vendor.findOne({ userId: user.userId });
+      const vendor = await Store.findOne({ vendorId: user.userId });
       if (!vendor || vendor._id.toString() !== product.vendorId.toString()) {
         return NextResponse.json(apiError('You do not have permission to delete this product'), { status: 403 });
       }
@@ -58,7 +86,7 @@ export async function DELETE(
     await Product.findByIdAndDelete(params.id);
 
     // Decrement vendor product count
-    await Vendor.findByIdAndUpdate(product.vendorId, { $inc: { 'analytics.totalProducts': -1 } });
+    await Store.findByIdAndUpdate(product.vendorId, { $inc: { 'analytics.totalProducts': -1 } });
 
     return NextResponse.json(apiSuccess(null, 'Product deleted successfully'), { status: 200 });
   } catch (error) {
@@ -98,7 +126,7 @@ export async function PUT(
     }
 
     // Check ownership
-    const vendor = await Vendor.findOne({ userId: user.userId });
+    const vendor = await Store.findOne({ vendorId: user.userId });
     if (!vendor || vendor._id.toString() !== product.vendorId.toString()) {
       return NextResponse.json(
         apiError('You are not authorized to update this product'),

@@ -24,7 +24,7 @@ const ChatWindow: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const activeConversation = conversations.find(c => c._id === activeConversationId);
-    const otherParticipant = activeConversation?.participants.find(p => p.participantId !== user?.id);
+    const otherParticipant = activeConversation?.participants.find(p => String(p.participantId) !== String(user?.id));
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -79,7 +79,7 @@ const ChatWindow: React.FC = () => {
 
     const otherName = otherParticipant?.participantModel === 'Vendor'
         ? otherParticipant.details?.shopName
-        : otherParticipant?.details?.name;
+        : (otherParticipant?.details?.name || otherParticipant?.details?.email?.split('@')[0] || 'User');
 
     return (
         <div className="flex flex-col h-full bg-white relative">

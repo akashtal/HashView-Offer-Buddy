@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import User from '@/models/User';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      const vendors = await Vendor.aggregate(pipeline);
+      const vendors = await Store.aggregate(pipeline);
 
       // Get total count with same filters
       const countPipeline = [
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         { $count: 'total' }
       ];
 
-      const countResult = await Vendor.aggregate(countPipeline);
+      const countResult = await Store.aggregate(countPipeline);
       const total = countResult[0]?.total || 0;
 
       return NextResponse.json(
@@ -146,13 +146,13 @@ export async function GET(request: NextRequest) {
         sortOptions = { createdAt: -1 }; // Default to newest
       }
 
-      const vendors = await Vendor.find(query)
+      const vendors = await Store.find(query)
         .populate('category', 'name slug icon')
         .sort(sortOptions)
         .skip(skip)
         .limit(limit);
 
-      const total = await Vendor.countDocuments(query);
+      const total = await Store.countDocuments(query);
 
       return NextResponse.json(
         apiSuccess({
@@ -189,11 +189,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if vendor already exists for this user
-    const existingVendor = await Vendor.findOne({ userId: user.userId });
-    if (existingVendor) {
+    // Check if store already exists for this vendor
+    const existingStore = await Store.findOne({ vendorId: user.userId });
+    if (existingStore) {
       return NextResponse.json(
-        apiError('Vendor profile already exists for this user'),
+        apiError('Store profile already exists for this vendor'),
         { status: 400 }
       );
     }
@@ -201,10 +201,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createVendorSchema.parse(body);
 
-    // Create vendor with Point type for geospatial queries
-    const vendor = await Vendor.create({
+    // Create store with Point type for geospatial queries
+    const store = await Store.create({
       ...validatedData,
-      userId: user.userId,
+      vendorId: user.userId,
       location: {
         address: validatedData.location.address,
         city: validatedData.location.city,
@@ -218,19 +218,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update user role if needed
-    await User.findByIdAndUpdate(user.userId, {
-      role: 'vendor',
-    });
+    // removed legacy role update
 
-    const populatedVendor = await Vendor.findById(vendor._id)
-      .populate('category', 'name slug icon')
-      .populate('userId', 'name email');
+    const populatedStore = await Store.findById(store._id)
+      .populate('category', 'name slug icon');
+    // .populate('vendorId', 'email'); // optional
 
     return NextResponse.json(
       apiSuccess(
-        { vendor: populatedVendor },
-        'Vendor profile created successfully. Awaiting admin approval.'
+        { store: populatedStore },
+        'Store profile created successfully. Awaiting admin approval.'
       ),
       { status: 201 }
     );

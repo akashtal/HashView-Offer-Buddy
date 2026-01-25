@@ -144,6 +144,9 @@ export default function Header() {
                   )}
                 </Link>
 
+                {/* Vendor Link */}
+
+
                 {/* User Profile or Sign In */}
                 {isAuthenticated ? (
                   <div className="relative">

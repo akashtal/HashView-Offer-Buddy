@@ -3,7 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
 import Message from '@/models/Message';
 import User from '@/models/User';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import { getUserFromRequest } from '@/lib/auth';
 import { apiSuccess, apiError } from '@/lib/utils';
 import mongoose from 'mongoose';
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
                 participants: [
                     {
                         participantId: userObjectId,
-                        participantModel: currentUser.role === 'user' ? 'User' : (currentUser.role === 'vendor' ? 'Vendor' : 'User'), // Handle admin if needed
+                        participantModel: currentUser.role === 'user' ? 'User' : (currentUser.role === 'vendor' ? 'Store' : 'User'), // Handle admin if needed
                     },
                     {
                         participantId: recipientObjectId,
@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
                         let details = null;
                         if (p.participantModel === 'User') {
                             details = await User.findById(p.participantId).select('name email avatar');
-                        } else if (p.participantModel === 'Vendor') {
-                            details = await Vendor.findById(p.participantId).select('shopName email logo');
+                        } else if (p.participantModel === 'Vendor' || p.participantModel === 'Store') {
+                            details = await Store.findById(p.participantId).select('shopName email logo');
                         }
                         return {
                             ...p.toObject(),

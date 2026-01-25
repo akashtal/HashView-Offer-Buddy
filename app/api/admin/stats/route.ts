@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import Product from '@/models/Product';
 import Analytics from '@/models/Analytics';
 import { apiSuccess, apiError } from '@/lib/utils';
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
 
     // Get counts
     const totalUsers = await User.countDocuments({ role: 'user' });
-    const totalVendors = await Vendor.countDocuments({ isApproved: true });
-    const pendingVendors = await Vendor.countDocuments({
+    const totalVendors = await Store.countDocuments({ isApproved: true });
+    const pendingVendors = await Store.countDocuments({
       isApproved: false,
       isActive: true
     });
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       .limit(10);
 
     // Get top vendors by views
-    const topVendors = await Vendor.find({ isApproved: true })
+    const topVendors = await Store.find({ isApproved: true })
       .select('shopName shopLogo analytics')
       .sort({ 'analytics.totalViews': -1 })
       .limit(10);
@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
     // Get top products by views
     const topProducts = await Product.find({ isActive: true })
       .select('title images analytics vendorId')
-      .populate('vendorId', 'shopName')
       .sort({ 'analytics.views': -1 })
       .limit(10);
 

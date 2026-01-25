@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { Mail, Lock, User, Loader2, ArrowRight, Store } from 'lucide-react';
+import AuthTabs from '@/components/auth/AuthTabs';
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -37,6 +38,7 @@ export default function SignUpPage() {
         <div className="py-4">
             <div className="mx-auto w-full max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
+                    <AuthTabs />
                     <div className="mb-6 text-center">
                         <h2 className="text-2xl font-bold text-gray-900">Create your account</h2>
                         <p className="mt-1 text-sm text-gray-500">
@@ -115,33 +117,7 @@ export default function SignUpPage() {
                             </div>
                         </div>
 
-                        <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">I am a:</label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="role"
-                                        value="user"
-                                        checked={formData.role === 'user'}
-                                        onChange={() => setFormData({ ...formData, role: 'user' })}
-                                        className="text-[#FDB913] focus:ring-[#FDB913]"
-                                    />
-                                    <span className="text-sm">Buyer</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="role"
-                                        value="vendor"
-                                        checked={formData.role === 'vendor'}
-                                        onChange={() => setFormData({ ...formData, role: 'vendor' })}
-                                        className="text-[#FDB913] focus:ring-[#FDB913]"
-                                    />
-                                    <span className="text-sm flex items-center gap-1"><Store size={14} /> Seller / Vendor</span>
-                                </label>
-                            </div>
-                        </div>
+
 
                         <div>
                             <button

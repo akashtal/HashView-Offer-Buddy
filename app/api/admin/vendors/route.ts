@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
-import Vendor from '@/models/Vendor';
+import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest, hasRole } from '@/lib/auth';
 
@@ -34,14 +34,14 @@ export async function GET(request: NextRequest) {
       query.isActive = true;
     }
 
-    const vendors = await Vendor.find(query)
+    const vendors = await Store.find(query)
       .populate('category', 'name slug')
-      .populate('userId', 'name email')
+      .populate('vendorId', 'name email')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Vendor.countDocuments(query);
+    const total = await Store.countDocuments(query);
 
     return NextResponse.json(
       apiSuccess({
