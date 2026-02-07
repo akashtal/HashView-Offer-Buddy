@@ -33,7 +33,7 @@ export default function ProfilePage() {
             router.push('/signin');
         } else if (user) {
             setFormData({
-                name: user.name,
+                name: user.name || '',
                 phone: user.phone || '',
                 location: {
                     address: user.location?.address || '',
@@ -153,7 +153,7 @@ export default function ProfilePage() {
                                             <div className="grid md:grid-cols-2 gap-4">
                                                 <Input
                                                     label="Full Name"
-                                                    value={isEditing ? formData.name : user.name}
+                                                    value={isEditing ? formData.name : (user.name || '')}
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                                     disabled={!isEditing}
                                                     icon={<FiUser />}
@@ -169,7 +169,7 @@ export default function ProfilePage() {
                                                 <div className="md:col-span-2">
                                                     <Input
                                                         label="Email Address"
-                                                        value={user.email}
+                                                        value={user.email || ''}
                                                         disabled
                                                         className="bg-gray-100 cursor-not-allowed"
                                                         icon={<FiMail />}

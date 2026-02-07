@@ -41,6 +41,26 @@ export interface IStore extends Document {
     totalContacts: number;
     totalProducts: number;
   };
+  kycDocuments?: {
+    idProof?: {
+      url: string;
+      type: 'aadhaar' | 'pan' | 'voter_id' | 'passport';
+      uploadedAt: Date;
+    };
+    businessDocument?: {
+      url: string;
+      type: 'gst_certificate' | 'trade_license' | 'udyam' | 'other';
+      uploadedAt: Date;
+    };
+    status: 'pending' | 'approved' | 'rejected' | 'not_submitted';
+    reviewedAt?: Date;
+    reviewedBy?: mongoose.Types.ObjectId;
+    rejectionReason?: string;
+  };
+  limits: {
+    maxSubcategories: number;
+    maxProductsPerSubcategory: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -173,6 +193,45 @@ const StoreSchema = new Schema<IStore>(
         default: 0,
       },
     },
+    kycDocuments: {
+      idProof: {
+        url: String,
+        type: {
+          type: String,
+          enum: ['aadhaar', 'pan', 'voter_id', 'passport'],
+        },
+        uploadedAt: Date,
+      },
+      businessDocument: {
+        url: String,
+        type: {
+          type: String,
+          enum: ['gst_certificate', 'trade_license', 'udyam', 'other'],
+        },
+        uploadedAt: Date,
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected', 'not_submitted'],
+        default: 'not_submitted',
+      },
+      reviewedAt: Date,
+      reviewedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      rejectionReason: String,
+    },
+    limits: {
+      maxSubcategories: {
+        type: Number,
+        default: 5,
+      },
+      maxProductsPerSubcategory: {
+        type: Number,
+        default: 20,
+      },
+    },
   },
   {
     timestamps: true,
@@ -186,6 +245,11 @@ StoreSchema.index({ vendorId: 1 });
 StoreSchema.index({ category: 1 });
 StoreSchema.index({ isApproved: 1, isActive: 1 });
 StoreSchema.index({ 'location.city': 1 });
+
+// Force model recompilation in development to handle schema changes
+if (process.env.NODE_ENV === 'development') {
+  delete mongoose.models['Store'];
+}
 
 const Store: Model<IStore> = mongoose.models.Store || mongoose.model<IStore>('Store', StoreSchema);
 

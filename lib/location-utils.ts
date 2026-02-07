@@ -71,28 +71,49 @@ export function isGeolocationSupported(): boolean {
  */
 export async function getCurrentLocation(): Promise<Coordinates | null> {
     if (!isGeolocationSupported()) {
+        console.warn('Geolocation is not supported by this browser.');
         return null;
     }
 
-    return new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                resolve({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                });
-            },
-            (error) => {
-                console.error('Error getting location:', error);
-                resolve(null);
-            },
-            {
-                enableHighAccuracy: false, // Start with low accuracy for faster response on mobile
-                timeout: 30000, // 30 seconds - longer for mobile devices
-                maximumAge: 300000, // 5 minutes - use cached location
-            }
-        );
-    });
+    const getPosition = (options: PositionOptions): Promise<GeolocationPosition> => {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+    };
+
+    try {
+        // Try with low accuracy first (faster, less battery)
+        const position = await getPosition({
+            enableHighAccuracy: false,
+            timeout: 10000, // 10s timeout for low accuracy
+            maximumAge: 300000, // 5 minutes cache
+        });
+        return {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+        };
+    } catch (error: any) {
+        console.warn('Low accuracy location failed, retrying with high accuracy...', error?.message);
+
+        try {
+            // Retry with high accuracy (GPS)
+            const position = await getPosition({
+                enableHighAccuracy: true,
+                timeout: 20000, // 20s timeout for GPS
+                maximumAge: 0, // Force fresh reading
+            });
+            return {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+            };
+        } catch (retryError: any) {
+            console.error('Error getting location:', {
+                code: retryError?.code,
+                message: retryError?.message,
+            });
+            return null;
+        }
+    }
 }
 
 /**

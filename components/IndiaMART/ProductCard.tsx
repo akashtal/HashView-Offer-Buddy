@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
+import { useToast } from '@/components/ui/Toast';
 
 interface IndiaMArtProductCardProps {
     id: string;
@@ -20,6 +22,7 @@ interface IndiaMArtProductCardProps {
         shopName: string;
         city?: string;
     };
+    vendorId?: string;
     distance?: number;
 }
 
@@ -30,10 +33,38 @@ export default function IndiaMArtProductCard({
     price,
     offer,
     vendor,
+    vendorId,
     distance,
 }: IndiaMArtProductCardProps) {
+    const { addItem } = useCartStore();
+    const { showToast, ToastContainer } = useToast();
+
+    const handleAddToCart = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!price?.original && !price?.discounted) {
+            showToast('Price not available for this product', 'error');
+            return;
+        }
+
+        try {
+            await addItem({
+                productId: id,
+                title,
+                price: price.discounted || price.original || 0,
+                image,
+                vendorId: vendorId
+            });
+            showToast('Added to cart!', 'success');
+        } catch (error) {
+            showToast('Failed to add to cart', 'error');
+        }
+    };
+
     return (
-        <Link href={`/products/${id}`} className="indiamart-product-card group flex flex-col h-full">
+        <Link href={`/products/${id}`} className="indiamart-product-card group flex flex-col h-full relative">
+            <ToastContainer />
             {/* Product Image */}
             <div className="relative h-48 flex-shrink-0 bg-gray-100">
                 <Image
@@ -91,11 +122,20 @@ export default function IndiaMArtProductCard({
                     </div>
                 )}
 
-                {/* Get Best Price Button */}
-                <button className="w-full get-best-price-btn py-2.5 text-sm font-bold mt-auto">
-                    <Phone size={14} className="inline mr-2" />
-                    Get Best Price
-                </button>
+                {/* Buttons Container */}
+                <div className="mt-auto flex flex-col sm:flex-row gap-2">
+                    <button className="w-full sm:flex-1 get-best-price-btn py-1.5 sm:py-2.5 text-xs sm:text-sm font-bold">
+                        <Phone size={12} className="inline mr-1.5 sm:mr-2" />
+                        Best Price
+                    </button>
+                    <button
+                        onClick={handleAddToCart}
+                        className="w-full sm:w-auto px-3 py-1.5 sm:py-2.5 bg-gray-900 text-white rounded-lg text-xs sm:text-sm font-bold hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        title="Add to Cart"
+                    >
+                        + Cart
+                    </button>
+                </div>
             </div>
         </Link>
     );

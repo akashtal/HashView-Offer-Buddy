@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useOptimistic } from 'react';
+import { useState, useEffect, useOptimistic, startTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
@@ -37,7 +37,9 @@ export default function CartPage() {
 
     const handleRemove = async (productId: string, title: string) => {
         // Optimistic update: UI changes instantly
-        setOptimisticItems({ type: 'remove', id: productId });
+        startTransition(() => {
+            setOptimisticItems({ type: 'remove', id: productId });
+        });
 
         // Actual removal happens in background
         removeItem(productId);
@@ -48,7 +50,9 @@ export default function CartPage() {
         if (newQuantity < 1) return;
 
         // Optimistic update
-        setOptimisticItems({ type: 'update', id: productId, quantity: newQuantity });
+        startTransition(() => {
+            setOptimisticItems({ type: 'update', id: productId, quantity: newQuantity });
+        });
 
         // Actual update
         updateQuantity(productId, newQuantity);

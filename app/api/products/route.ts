@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
 import Store from '@/models/Store';
+import VendorSubcategory from '@/models/VendorSubcategory';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createProductSchema } from '@/lib/validation';
@@ -277,6 +278,7 @@ export async function GET(request: NextRequest) {
           limit,
           total,
           pages: Math.ceil(total / limit),
+          hasMore: (page * limit) < total,
         },
         facets: {
           minPrice: stats.minPrice || 0,
@@ -335,6 +337,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Subcategory validation and limit enforcement
+    let subcategoryId = (validatedData as any).subcategory;
+    if (subcategoryId) {
+      const subcategory = await VendorSubcategory.findOne({
+        _id: subcategoryId,
+        storeId: vendor._id,
+      });
+
+      if (!subcategory) {
+        return NextResponse.json(
+          apiError('Invalid subcategory. Subcategory not found or does not belong to your store.'),
+          { status: 400 }
+        );
+      }
+
+      // Check product limit per subcategory
+      const maxProductsPerSubcategory = vendor.limits?.maxProductsPerSubcategory || 20;
+      if (subcategory.productCount >= maxProductsPerSubcategory) {
+        return NextResponse.json(
+          apiError(`Subcategory "${subcategory.name}" has reached its product limit of ${maxProductsPerSubcategory}. Contact admin to increase.`),
+          { status: 403 }
+        );
+      }
+    }
+
     // Create product
     console.log('Creating product with data:', { ...validatedData, vendorId: vendor._id });
     try {
@@ -348,9 +375,17 @@ export async function POST(request: NextRequest) {
         $inc: { 'analytics.totalProducts': 1 },
       });
 
+      // If subcategory provided, increment its product count
+      if (subcategoryId) {
+        await VendorSubcategory.findByIdAndUpdate(subcategoryId, {
+          $inc: { productCount: 1 },
+        });
+      }
+
       const populatedProduct = await Product.findById(product._id)
         .populate('category', 'name slug icon')
-        .populate('vendorId', 'shopName shopLogo location');
+        .populate('vendorId', 'shopName shopLogo location')
+        .populate('subcategory', 'name slug');
 
       return NextResponse.json(
         apiSuccess(

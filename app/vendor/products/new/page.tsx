@@ -8,7 +8,7 @@ import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
-import { FiPackage, FiImage, FiTag, FiDollarSign, FiUpload, FiX } from 'react-icons/fi';
+import { FiPackage, FiImage, FiTag, FiDollarSign, FiUpload, FiX, FiPlus, FiFolder } from 'react-icons/fi';
 
 export default function NewProductPage() {
     const router = useRouter();
@@ -36,6 +36,14 @@ export default function NewProductPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Subcategory State
+    const [subcategories, setSubcategories] = useState<any[]>([]);
+    const [selectedSubcategory, setSelectedSubcategory] = useState('');
+    const [subcategoryUsage, setSubcategoryUsage] = useState({ used: 0, max: 5 });
+    const [showCreateSubcatModal, setShowCreateSubcatModal] = useState(false);
+    const [newSubcatName, setNewSubcatName] = useState('');
+    const [creatingSubcat, setCreatingSubcat] = useState(false);
+
     // Auth & Profile Check
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
@@ -59,30 +67,92 @@ export default function NewProductPage() {
         loadCategories();
     }, []);
 
+    // Load Subcategories
+    useEffect(() => {
+        const loadSubcategories = async () => {
+            try {
+                const response = await fetch('/api/vendor/subcategories');
+                const data = await response.json();
+                if (data.success) {
+                    setSubcategories(data.data.subcategories || []);
+                    setSubcategoryUsage({
+                        used: data.data.usage?.subcategoriesUsed || 0,
+                        max: data.data.usage?.maxSubcategories || 5,
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load subcategories');
+            }
+        };
+        loadSubcategories();
+    }, []);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleCreateSubcategory = async () => {
+        if (!newSubcatName.trim() || !formData.category) {
+            setError('Please enter a subcategory name and select a category first');
+            return;
+        }
+
+        setCreatingSubcat(true);
+        setError('');
+
+        try {
+            const response = await fetch('/api/vendor/subcategories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newSubcatName.trim(),
+                    parentCategory: formData.category,
+                }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to create subcategory');
+            }
+
+            // Add to list and select it
+            setSubcategories(prev => [data.data.subcategory, ...prev]);
+            setSelectedSubcategory(data.data.subcategory._id);
+            setSubcategoryUsage(prev => ({ ...prev, used: prev.used + 1 }));
+            setNewSubcatName('');
+            setShowCreateSubcatModal(false);
+        } catch (err: any) {
+            setError(err.message || 'Failed to create subcategory');
+        } finally {
+            setCreatingSubcat(false);
+        }
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
         setUploading(true);
         setError('');
 
-        const data = new FormData();
-        data.append('file', file);
-
         try {
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: data
+            const uploadPromises = files.map(async (file) => {
+                const data = new FormData();
+                data.append('file', file);
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: data
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Failed to upload');
+                return result.data.url;
             });
-            const result = await res.json();
-            setImages(prev => [...prev, result.data.url]);
+
+            const uploadedUrls = await Promise.all(uploadPromises);
+            setImages(prev => [...prev, ...uploadedUrls]);
         } catch (err: any) {
-            setError('Failed to upload image. Please try again.');
+            setError('Failed to upload some images. Please try again.');
             console.error(err);
         } finally {
             setUploading(false);
@@ -113,6 +183,7 @@ export default function NewProductPage() {
                 title: formData.title,
                 description: formData.description,
                 category: formData.category,
+                subcategory: selectedSubcategory || undefined,
                 images,
                 price: {
                     original: priceOriginal,
@@ -214,7 +285,108 @@ export default function NewProductPage() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* Subcategory Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                                            <FiFolder className="text-primary" />
+                                            Subcategory
+                                        </label>
+                                        <span className="text-xs text-gray-500">
+                                            {subcategoryUsage.used}/{subcategoryUsage.max} used
+                                        </span>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={selectedSubcategory}
+                                            onChange={(e) => setSelectedSubcategory(e.target.value)}
+                                            className="input-field flex-1"
+                                        >
+                                            <option value="">Select Subcategory (Optional)</option>
+                                            {subcategories.map(subcat => (
+                                                <option key={subcat._id} value={subcat._id}>
+                                                    {subcat.name} ({subcat.productCount || 0} products)
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreateSubcatModal(true)}
+                                            disabled={subcategoryUsage.used >= subcategoryUsage.max}
+                                            className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
+                                            title={subcategoryUsage.used >= subcategoryUsage.max ? 'Subcategory limit reached' : 'Create new subcategory'}
+                                        >
+                                            <FiPlus size={16} />
+                                            <span className="hidden sm:inline">New</span>
+                                        </button>
+                                    </div>
+
+                                    {subcategoryUsage.used >= subcategoryUsage.max && (
+                                        <p className="text-xs text-amber-600">
+                                            You have reached your subcategory limit. Contact admin to increase.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Create Subcategory Modal */}
+                            {showCreateSubcatModal && (
+                                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                                    <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+                                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                            <FiFolder className="text-primary" />
+                                            Create Subcategory
+                                        </h3>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Subcategory Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={newSubcatName}
+                                                    onChange={(e) => setNewSubcatName(e.target.value)}
+                                                    placeholder="e.g. Smartphones, Laptops"
+                                                    className="input-field w-full"
+                                                    autoFocus
+                                                />
+                                            </div>
+
+                                            <p className="text-xs text-gray-500">
+                                                This subcategory will be created under:{' '}
+                                                <span className="font-medium">
+                                                    {categories.find(c => c._id === formData.category)?.name || 'Selected category'}
+                                                </span>
+                                            </p>
+
+                                            <div className="flex gap-3 justify-end pt-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        setShowCreateSubcatModal(false);
+                                                        setNewSubcatName('');
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="primary"
+                                                    onClick={handleCreateSubcategory}
+                                                    isLoading={creatingSubcat}
+                                                    disabled={!newSubcatName.trim() || !formData.category}
+                                                >
+                                                    Create
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Pricing & Offer */}
                             <div className="space-y-4">
@@ -318,19 +490,20 @@ export default function NewProductPage() {
                                         </div>
                                     ))}
 
-                                    {images.length < 4 && (
+                                    {images.length < 10 && (
                                         <label className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 cursor-pointer hover:border-primary hover:bg-blue-50 transition-colors h-32">
                                             {uploading ? (
-                                                <span className="text-sm text-gray-500 animate-pulse">Uploading...</span>
+                                                <span className="text-sm text-gray-500 animate-pulse text-center">Uploading...</span>
                                             ) : (
                                                 <>
                                                     <FiUpload className="text-gray-400 mb-2" size={24} />
-                                                    <span className="text-sm text-gray-500">Upload Image</span>
+                                                    <span className="text-sm text-gray-500 text-center">Upload Images<br /><span className="text-xs">(Max 10)</span></span>
                                                 </>
                                             )}
                                             <input
                                                 type="file"
                                                 accept="image/*"
+                                                multiple
                                                 onChange={handleImageUpload}
                                                 className="hidden"
                                                 disabled={uploading}

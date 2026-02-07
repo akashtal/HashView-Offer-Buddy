@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ChevronDown, Check, Star } from 'lucide-react';
 import { FilterOptions } from './ComprehensiveFilters';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,11 +9,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface FilterSidebarProps {
     currentFilters: FilterOptions;
     categories: any[];
-    onApplyFilters: (filters: FilterOptions) => void;
     className?: string;
 }
 
-export default function FilterSidebar({ currentFilters, categories, onApplyFilters, className = '' }: FilterSidebarProps) {
+export default function FilterSidebar({ currentFilters, categories, className = '' }: FilterSidebarProps) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const [priceMin, setPriceMin] = useState(currentFilters.minPrice || 0);
     const [priceMax, setPriceMax] = useState(currentFilters.maxPrice || 50000);
 
@@ -21,18 +25,49 @@ export default function FilterSidebar({ currentFilters, categories, onApplyFilte
         setPriceMax(currentFilters.maxPrice || 50000);
     }, [currentFilters.minPrice, currentFilters.maxPrice]);
 
+    const updateFilters = (newFilters: FilterOptions) => {
+        const params = new URLSearchParams(searchParams.toString());
+
+        // Helper to update or delete param
+        const setOrDelete = (key: string, value: any) => {
+            if (value === undefined || value === null || value === '' || value === false) {
+                params.delete(key);
+            } else {
+                params.set(key, String(value));
+            }
+        };
+
+        // Update all filter keys
+        Object.keys(newFilters).forEach(key => {
+            setOrDelete(key, newFilters[key as keyof FilterOptions]);
+        });
+
+        // Always reset to page 1 when filters change
+        params.delete('page');
+
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     const handleFilterChange = (key: keyof FilterOptions, value: any) => {
         const newFilters = { ...currentFilters, [key]: value };
-        onApplyFilters(newFilters);
+        updateFilters(newFilters);
     };
 
     const commitPriceChange = () => {
-        onApplyFilters({
+        updateFilters({
             ...currentFilters,
             minPrice: priceMin > 0 ? priceMin : undefined,
             maxPrice: priceMax < 50000 ? priceMax : undefined
         });
     }
+
+    const clearAllFilters = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        // List of keys to clear
+        ['category', 'minPrice', 'maxPrice', 'sortBy', 'rating', 'hasOffer'].forEach(key => params.delete(key));
+        params.delete('page');
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     return (
         <aside className={`w-64 flex-shrink-0 hidden lg:block ${className}`}>
@@ -40,7 +75,7 @@ export default function FilterSidebar({ currentFilters, categories, onApplyFilte
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="font-bold text-gray-900 text-lg">Filters</h3>
                     <button
-                        onClick={() => onApplyFilters({})}
+                        onClick={clearAllFilters}
                         className="text-xs text-[#B45309] font-medium hover:underline"
                     >
                         Clear All

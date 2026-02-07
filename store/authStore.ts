@@ -218,7 +218,18 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: any) {
+          // If 404 (user not found) or 401 (unauthorized), just clear session silently
+          if (error.response?.status === 404 || error.response?.status === 401) {
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            return;
+          }
+
           console.error('Fetch user error:', error);
           set({
             user: null,

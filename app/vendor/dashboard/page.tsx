@@ -26,7 +26,12 @@ import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { formatCurrency } from '@/lib/utils';
 
-export default function VendorDashboard() {
+// ... existing imports
+
+import { Suspense } from 'react';
+
+// Main content component that uses searchParams
+function VendorDashboardContent() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { activeConversationId } = useChatStore();
@@ -469,5 +474,14 @@ export default function VendorDashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+// Wrapper to provide Suspense boundary
+export default function VendorDashboard() {
+  return (
+    <Suspense fallback={<Loading fullScreen text="Loading..." />}>
+      <VendorDashboardContent />
+    </Suspense>
   );
 }

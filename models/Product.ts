@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import './Category'; // Ensure Category model is registered
+import './VendorSubcategory'; // Ensure VendorSubcategory model is registered
+import './Store'; // Ensure Store model is registered
 
 export interface IProduct extends Document {
   _id: mongoose.Types.ObjectId;
@@ -8,7 +10,7 @@ export interface IProduct extends Document {
   description: string;
   images: string[];
   category: mongoose.Types.ObjectId;
-  subcategory?: string;
+  subcategory?: mongoose.Types.ObjectId;
   price?: {
     original?: number;
     discounted?: number;
@@ -79,7 +81,8 @@ const ProductSchema = new Schema<IProduct>(
       required: true,
     },
     subcategory: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'VendorSubcategory',
     },
     price: {
       original: Number,

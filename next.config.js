@@ -18,11 +18,15 @@ const nextConfig = {
         protocol: 'https',
         hostname: '5.imimg.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
     ],
   },
 
   // Partial Pre-rendering (Cache Components) - React 19.2 + Next.js 16
-  cacheComponents: true,
+  // cacheComponents: true,
 
   // React 19.2 & Next.js 16 Features
   experimental: {
