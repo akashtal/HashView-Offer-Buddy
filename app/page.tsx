@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import CategoryCarousel from '@/components/SwiggyComponents/CategoryCarousel';
 import RestaurantCard from '@/components/SwiggyComponents/RestaurantCard';
 import RadiusFilter from '@/components/ui/RadiusFilter';
 import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
 import FilterChips from '@/components/ui/FilterChips';
 import { useLocation } from '@/lib/LocationContext';
+import Loading from '@/components/ui/Loading'; // Assuming a Loading component exists
 
 export default function HomePage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -27,8 +27,9 @@ export default function HomePage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get('/api/categories?parentOnly=true');
-        setCategories(res.data.data?.categories || []);
+        const res = await fetch('/api/categories?parentOnly=true');
+        const data = await res.json();
+        setCategories(data.data?.categories || []);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
@@ -63,9 +64,11 @@ export default function HomePage() {
         if (filters.minPrice) params.minPrice = filters.minPrice;
         if (filters.maxPrice) params.maxPrice = filters.maxPrice;
 
-        const response = await axios.get('/api/products', { params });
-        const fetchedProducts = response.data.data.products;
-        const fetchedFacets = response.data.data.facets;
+        const queryString = new URLSearchParams(params).toString();
+        const response = await fetch(`/api/products?${queryString}`);
+        const data = await response.json();
+        const fetchedProducts = data.data.products;
+        const fetchedFacets = data.data.facets;
 
         setProducts(fetchedProducts || []);
 

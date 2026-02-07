@@ -1,10 +1,12 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import './Product'; // Ensure Product model is registered
 
 export interface IMessage extends Document {
     conversationId: mongoose.Types.ObjectId;
     senderId: mongoose.Types.ObjectId;
     senderModel: 'User' | 'Vendor';
     content: string;
+    productId?: mongoose.Types.ObjectId;
     isRead: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -31,6 +33,10 @@ const MessageSchema = new Schema<IMessage>(
             type: String,
             required: true,
             trim: true,
+        },
+        productId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Product',
         },
         isRead: {
             type: Boolean,

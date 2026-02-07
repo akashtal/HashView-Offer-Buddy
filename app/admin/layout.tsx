@@ -4,21 +4,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { FiUsers, FiShoppingBag, FiPackage, FiGrid, FiBarChart2, FiLogOut } from 'react-icons/fi';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Loading from '@/components/ui/Loading';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, isAuthenticated, logout, isLoading: authLoading } = useAuthStore();
+    const [isHydrated, setIsHydrated] = useState(false);
 
     useEffect(() => {
-        if (!authLoading && (!isAuthenticated || user?.role !== 'admin')) {
+        setIsHydrated(true);
+    }, []);
+
+    useEffect(() => {
+        if (isHydrated && !authLoading && (!isAuthenticated || user?.role !== 'admin')) {
             router.push('/signin');
         }
-    }, [isAuthenticated, user, authLoading, router]);
+    }, [isAuthenticated, user, authLoading, router, isHydrated]);
 
-    if (authLoading) return <Loading fullScreen />;
+    if (!isHydrated || authLoading) return <Loading fullScreen />;
 
     if (!user || user.role !== 'admin') return null;
 

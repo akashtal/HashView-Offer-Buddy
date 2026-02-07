@@ -75,6 +75,50 @@ const categoryImages = {
     'Sports & Outdoors': {
         image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80',
         type: 'real'
+    },
+    'Building Construction': {
+        image: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&q=80',
+        type: 'real'
+    },
+    'Electronics & Electrical': {
+        image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80',
+        type: 'real'
+    },
+    'Pharmaceutical Drugs': {
+        image: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&q=80',
+        type: 'real'
+    },
+    'Hospital Equipment': {
+        image: 'https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=800&q=80',
+        type: 'real'
+    },
+    'Industrial Machinery': {
+        image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80',
+        type: 'real'
+    },
+    'Industrial Supplies': {
+        image: 'https://images.unsplash.com/photo-1581093588402-4857416d22e8?w=800&q=80',
+        type: 'real'
+    },
+    'Agriculture & Food': {
+        image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80',
+        type: 'real'
+    },
+    'Apparel & Garments': {
+        image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
+        type: 'real'
+    },
+    'Packaging Material': {
+        image: 'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&q=80',
+        type: 'real'
+    },
+    'Chemicals & Dyes': {
+        image: 'https://images.unsplash.com/photo-1605705359218-facb09c5dbf3?w=800&q=80',
+        type: 'real'
+    },
+    'Logistics & Transport': {
+        image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80',
+        type: 'real'
     }
 };
 
@@ -92,21 +136,44 @@ async function addCategoryImages() {
         fs.writeFileSync(backupPath, JSON.stringify(currentCategories, null, 2));
         console.log('✅ Created backup at scripts/category-backup.json');
 
-        // Update categories with images
+        // Update or Create categories
         let updatedCount = 0;
+        let createdCount = 0;
+
         for (const [categoryName, imageData] of Object.entries(categoryImages)) {
+            const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+            // Try to find and update, or create if missing
             const result = await Category.updateOne(
                 { name: categoryName },
-                { $set: { image: imageData.image } }
+                {
+                    $set: {
+                        image: imageData.image,
+                        slug: slug,
+                        isActive: true,
+                        // Set default icon if not present, but don't overwrite existing specific ones ideally.
+                        // For simplicity in this "sync" script affecting new B2B cats, we set a default if creating.
+                    },
+                    $setOnInsert: {
+                        icon: 'fi fi-rr-box', // Default icon for new categories
+                        order: 10
+                    }
+                },
+                { upsert: true }
             );
 
-            if (result.modifiedCount > 0) {
+            if (result.upsertedCount > 0) {
+                createdCount++;
+                console.log(`✅ Created (New): ${categoryName}`);
+            } else if (result.modifiedCount > 0) {
                 updatedCount++;
-                console.log(`✅ Updated ${categoryName} with ${imageData.type} image`);
+                console.log(`✅ Updated (Existing): ${categoryName}`);
+            } else {
+                console.log(`   Skipped (No Change): ${categoryName}`);
             }
         }
 
-        console.log(`\n🎉 Successfully updated ${updatedCount} categories with images!`);
+        console.log(`\n🎉 Sync Complete: ${createdCount} Created, ${updatedCount} Updated.`);
         console.log('\n📝 To revert changes, run: npm run revert-category-images\n');
 
     } catch (error) {

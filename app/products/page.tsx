@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin, Search } from 'lucide-react';
-import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
 import IndiaMArtProductCard from '@/components/IndiaMART/ProductCard';
 import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
@@ -38,8 +37,9 @@ function ProductGrid() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const res = await axios.get('/api/categories?parentOnly=true');
-                setCategories(res.data.data?.categories || []);
+                const res = await fetch('/api/categories?parentOnly=true');
+                const data = await res.json();
+                setCategories(data.data?.categories || []);
             } catch (error) {
                 console.error('Failed to fetch categories:', error);
             }
@@ -64,13 +64,20 @@ function ProductGrid() {
                 params.longitude = location.coordinates.longitude;
             }
 
-            const res = await axios.get('/api/products', { params });
-            setProducts(res.data.data.products || []);
-            setTotalProducts(res.data.data.pagination?.total || 0);
+            // Remove undefined values
+            Object.keys(params).forEach(key =>
+                params[key] === undefined && delete params[key]
+            );
+
+            const queryString = new URLSearchParams(params).toString();
+            const res = await fetch(`/api/products?${queryString}`);
+            const data = await res.json();
+            setProducts(data.data.products || []);
+            setTotalProducts(data.data.pagination?.total || 0);
 
             // Update facets if provided
-            if (res.data.data.facets) {
-                setFacets(res.data.data.facets);
+            if (data.data.facets) {
+                setFacets(data.data.facets);
             }
 
         } catch (error) {

@@ -7,8 +7,9 @@ import { getUserFromRequest } from '@/lib/auth';
 // PUT - Update Category (Admin Only)
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
         const user = await getUserFromRequest(request);
@@ -33,8 +34,9 @@ export async function PUT(
 // DELETE - Delete Category (Admin Only)
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
         const user = await getUserFromRequest(request);

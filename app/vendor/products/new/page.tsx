@@ -8,7 +8,6 @@ import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
-import axios from 'axios';
 import { FiPackage, FiImage, FiTag, FiDollarSign, FiUpload, FiX } from 'react-icons/fi';
 
 export default function NewProductPage() {
@@ -50,8 +49,9 @@ export default function NewProductPage() {
     useEffect(() => {
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories?parentOnly=true');
-                setCategories(response.data.data.categories);
+                const response = await fetch('/api/categories?parentOnly=true');
+                const data = await response.json();
+                setCategories(data.data.categories);
             } catch (err) {
                 console.error('Failed to load categories');
             }
@@ -75,8 +75,12 @@ export default function NewProductPage() {
         data.append('file', file);
 
         try {
-            const res = await axios.post('/api/upload', data);
-            setImages(prev => [...prev, res.data.data.url]);
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: data
+            });
+            const result = await res.json();
+            setImages(prev => [...prev, result.data.url]);
         } catch (err: any) {
             setError('Failed to upload image. Please try again.');
             console.error(err);
@@ -133,7 +137,13 @@ export default function NewProductPage() {
                 }
             }
 
-            await axios.post('/api/products', payload);
+            const response = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to create product');
             router.push('/vendor/dashboard');
 
         } catch (err: any) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -39,7 +39,15 @@ export default function VendorDashboard() {
     fetchMyProfile,
   } = useVendorStore();
 
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'analytics' | 'messages'>('overview');
+
+  useEffect(() => {
+    if (tabParam && ['overview', 'products', 'analytics', 'messages'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== 'vendor') {

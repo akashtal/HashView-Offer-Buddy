@@ -3,9 +3,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiFacebook, FiTwitter, FiInstagram, FiMail, FiPhone } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
+  const [currentYear, setCurrentYear] = useState(2024);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   return (
     <footer className="bg-secondary text-white mt-auto">

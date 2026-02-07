@@ -22,7 +22,7 @@ const AnalyticsSchema = new Schema<IAnalytics>(
   {
     vendorId: {
       type: Schema.Types.ObjectId,
-      ref: 'Vendor',
+      ref: 'Store',
       required: true,
     },
     productId: {

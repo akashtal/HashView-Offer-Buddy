@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import axios from 'axios';
 import { Lock, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -40,7 +39,13 @@ function ResetPasswordForm() {
         setError('');
 
         try {
-            await axios.post('/api/auth/reset-password', { token, password });
+            const response = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, password })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to reset password');
             setSuccess(true);
             setTimeout(() => {
                 router.push('/signin');

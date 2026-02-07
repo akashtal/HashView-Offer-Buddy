@@ -4,7 +4,7 @@ import { jwtVerify } from 'jose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-offer-buddy-123';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // 1. Exclude public paths and static assets

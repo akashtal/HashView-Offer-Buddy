@@ -32,7 +32,9 @@ interface AdminState {
     deleteProduct: (id: string) => Promise<void>;
 
     // Category Actions
+    // Category Actions
     createCategory: (data: any) => Promise<void>;
+    updateCategory: (id: string, data: any) => Promise<void>;
     deleteCategory: (id: string) => Promise<void>;
 }
 
@@ -222,6 +224,18 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         try {
             await axios.delete(`/api/categories/${id}`);
             set(state => ({ categories: state.categories.filter(c => c._id !== id) }));
+        } catch (error: any) {
+            set({ error: error.message });
+            throw error;
+        }
+    },
+
+    updateCategory: async (id, data) => {
+        try {
+            const res = await axios.put(`/api/categories/${id}`, data);
+            set(state => ({
+                categories: state.categories.map(c => c._id === id ? res.data.data.category : c)
+            }));
         } catch (error: any) {
             set({ error: error.message });
             throw error;

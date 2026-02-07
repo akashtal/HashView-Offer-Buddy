@@ -9,22 +9,49 @@ if (!MONGODB_URI) {
     process.exit(1);
 }
 
+// Import User model (adjust path if needed, assuming check_db.ts is in root)
+import User from './models/User';
+import bcrypt from 'bcryptjs';
+
 const run = async () => {
     try {
         await mongoose.connect(MONGODB_URI);
-        console.log("Connected to DB");
-        const productsCollection = mongoose.connection.db?.collection('products');
-        if (!productsCollection) throw new Error("Collection not found");
+        console.log("Connected to DB:", mongoose.connection.db?.databaseName);
 
-        const total = await productsCollection.countDocuments();
-        console.log(`Total Products in DB: ${total}`);
+        // Check and Create Admin
+        const adminEmail = 'admin@offerbuddy.com';
+        const adminPassword = 'Admin@123';
 
-        if (total > 0) {
-            const sample = await productsCollection.find({}).limit(3).toArray();
-            console.log("Samples:", JSON.stringify(sample, null, 2));
+        const existingAdmin = await User.findOne({ email: adminEmail });
+        if (!existingAdmin) {
+            console.log("⚠️ Admin user not found. Creating default admin...");
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            await User.create({
+                name: 'Admin User',
+                email: adminEmail,
+                password: hashedPassword,
+                role: 'admin',
+                isVerified: true,
+            });
+            console.log(`✅ Admin created successfully: ${adminEmail} / ${adminPassword}`);
         } else {
-            console.log("No products found in DB.");
+            console.log("✅ Admin user already exists.");
         }
+
+        const productsCollection = mongoose.connection.db?.collection('products');
+        if (!productsCollection) {
+            console.log("Products collection not initialized yet.");
+        } else {
+            const total = await productsCollection.countDocuments();
+            console.log(`Total Products in DB: ${total}`);
+            if (total > 0) {
+                const sample = await productsCollection.find({}).limit(3).toArray();
+                console.log("Samples:", JSON.stringify(sample, null, 2));
+            } else {
+                console.log("No products found in DB.");
+            }
+        }
+
     } catch (error) {
         console.error("Error:", error);
     } finally {

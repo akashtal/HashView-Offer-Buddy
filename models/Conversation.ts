@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import './Message'; // Ensure Message model is registered for populate
 
 export interface IConversation extends Document {
     participants: {
         participantId: mongoose.Types.ObjectId;
-        participantModel: 'User' | 'Vendor';
+        participantModel: 'User' | 'Vendor' | 'Store';
     }[];
     lastMessage?: mongoose.Types.ObjectId;
     lastMessageAt: Date;
@@ -23,7 +24,7 @@ const ConversationSchema = new Schema<IConversation>(
                 participantModel: {
                     type: String,
                     required: true,
-                    enum: ['User', 'Vendor'],
+                    enum: ['User', 'Vendor', 'Store'],
                 },
             },
         ],

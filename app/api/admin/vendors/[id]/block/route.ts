@@ -8,8 +8,9 @@ import { getUserFromRequest, hasRole } from '@/lib/auth';
 // POST - Block/Unblock vendor (Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
 

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import dbConnect from '@/lib/mongodb';
 import Store from '@/models/Store';
+import Product from '@/models/Product';
 import { apiSuccess, apiError } from '@/lib/utils';
-
-export const dynamic = 'force-dynamic';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-offer-buddy-123';
 
@@ -48,8 +47,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch vendor's products (if needed)
-    const products: any[] = []; // TODO: Implement product fetching when Product model is available
+    // Fetch vendor's products
+    const products = await Product.find({ vendorId: store._id })
+      .populate('category', 'name slug icon')
+      .sort({ createdAt: -1 });
 
     return NextResponse.json(
       apiSuccess({

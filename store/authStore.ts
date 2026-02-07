@@ -33,6 +33,7 @@ interface AuthState {
   registerVendor: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
+  setUser: (user: User | null) => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   fetchUser: () => Promise<void>;
   setToken: (token: string) => void;
@@ -45,6 +46,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isLoading: false,
       isAuthenticated: false,
+
+      setUser: (user: User | null) => {
+        set({ user });
+      },
 
       setToken: (token: string) => {
         set({ token, isAuthenticated: true });

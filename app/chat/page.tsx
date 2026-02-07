@@ -27,13 +27,15 @@ export default function ChatPage() {
         );
     }
 
+    // Safe estimate for mobile header height (144px) and bottom nav (64px)
+    // We use fixed positioning on mobile to ensure it doesn't scroll the body
     return (
-        <div className="h-[calc(100dvh-130px)] md:h-[calc(100dvh-150px)] bg-white flex flex-col overflow-hidden">
-            <main className="flex-1 flex overflow-hidden w-full max-w-full">
+        <div className="fixed top-[144px] bottom-[64px] left-0 right-0 md:static md:h-[calc(100dvh-85px)] bg-white flex flex-col overflow-hidden z-0">
+            <main className="flex-1 flex overflow-hidden w-full max-w-full relative">
                 {/* Inbox Sidebar - Hidden on mobile if a conversation is active */}
                 <div className={`
                     ${activeConversationId ? 'hidden md:flex' : 'flex'} 
-                    w-full md:w-1/3 md:min-w-[320px] md:max-w-sm flex-col border-r
+                    w-full md:w-1/3 md:min-w-[320px] md:max-w-sm flex-col border-r bg-white z-10
                 `}>
                     <ChatList />
                 </div>
@@ -41,7 +43,7 @@ export default function ChatPage() {
                 {/* Chat Window Area - Hidden on mobile if no conversation is active */}
                 <div className={`
                     ${activeConversationId ? 'flex' : 'hidden md:flex'} 
-                    flex-1 flex-col bg-gray-50
+                    flex-1 flex-col bg-gray-50 h-full w-full relative z-0
                 `}>
                     <ChatWindow />
                 </div>

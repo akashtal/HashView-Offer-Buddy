@@ -46,6 +46,12 @@ const ChatButton: React.FC<ChatButtonProps> = ({
             return;
         }
 
+        // If user is a vendor, redirect to vendor dashboard messages
+        if (user?.role === 'vendor') {
+            router.push('/vendor/dashboard?tab=messages');
+            return;
+        }
+
         try {
             const conversationId = await initiateChat(recipientId, recipientModel);
             setActiveConversation(conversationId);

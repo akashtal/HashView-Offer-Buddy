@@ -6,9 +6,6 @@ import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createVendorSchema } from '@/lib/validation';
 
-// Enable ISR with 2 hour revalidation
-export const revalidate = 7200;
-
 // GET - Get nearby vendors with geospatial filtering
 export async function GET(request: NextRequest) {
   try {

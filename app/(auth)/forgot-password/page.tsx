@@ -2,38 +2,49 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { forgotPasswordAction, resetPasswordAction } from '../actions';
 import { Mail, Loader2, ArrowLeft, Send } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
-    const [otp, setOtp] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [step, setStep] = useState<'email' | 'reset'>('email');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSendOTP = async (e: React.FormEvent) => {
+    const handleSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
         setSuccess('');
 
+        const formData = new FormData(e.currentTarget);
+
         try {
-            const response = await axios.post('/api/auth/forgot-password', { email });
-            setSuccess(response.data.message || 'OTP sent successfully to your email.');
-            setStep('reset');
+            const result = await forgotPasswordAction(formData);
+            if (result.success) {
+                // Type narrowing: TypeScript knows result has 'message' property here
+                setSuccess('message' in result ? result.message : 'OTP sent successfully to your email.');
+                setStep('reset');
+                setEmail(formData.get('email') as string);
+            } else {
+                setError(result.error || 'Something went wrong. Please try again.');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Something went wrong. Please try again.');
+            setError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleResetPassword = async (e: React.FormEvent) => {
+    const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        const formData = new FormData(e.currentTarget);
+        const password = formData.get('password') as string;
+        const confirmPassword = formData.get('confirmPassword') as string;
 
         if (password !== confirmPassword) {
             setError('Passwords do not match');
@@ -43,14 +54,21 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
         setError('');
 
+        // Add email to formData
+        formData.append('email', email);
+
         try {
-            await axios.post('/api/auth/reset-password', { email, otp, password });
-            setSuccess('Password reset successfully! Redirecting to sign in...');
-            setTimeout(() => {
-                window.location.href = '/signin';
-            }, 3000);
+            const result = await resetPasswordAction(formData);
+            if (result.success) {
+                setSuccess('Password reset successfully! Redirecting to sign in...');
+                setTimeout(() => {
+                    router.push('/signin');
+                }, 3000);
+            } else {
+                setError(result.error || 'Invalid OTP or expired. Please try again.');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Invalid OTP or expired. Please try again.');
+            setError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -100,8 +118,6 @@ export default function ForgotPasswordPage() {
                                             required
                                             className="focus:ring-[#FDB913] focus:border-[#FDB913] block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
                                             placeholder="you@example.com"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
                                         />
                                     </div>
                                 </div>
@@ -122,12 +138,12 @@ export default function ForgotPasswordPage() {
                                     </label>
                                     <input
                                         id="otp"
+                                        name="otp"
                                         type="text"
                                         required
                                         maxLength={6}
                                         className="mt-1 focus:ring-[#FDB913] focus:border-[#FDB913] block w-full text-center text-2xl tracking-[1em] border-gray-300 rounded-md py-2"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                        onChange={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
                                     />
                                 </div>
 
@@ -137,11 +153,11 @@ export default function ForgotPasswordPage() {
                                     </label>
                                     <input
                                         id="password"
+                                        name="password"
                                         type="password"
                                         required
+                                        minLength={6}
                                         className="mt-1 focus:ring-[#FDB913] focus:border-[#FDB913] block w-full sm:text-sm border-gray-300 rounded-md py-2"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
                                     />
                                 </div>
 
@@ -151,11 +167,11 @@ export default function ForgotPasswordPage() {
                                     </label>
                                     <input
                                         id="confirmPassword"
+                                        name="confirmPassword"
                                         type="password"
                                         required
+                                        minLength={6}
                                         className="mt-1 focus:ring-[#FDB913] focus:border-[#FDB913] block w-full sm:text-sm border-gray-300 rounded-md py-2"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
                                     />
                                 </div>
 

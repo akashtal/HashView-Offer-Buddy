@@ -7,8 +7,9 @@ import { getUserFromRequest } from '@/lib/auth';
 // DELETE User
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
 
@@ -32,8 +33,9 @@ export async function DELETE(
 // UPDATE User Role
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
 

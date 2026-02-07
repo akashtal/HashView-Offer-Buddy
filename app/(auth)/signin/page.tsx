@@ -1,50 +1,56 @@
 'use client';
 
-
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import axios from 'axios';
+import { signInAction } from '../actions';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+
 import AuthTabs from '@/components/auth/AuthTabs';
+import { SubmitButton } from '@/components/ui/FormButtons';
+import { useAuthStore } from '@/store/authStore';
 
 function SignInContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { login, isAuthenticated } = useAuthStore();
-    // ... rest of state
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-    });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const { setToken, setUser } = useAuthStore();
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            const from = searchParams.get('from') || '/';
-            router.replace(from);
-        }
-    }, [isAuthenticated, router, searchParams]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        try {
-            const role = await login(formData.email, formData.password);
+        const formData = new FormData(e.currentTarget);
 
-            if (role === 'admin') {
-                router.push('/admin/dashboard');
-            } else if (role === 'vendor') {
-                router.push('/vendor/dashboard');
+        try {
+            const result = await signInAction(formData);
+
+            if (result.success) {
+                // effective sync server session with client store
+                if (result.data?.token) {
+                    setToken(result.data.token);
+                }
+                if (result.data?.user) {
+                    setUser(result.data.user as any);
+                }
+
+                const role = result.data?.user?.role;
+
+                if (role === 'admin') {
+                    router.push('/admin/dashboard');
+                } else if (role === 'vendor') {
+                    router.push('/vendor/dashboard');
+                } else {
+                    const from = searchParams.get('from') || '/';
+                    router.push(from);
+                }
             } else {
-                router.push('/');
+                setError(result.error || 'Invalid credentials. Please try again.');
             }
         } catch (err: any) {
-            setError(err.message || 'Invalid credentials. Please try again.');
+            setError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -85,8 +91,6 @@ function SignInContent() {
                                     required
                                     className="focus:ring-[#FDB913] focus:border-[#FDB913] block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
                                     placeholder="you@example.com"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -107,8 +111,6 @@ function SignInContent() {
                                     required
                                     className="focus:ring-[#FDB913] focus:border-[#FDB913] block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
                                     placeholder="••••••••"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>
                         </div>

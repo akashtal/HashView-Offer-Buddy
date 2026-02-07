@@ -48,7 +48,7 @@ const ProductSchema = new Schema<IProduct>(
   {
     vendorId: {
       type: Schema.Types.ObjectId,
-      ref: 'Vendor',
+      ref: 'Store',
       required: true,
     },
     title: {

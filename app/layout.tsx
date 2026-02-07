@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import './indiamart-theme.css';
 import RootLayoutClient from '@/components/layout/RootLayoutClient';
-import dbConnect from '@/lib/mongodb';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -28,13 +27,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Initialize database connection on server startup
-  await dbConnect();
+  // Database connection is handled lazily by API routes and server actions
 
   return (
     <html lang="en">

@@ -9,8 +9,9 @@ import { updateVendorSchema } from '@/lib/validation';
 // GET - Get vendor by ID with products
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
 
@@ -55,8 +56,9 @@ export async function GET(
 // PUT - Update vendor profile
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
 
@@ -124,8 +126,9 @@ export async function PUT(
 // DELETE - Delete vendor (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Search, MapPin, ChevronDown } from 'lucide-react';
-import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
 import { sortByDistance, INDIAN_CITIES } from '@/lib/location-utils';
 import SupplierCard from '@/components/IndiaMART/SupplierCard';
@@ -17,8 +16,9 @@ export default function SuppliersPage() {
 
     const loadSuppliers = useCallback(async () => {
         try {
-            const response = await axios.get('/api/vendors');
-            let suppliersData = response.data.data.vendors || response.data.data || [];
+            const response = await fetch('/api/vendors');
+            const data = await response.json();
+            let suppliersData = data.data.vendors || data.data || [];
 
             // Sort by distance if location available
             if (location?.coordinates) {

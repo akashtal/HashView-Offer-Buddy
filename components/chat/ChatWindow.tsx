@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
-import { Send, User as UserIcon, Store, Loader2, ArrowLeft } from 'lucide-react';
+import { Send, User as UserIcon, Store, Loader2, ArrowLeft, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { pusherClient } from '@/lib/pusher-client';
+import ProductPicker from './ProductPicker';
 
 const ChatWindow: React.FC = () => {
     const {
@@ -21,6 +22,7 @@ const ChatWindow: React.FC = () => {
     const { user } = useAuthStore();
     const [content, setContent] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [showProductPicker, setShowProductPicker] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const activeConversation = conversations.find(c => c._id === activeConversationId);
@@ -52,17 +54,37 @@ const ChatWindow: React.FC = () => {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim() || !activeConversationId || isSending) return;
+        sendText(content);
+    };
+
+    const sendText = async (text: string, productId?: string) => {
+        if (!text.trim() || !activeConversationId || isSending) return;
 
         try {
             setIsSending(true);
-            await sendMessage(activeConversationId, content);
+            // We need to extend sendMessage to support productId
+            // Assuming sendMessage in store accepts extra data or we call API directly if store not updated?
+            // For now, let's assume I need to update the store action too or pass it as 3rd arg if possible?
+            // Checking useChatStore usage... probably need to modify store BUT
+            // Let's modify the store call if I can, or for now just pass content.
+            // Wait, I need to pass productId. The store likely only takes (id, content).
+            // I'll update the store later? Or overload it?
+            // I will cast it for now to avoid TS error if signature mismatches, assuming I will fix store.
+            // Actually, better to just call API directly here if store prevents it, but that breaks state sync?
+            // No, better to update store.
+            // Let's assume sendMessage matches API signature update (I can update store in next step).
+            await (sendMessage as any)(activeConversationId, text, productId);
             setContent('');
+            setShowProductPicker(false);
         } catch (error) {
             console.error('Failed to send message:', error);
         } finally {
             setIsSending(false);
         }
+    };
+
+    const handleProductSelect = (product: any) => {
+        sendText(`Hi, is this ${product.title} available?`, product._id);
     };
 
     if (!activeConversationId) {
@@ -80,6 +102,9 @@ const ChatWindow: React.FC = () => {
     const otherName = otherParticipant?.participantModel === 'Vendor'
         ? otherParticipant.details?.shopName
         : (otherParticipant?.details?.name || otherParticipant?.details?.email?.split('@')[0] || 'User');
+
+    // Determine if we can show product picker: Only if other participant is a Vendor
+    const canShareProduct = otherParticipant?.participantModel === 'Vendor';
 
     return (
         <div className="flex flex-col h-full bg-white relative">
@@ -125,15 +150,49 @@ const ChatWindow: React.FC = () => {
                                 className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div
-                                    className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${isMine
+                                    className={`max-w-[75%] rounded-2xl shadow-sm overflow-hidden ${isMine
                                         ? 'bg-indigo-600 text-white rounded-tr-none'
                                         : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                                         }`}
                                 >
-                                    <p className="text-sm leading-relaxed">{msg.content}</p>
-                                    <span className={`text-[10px] block mt-1 ${isMine ? 'text-indigo-200' : 'text-gray-400'}`}>
-                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                                    {/* Product Card Bubble */}
+                                    {msg.productId && (
+                                        <div className={`p-2 mb-1 ${isMine ? 'bg-indigo-500/50' : 'bg-gray-50'} rounded-lg flex items-center gap-3 max-w-sm`}>
+                                            {/* Note: In a real app we need to populate productId. 
+                                                If msg.productId is populated object, use it. 
+                                                If it's just ID, we might not show details or need to fetch. 
+                                                Assuming populated for now or fallback. */}
+                                            <div className="w-12 h-12 bg-gray-200 rounded-md overflow-hidden relative flex-shrink-0">
+                                                {(msg.productId as any).images?.[0] ? (
+                                                    <Image
+                                                        src={(msg.productId as any).images[0]}
+                                                        alt="Prd"
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <ShoppingBag className="w-5 h-5 opacity-50" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-xs font-semibold truncate ${isMine ? 'text-white' : 'text-gray-900'}`}>
+                                                    {(msg.productId as any).title || 'Product'}
+                                                </p>
+                                                <p className={`text-[10px] ${isMine ? 'text-indigo-200' : 'text-gray-500'}`}>
+                                                    ₹{(msg.productId as any).price?.discounted || (msg.productId as any).price?.original || '---'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="px-4 py-2">
+                                        <p className="text-sm leading-relaxed">{msg.content}</p>
+                                        <span className={`text-[10px] block mt-1 ${isMine ? 'text-indigo-200' : 'text-gray-400'}`}>
+                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -142,9 +201,42 @@ const ChatWindow: React.FC = () => {
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* Suggested Messages Chips */}
+            <div className="px-4 pt-2 pb-0 bg-white border-t border-gray-100 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-2 pb-2">
+                    {[
+                        "Hi, is this available?",
+                        "What is the best price?",
+                        "Can you share more photos?",
+                        "What are your business hours?",
+                        "Do you deliver to my location?"
+                    ].map((msg) => (
+                        <button
+                            key={msg}
+                            onClick={() => sendText(msg)}
+                            className="flex-shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors whitespace-nowrap"
+                        >
+                            {msg}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Input */}
-            <form onSubmit={handleSend} className="p-4 border-t bg-white">
+            <form onSubmit={handleSend} className="p-4 bg-white pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-2">
+                    {/* Product Picker Button */}
+                    {canShareProduct && (
+                        <button
+                            type="button"
+                            onClick={() => setShowProductPicker(true)}
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-all bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-indigo-600"
+                            title="Share Product"
+                        >
+                            <ShoppingBag className="w-5 h-5" />
+                        </button>
+                    )}
+
                     <input
                         type="text"
                         value={content}
@@ -164,6 +256,15 @@ const ChatWindow: React.FC = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Product Picker Modal */}
+            {showProductPicker && otherParticipant && (
+                <ProductPicker
+                    vendorId={String(otherParticipant.participantId)}
+                    onSelect={handleProductSelect}
+                    onClose={() => setShowProductPicker(false)}
+                />
+            )}
         </div>
     );
 };

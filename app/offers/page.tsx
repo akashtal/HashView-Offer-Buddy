@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Tag, Percent, Clock } from 'lucide-react';
-import axios from 'axios';
 
 export default function OffersPage() {
     const [offerProducts, setOfferProducts] = useState<any[]>([]);
@@ -16,8 +15,9 @@ export default function OffersPage() {
 
     const loadOffers = async () => {
         try {
-            const response = await axios.get('/api/products?hasOffer=true&limit=50');
-            setOfferProducts(response.data.data.products);
+            const response = await fetch('/api/products?hasOffer=true&limit=50');
+            const data = await response.json();
+            setOfferProducts(data.data.products || []);
             setIsLoading(false);
         } catch (error) {
             console.error('Failed to load offers:', error);

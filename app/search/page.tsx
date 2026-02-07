@@ -9,7 +9,6 @@ import { ProductCardSkeleton } from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { FiSearch, FiFilter, FiX } from 'react-icons/fi';
-import axios from 'axios';
 
 function SearchContent() {
     const router = useRouter();
@@ -25,8 +24,9 @@ function SearchContent() {
     useEffect(() => {
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories?parentOnly=true');
-                setCategories(response.data.data.categories);
+                const response = await fetch('/api/categories?parentOnly=true');
+                const data = await response.json();
+                setCategories(data.data.categories || []);
             } catch (error) {
                 console.error('Failed to load categories:', error);
             }

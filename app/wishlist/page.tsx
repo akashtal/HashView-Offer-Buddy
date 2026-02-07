@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useOptimistic } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, X } from 'lucide-react';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useCartStore } from '@/store/cartStore';
 import { useToast } from '@/components/ui/Toast';
-import axios from 'axios';
 
 export default function WishlistPage() {
     const { items: wishlistIds, toggleItem } = useWishlistStore();
@@ -16,6 +15,12 @@ export default function WishlistPage() {
 
     const [products, setProducts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // React 19.2: Optimistic updates for instant removal feedback
+    const [optimisticProducts, removeOptimistic] = useOptimistic(
+        products,
+        (state, removedId: string) => state.filter(p => p._id !== removedId)
+    );
 
     const loadWishlistProducts = useCallback(async () => {
         if (wishlistIds.length === 0) {
@@ -27,8 +32,9 @@ export default function WishlistPage() {
         try {
             setIsLoading(true);
             // Fetch all products and filter by wishlist IDs
-            const response = await axios.get('/api/products');
-            const allProducts = response.data.data.products;
+            const response = await fetch('/api/products');
+            const data = await response.json();
+            const allProducts = data.data.products;
             const wishlistProducts = allProducts.filter((p: any) => wishlistIds.includes(p._id));
             setProducts(wishlistProducts);
         } catch (error) {
@@ -42,7 +48,11 @@ export default function WishlistPage() {
         loadWishlistProducts();
     }, [wishlistIds, loadWishlistProducts]);
 
-    const handleRemove = (productId: string, title: string) => {
+    const handleRemove = async (productId: string, title: string) => {
+        // Optimistic: Remove from UI instantly
+        removeOptimistic(productId);
+
+        // Actual removal in background
         toggleItem(productId);
         showToast(`Removed ${title} from wishlist`, 'info');
     };

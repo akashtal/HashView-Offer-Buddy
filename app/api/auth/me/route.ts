@@ -5,8 +5,6 @@ import User from '@/models/User';
 import VendorAuth from '@/models/VendorAuth';
 import { apiSuccess, apiError } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
-
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-offer-buddy-123';
 
 export async function GET(request: NextRequest) {

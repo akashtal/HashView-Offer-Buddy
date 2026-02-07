@@ -7,9 +7,6 @@ import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
 import { createProductSchema } from '@/lib/validation';
 
-// Enable ISR with 1 hour revalidation
-export const revalidate = 3600;
-
 // GET - Get all products with location filtering using MongoDB geospatial queries
 // GET - Get all products with location filtering using MongoDB geospatial queries
 export async function GET(request: NextRequest) {
@@ -32,6 +29,7 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     const rating = parseFloat(searchParams.get('rating') || '0');
+    const vendorId = searchParams.get('vendorId');
 
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
@@ -45,7 +43,7 @@ export async function GET(request: NextRequest) {
       sortBy = 'newest';
     }
 
-    console.log('API Request Params:', { latitude, longitude, radius: radiusKm, category, minPrice, maxPrice, sortBy, rating });
+    console.log('API Request Params:', { latitude, longitude, radius: radiusKm, category, minPrice, maxPrice, sortBy, rating, vendorId });
 
     // Build Match Stage (Common Filters)
     const matchStage: any = {
@@ -54,6 +52,10 @@ export async function GET(request: NextRequest) {
 
     if (category && mongoose.Types.ObjectId.isValid(category)) {
       matchStage.category = new mongoose.Types.ObjectId(category);
+    }
+
+    if (vendorId && mongoose.Types.ObjectId.isValid(vendorId)) {
+      matchStage.vendorId = new mongoose.Types.ObjectId(vendorId);
     }
 
     if (hasOffer) {
@@ -84,7 +86,7 @@ export async function GET(request: NextRequest) {
         // Lookup Vendor for Location
         {
           $lookup: {
-            from: 'vendors',
+            from: 'stores',
             localField: 'vendorId',
             foreignField: '_id',
             as: 'vendor'
@@ -179,7 +181,7 @@ export async function GET(request: NextRequest) {
       productsPipeline.push(
         {
           $lookup: {
-            from: 'vendors',
+            from: 'stores',
             localField: 'vendorId',
             foreignField: '_id',
             as: 'vendor'

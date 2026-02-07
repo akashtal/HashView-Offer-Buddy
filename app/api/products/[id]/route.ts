@@ -9,8 +9,9 @@ import { createProductSchema, updateProductSchema } from '@/lib/validation';
 // GET - Get product details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
 
@@ -58,8 +59,9 @@ export async function GET(
 // DELETE - Delete product (Vendor or Admin)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
     const user = await getUserFromRequest(request);
@@ -97,8 +99,9 @@ export async function DELETE(
 // PUT - Update product (Vendor only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     await dbConnect();
     const user = await getUserFromRequest(request);

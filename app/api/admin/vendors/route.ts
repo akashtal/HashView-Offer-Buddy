@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/mongodb';
 import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';

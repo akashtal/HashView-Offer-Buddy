@@ -9,8 +9,9 @@ import { updateVendorSchema } from '@/lib/validation';
 // PUT - Update Vendor (Edit)
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
         const admin = await getUserFromRequest(request);
@@ -40,8 +41,9 @@ export async function PUT(
 // DELETE - Hard Delete Vendor
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
         const admin = await getUserFromRequest(request);
@@ -64,8 +66,9 @@ export async function DELETE(
 // PATCH - Toggle Status (Suspend/Activate)
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         await dbConnect();
         const admin = await getUserFromRequest(request);

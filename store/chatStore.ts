@@ -9,6 +9,7 @@ interface Message {
     senderId: string;
     senderModel: 'User' | 'Vendor';
     content: string;
+    productId?: string | object; // Can be ID or populated object
     createdAt: string;
 }
 
@@ -41,7 +42,7 @@ interface ChatState {
     fetchConversations: () => Promise<void>;
     setActiveConversation: (conversationId: string | null) => void;
     fetchMessages: (conversationId: string) => Promise<void>;
-    sendMessage: (conversationId: string, content: string) => Promise<void>;
+    sendMessage: (conversationId: string, content: string, productId?: string) => Promise<void>;
     addMessage: (message: Message) => void;
     updateConversationLocally: (conversationId: string, lastMessage: Message) => void;
     initiateChat: (recipientId: string, recipientModel: 'User' | 'Vendor') => Promise<string>;
@@ -94,13 +95,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     },
 
-    sendMessage: async (conversationId: string, content: string) => {
+    sendMessage: async (conversationId: string, content: string, productId?: string) => {
         try {
             const token = useAuthStore.getState().token;
             if (!token) return;
 
             await axios.post('/api/chat/messages',
-                { conversationId, content },
+                { conversationId, content, productId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
         } catch (error) {

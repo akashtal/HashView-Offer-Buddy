@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useOptimistic } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
@@ -9,12 +9,49 @@ import { useToast } from '@/components/ui/Toast';
 import ChatButton from '@/components/chat/ChatButton';
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, clearCart, getTotal } = useCartStore();
+    const { items, removeItem, updateQuantity, clearCart, getTotal, syncCart } = useCartStore();
     const { showToast, ToastContainer } = useToast();
 
-    const handleRemove = (productId: string, title: string) => {
+    // React 19.2: Optimistic UI updates for instant feedback
+    const [optimisticItems, setOptimisticItems] = useOptimistic(
+        items,
+        (state, action: { type: 'remove' | 'update', id?: string, quantity?: number }) => {
+            if (action.type === 'remove') {
+                return state.filter(item => item.productId !== action.id);
+            }
+            if (action.type === 'update' && action.id) {
+                return state.map(item =>
+                    item.productId === action.id
+                        ? { ...item, quantity: action.quantity! }
+                        : item
+                );
+            }
+            return state;
+        }
+    );
+
+    // Sync with backend on mount
+    useEffect(() => {
+        syncCart();
+    }, []);
+
+    const handleRemove = async (productId: string, title: string) => {
+        // Optimistic update: UI changes instantly
+        setOptimisticItems({ type: 'remove', id: productId });
+
+        // Actual removal happens in background
         removeItem(productId);
         showToast(`Removed ${title} from cart`, 'info');
+    };
+
+    const handleQuantityUpdate = async (productId: string, newQuantity: number) => {
+        if (newQuantity < 1) return;
+
+        // Optimistic update
+        setOptimisticItems({ type: 'update', id: productId, quantity: newQuantity });
+
+        // Actual update
+        updateQuantity(productId, newQuantity);
     };
 
     const handleClearCart = () => {
@@ -24,7 +61,7 @@ export default function CartPage() {
         }
     };
 
-    if (items.length === 0) {
+    if (optimisticItems.length === 0) {
         return (
             <div className="min-h-screen bg-[#F3F3F3] py-12">
                 <ToastContainer />

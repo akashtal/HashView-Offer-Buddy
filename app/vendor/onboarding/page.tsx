@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
-import axios from 'axios';
 import { FiShoppingBag, FiMapPin, FiPhone } from 'react-icons/fi';
 
 export default function VendorOnboardingPage() {
@@ -61,10 +60,11 @@ export default function VendorOnboardingPage() {
         // Fetch categories
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories?parentOnly=true');
-                setCategories(response.data.data.categories);
-                if (response.data.data.categories.length > 0) {
-                    setFormData(prev => ({ ...prev, category: response.data.data.categories[0]._id }));
+                const response = await fetch('/api/categories?parentOnly=true');
+                const data = await response.json();
+                setCategories(data.data.categories);
+                if (data.data.categories.length > 0) {
+                    setFormData(prev => ({ ...prev, category: data.data.categories[0]._id }));
                 }
             } catch (err) {
                 console.error('Failed to load categories');
