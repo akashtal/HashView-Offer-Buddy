@@ -212,7 +212,7 @@ export default function ClientHomePage() {
             </div>
 
             {/* Restaurants/Products Grid */}
-            <section className="py-8">
+            <section className="py-4">
                 <div className="container-custom">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-[#282C3F]">

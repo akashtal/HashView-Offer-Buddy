@@ -91,10 +91,10 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
     }
 
     return (
-        <div className="space-y-2 bg-white pb-6 pt-2">
+        <div className="space-y-2 bg-white pt-2">
             {/* 1. Categories Section */}
             {categories.length > 0 && (
-                <section className="py-2">
+                <section>
                     <div className="container-custom">
                         <div className="relative group">
                             {/* Left Arrow */}
@@ -160,9 +160,9 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
 
             {/* 2. Top Stores Section */}
             {vendors.length > 0 && (
-                <section className="py-2">
+                <section>
                     <div className="container-custom">
-                        <h2 className="text-xl font-bold text-[#282C3F] mb-3">Top Stores Near You</h2>
+                        <h2 className="text-xl font-bold text-[#282C3F]">Top Stores Near You</h2>
 
                         <div className="relative group">
                             {/* Left Arrow */}
