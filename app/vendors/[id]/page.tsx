@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -13,65 +13,168 @@ import {
     Mail,
     Globe,
     CheckCircle,
-    MessageSquare
+    MessageSquare,
+    Search,
 } from 'lucide-react';
 import axios from 'axios';
 import { useLocation } from '@/lib/LocationContext';
 import { calculateDistance } from '@/lib/location-utils';
 import IndiaMArtProductCard from '@/components/IndiaMART/ProductCard';
 import ChatButton from '@/components/chat/ChatButton';
+import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
+import FilterChips from '@/components/ui/FilterChips';
 
 export default function VendorDetailPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
     const vendorId = params.id as string;
     const { location } = useLocation();
 
     const [vendor, setVendor] = useState<any>(null);
-    const [vendorProducts, setVendorProducts] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isProductsLoading, setIsProductsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('products');
     const [showEnquiryModal, setShowEnquiryModal] = useState(false);
 
-    const loadVendorData = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            // Fetch vendor details
-            const vendorRes = await axios.get(`/api/vendors/${vendorId}`);
-            const vendorData = vendorRes.data.data.vendor;
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [totalProducts, setTotalProducts] = useState(0);
 
-            // Calculate distance
-            if (location?.coordinates && vendorData.location?.coordinates) {
-                const [vendorLng, vendorLat] = vendorData.location.coordinates.coordinates;
-                vendorData.distance = calculateDistance(
-                    location.coordinates,
-                    { latitude: vendorLat, longitude: vendorLng }
-                );
-            }
-            setVendor(vendorData);
+    // Filters state — same shape as homepage
+    const [filters, setFilters] = useState<FilterOptions>({
+        sortBy: 'relevance',
+        rating: 0,
+        hasOffer: false,
+    });
 
-            // Fetch vendor products
-            // Ideally the API endpoint might return them, but if not we search products by vendorId
-            const productsRes = await axios.get(`/api/products`, {
-                params: {
-                    vendorId: vendorId, // Assuming API supports filtering by vendorId
-                    limit: 20
-                }
-            });
-            // Filter manually if API doesn't support vendorId param yet (fallback)
-            const allProducts = productsRes.data.data.products;
-            const filtered = allProducts.filter((p: any) => p.vendorId?._id === vendorId || p.vendorId === vendorId);
-            setVendorProducts(filtered);
+    // Facets from Server
+    const [facets, setFacets] = useState<any>({ minPrice: 0, maxPrice: 50000 });
 
-            setIsLoading(false);
-        } catch (error) {
-            console.error('Failed to load vendor:', error);
-            setIsLoading(false);
+    // Search from URL params (synced with header search)
+    const searchQuery = searchParams.get('search') || '';
+    const [localSearch, setLocalSearch] = useState(searchQuery);
+
+    // Sync local search when URL params change (e.g. from header search)
+    useEffect(() => {
+        setLocalSearch(searchQuery);
+    }, [searchQuery]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams.toString());
+        if (localSearch.trim()) {
+            params.set('search', localSearch.trim());
+        } else {
+            params.delete('search');
         }
+        router.push(`/vendors/${vendorId}?${params.toString()}`, { scroll: false });
+    };
+
+    const clearSearch = () => {
+        setLocalSearch('');
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('search');
+        router.push(`/vendors/${vendorId}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleFilterChange = (newFilters: FilterOptions) => {
+        setFilters(newFilters);
+        // Reset to page 1 is handled by the effect dependency
+    };
+
+    // Load Vendor Details (Run once)
+    useEffect(() => {
+        const fetchVendor = async () => {
+            try {
+                const vendorRes = await axios.get(`/api/vendors/${vendorId}`);
+                const vendorData = vendorRes.data.data.vendor;
+
+                if (location?.coordinates && vendorData.location?.coordinates) {
+                    const [vendorLng, vendorLat] = vendorData.location.coordinates.coordinates;
+                    vendorData.distance = calculateDistance(
+                        location.coordinates,
+                        { latitude: vendorLat, longitude: vendorLng }
+                    );
+                }
+                setVendor(vendorData);
+
+                // Fetch categories for filter drawer
+                try {
+                    const catRes = await axios.get('/api/categories?parentOnly=true');
+                    setCategories(catRes.data.data?.categories || []);
+                } catch { }
+            } catch (error) {
+                console.error('Failed to load vendor:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        if (vendorId) fetchVendor();
     }, [vendorId, location]);
 
+    // Fetch Products (Server-side filtering & pagination)
+    const fetchGithubProducts = useCallback(async (isLoadMore = false) => {
+        if (!vendorId) return;
+
+        try {
+            const currentPage = isLoadMore ? page + 1 : 1;
+            if (!isLoadMore) setIsProductsLoading(true);
+
+            const params: any = {
+                vendorId,
+                page: currentPage,
+                limit: 20,
+                sortBy: filters.sortBy || 'relevance',
+            };
+
+            if (searchQuery) params.query = searchQuery;
+            if (filters.category) params.category = filters.category;
+            if (filters.hasOffer) params.hasOffer = true;
+            if (filters.rating) params.rating = filters.rating;
+            if (filters.minPrice) params.minPrice = filters.minPrice;
+            if (filters.maxPrice) params.maxPrice = filters.maxPrice;
+
+            const res = await axios.get('/api/products', { params });
+            const newProducts = res.data.data.products || [];
+            const pagination = res.data.data.pagination;
+            const stats = res.data.data.stats;
+
+            if (isLoadMore) {
+                setProducts(prev => [...prev, ...newProducts]);
+                setPage(currentPage);
+            } else {
+                setProducts(newProducts);
+                setPage(1);
+                // Update facets only on initial load or filter change (if needed)
+                if (stats) setFacets({ minPrice: stats.minPrice, maxPrice: stats.maxPrice });
+            }
+
+            setHasMore(pagination?.hasMore || false);
+            setTotalProducts(pagination?.total || 0);
+
+        } catch (error) {
+            console.error('Failed to fetch products:', error);
+        } finally {
+            setIsProductsLoading(false);
+        }
+    }, [vendorId, searchQuery, filters, page]);
+
+    // Trigger fetch when filters/search change
     useEffect(() => {
-        loadVendorData();
-    }, [vendorId, loadVendorData]);
+        fetchGithubProducts(false); // Reset and fetch
+    }, [vendorId, searchQuery, filters]);
+
+    const loadMore = () => {
+        if (!hasMore || isProductsLoading) return;
+        fetchGithubProducts(true);
+    };
+
+    // Check if any filter is active (for chips display)
+    const hasActiveFilters = filters.category || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0 || (filters.maxPrice && filters.maxPrice < 50000);
 
     if (isLoading) {
         return <div className="min-h-screen bg-gray-50 p-8 text-center">Loading Supplier Profile...</div>;
@@ -163,7 +266,7 @@ export default function VendorDetailPage() {
                             className={`pb-3 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'products' ? 'border-[#FDB913] text-black' : 'border-transparent text-gray-500 hover:text-black'
                                 }`}
                         >
-                            Products & Services
+                            Products & Services ({totalProducts})
                         </button>
                         <button
                             onClick={() => setActiveTab('profile')}
@@ -182,6 +285,88 @@ export default function VendorDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Filter Bar — Same style as homepage */}
+            {activeTab === 'products' && (
+                <div className="bg-white border-b border-gray-100 py-3 sticky top-16 z-30 shadow-sm">
+                    <div className="container-custom">
+                        <div className="flex flex-col gap-3">
+                            {/* Top Row: Search + Filters */}
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-1">
+                                    {/* Search bar */}
+                                    <form onSubmit={handleSearch} className="relative flex-shrink-0">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder={`Search in ${vendor.shopName}...`}
+                                            value={localSearch}
+                                            onChange={(e) => setLocalSearch(e.target.value)}
+                                            className="w-[200px] sm:w-[280px] bg-gray-50 border border-gray-200 rounded-full py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-[#FDB913]/30 focus:border-[#FDB913] text-sm"
+                                        />
+                                    </form>
+
+                                    <div className="h-6 w-px bg-gray-200 shrink-0"></div>
+
+                                    {/* Same ComprehensiveFilters button as homepage */}
+                                    <ComprehensiveFilters
+                                        onApplyFilters={handleFilterChange}
+                                        currentFilters={filters}
+                                        categories={categories}
+                                        facets={facets}
+                                    />
+                                </div>
+
+                                {/* Desktop: inline chips + count */}
+                                <div className="hidden lg:flex items-center gap-3 min-w-0">
+                                    {hasActiveFilters && (
+                                        <div className="max-w-[42vw] min-w-0">
+                                            <FilterChips
+                                                currentFilters={filters}
+                                                categories={categories}
+                                                onApplyFilters={handleFilterChange}
+                                            />
+                                        </div>
+                                    )}
+                                    <p className="text-xs font-medium text-gray-500 whitespace-nowrap">
+                                        {products.length} of {totalProducts} products
+                                    </p>
+                                </div>
+
+                                {/* Tablet: count only */}
+                                <p className="hidden sm:block lg:hidden text-xs font-medium text-gray-500 whitespace-nowrap">
+                                    {products.length} products
+                                </p>
+                            </div>
+
+                            {/* Bottom Row: Chips (mobile/tablet only) */}
+                            <div className="lg:hidden">
+                                {hasActiveFilters && (
+                                    <FilterChips
+                                        currentFilters={filters}
+                                        categories={categories}
+                                        onApplyFilters={handleFilterChange}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Search chip */}
+                            {searchQuery && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">Searching:</span>
+                                    <button
+                                        onClick={clearSearch}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-200 transition-colors"
+                                    >
+                                        &ldquo;{searchQuery}&rdquo;
+                                        <span className="text-gray-500">&times;</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="container-custom py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -222,31 +407,68 @@ export default function VendorDetailPage() {
                     {/* Content Area */}
                     <div className="lg:col-span-3">
                         {activeTab === 'products' && (
-                            <div className="space-y-6">
-                                <h2 className="indiamart-section-title text-xl">
-                                    Products from {vendor.shopName}
-                                </h2>
-
-                                {vendorProducts.length === 0 ? (
+                            <div className="space-y-4">
+                                {/* Products Grid */}
+                                {products.length === 0 && !isProductsLoading ? (
                                     <div className="bg-white p-8 rounded-lg text-center border border-dashed border-gray-300">
-                                        <p className="text-gray-500">No products listed by this supplier yet.</p>
+                                        <Search className="mx-auto text-gray-300 mb-3" size={40} />
+                                        <p className="text-gray-500 font-medium">No products found</p>
+                                        <p className="text-gray-400 text-sm mt-1">
+                                            {searchQuery || hasActiveFilters ? 'Try different search terms or clear filters' : 'No products listed by this supplier yet.'}
+                                        </p>
+                                        {(searchQuery || hasActiveFilters) && (
+                                            <button
+                                                onClick={() => {
+                                                    setFilters({ sortBy: 'relevance', rating: 0, hasOffer: false });
+                                                    clearSearch();
+                                                }}
+                                                className="mt-3 text-sm text-[#FDB913] hover:underline font-medium"
+                                            >
+                                                Clear all filters
+                                            </button>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {vendorProducts.map(product => (
-                                            <IndiaMArtProductCard
-                                                key={product._id}
-                                                id={product._id}
-                                                title={product.title}
-                                                image={product.images?.[0]}
-                                                price={product.price}
-                                                offer={product.offer}
-                                                // No vendor details needed inside the card since we are on vendor page, but component expects it
-                                                vendor={{ shopName: vendor.shopName, city: vendor.location?.city }}
-                                            />
-                                        ))}
-                                    </div>
+                                    <>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {products.map(product => (
+                                                <IndiaMArtProductCard
+                                                    key={product._id}
+                                                    id={product._id}
+                                                    title={product.title}
+                                                    image={product.images?.[0]}
+                                                    price={product.price}
+                                                    offer={product.offer}
+                                                    vendor={{ shopName: vendor.shopName, city: vendor.location?.city }}
+                                                />
+                                            ))}
+                                            {isProductsLoading && (
+                                                <>
+                                                    {Array.from({ length: 3 }).map((_, i) => (
+                                                        <div key={i} className="shimmer h-[340px] rounded-lg"></div>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Load More Button */}
+                                        {hasMore && !isProductsLoading && (
+                                            <div className="flex justify-center mt-6">
+                                                <button
+                                                    onClick={loadMore}
+                                                    className="px-6 py-2 border border-gray-300 rounded-full text-sm font-semibold hover:bg-gray-50 hover:border-[#FDB913] transition-colors"
+                                                >
+                                                    Load More Products
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
+
+                                {/* SM: count */}
+                                <p className="sm:hidden text-xs font-medium text-gray-500 text-center mt-4">
+                                    Showing {products.length} of {totalProducts} products
+                                </p>
                             </div>
                         )}
 

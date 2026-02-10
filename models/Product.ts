@@ -161,18 +161,19 @@ const ProductSchema = new Schema<IProduct>(
   }
 );
 
-// Indexes
-ProductSchema.index({ vendorId: 1 });
-ProductSchema.index({ category: 1 });
-ProductSchema.index({ isActive: 1 });
-ProductSchema.index({ isFeatured: 1 });
-ProductSchema.index({ 'offer.validUntil': 1 });
-ProductSchema.index({ title: 'text', description: 'text', tags: 'text' });
-
 // Force model recompilation in development to handle schema changes
 if (process.env.NODE_ENV === 'development') {
   delete mongoose.models['Product'];
 }
+
+// Indexes for performance
+ProductSchema.index({ vendorId: 1, isActive: 1, createdAt: -1 }); // Vendor profile default view
+ProductSchema.index({ category: 1, isActive: 1 }); // Category pages
+ProductSchema.index({ 'price.original': 1 }); // Price sort/filter
+ProductSchema.index({ 'price.discounted': 1 }); // Discounted price sort/filter
+ProductSchema.index({ title: 'text', description: 'text', tags: 'text' }); // Text search
+ProductSchema.index({ isFeatured: 1 }); // Featured products
+ProductSchema.index({ 'offer.validUntil': 1 }); // Offer validity
 
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 

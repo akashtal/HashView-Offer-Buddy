@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import './Category';
+import './VendorAuth';
 
 export interface IStore extends Document {
   vendorId: mongoose.Types.ObjectId;

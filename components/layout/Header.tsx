@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { FiMapPin, FiUser, FiSearch, FiTag, FiHelpCircle, FiShoppingCart, FiChevronDown, FiBriefcase, FiGrid, FiHeart } from 'react-icons/fi';
 import { useAuthStore } from '@/store/authStore';
 import LocationSearch from '@/components/ui/LocationSearch';
@@ -12,6 +12,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -45,6 +46,22 @@ export default function Header() {
     await logout();
     router.push('/');
     setUserMenuOpen(false);
+  };
+
+  // Detect if on vendor profile page for contextual search
+  const vendorMatch = pathname.match(/^\/vendors\/([^/]+)$/);
+  const isOnVendorPage = !!vendorMatch;
+  const currentVendorId = vendorMatch?.[1] || '';
+
+  const handleHeaderSearch = (value: string) => {
+    if (value.trim()) {
+      if (isOnVendorPage && currentVendorId) {
+        // Search within the vendor's products
+        router.push(`/vendors/${currentVendorId}?search=${encodeURIComponent(value)}`);
+      } else {
+        router.push(`/products?search=${encodeURIComponent(value)}`);
+      }
+    }
   };
 
   return (
@@ -82,11 +99,11 @@ export default function Header() {
               <div className="relative group">
                 <input
                   type="text"
-                  placeholder="Search for products, shops, categories..."
+                  placeholder={isOnVendorPage ? "Search products from this supplier..." : "Search for products, shops, categories..."}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm shadow-sm group-hover:bg-white"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      router.push(`/products?search=${e.currentTarget.value}`);
+                      handleHeaderSearch(e.currentTarget.value);
                     }
                   }}
                 />
