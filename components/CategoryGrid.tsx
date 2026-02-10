@@ -18,7 +18,6 @@ interface Category {
     icon?: string;
 }
 
-// Skeleton component for better React 19.2 Suspense experience
 function CategorySkeleton() {
     return (
         <div className="card hover:shadow-xl transition-all p-6 text-center space-y-3 group bg-white animate-pulse">
