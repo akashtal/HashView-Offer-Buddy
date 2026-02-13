@@ -84,6 +84,23 @@ export const createVendorSchema = z.object({
 
 export const updateVendorSchema = createVendorSchema.partial();
 
+export const adminUpdateVendorSchema = updateVendorSchema.extend({
+  isApproved: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  limits: z
+    .object({
+      maxSubcategories: z.number().int().min(0).optional(),
+      maxProductsPerSubcategory: z.number().int().min(0).optional(),
+    })
+    .optional(),
+  kycDocuments: z
+    .object({
+      status: z.enum(['pending', 'approved', 'rejected', 'not_submitted']).optional(),
+      rejectionReason: z.string().optional(),
+    })
+    .optional(),
+});
+
 // Product Schemas
 export const createProductSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200),

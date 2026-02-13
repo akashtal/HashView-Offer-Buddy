@@ -4,7 +4,32 @@ import Store from '@/models/Store';
 import Product from '@/models/Product';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
-import { updateVendorSchema } from '@/lib/validation';
+import { adminUpdateVendorSchema } from '@/lib/validation';
+
+// GET - Get Vendor Details
+export async function GET(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    const params = await props.params;
+    try {
+        await dbConnect();
+        const admin = await getUserFromRequest(request);
+        if (!admin || admin.role !== 'admin') {
+            return NextResponse.json(apiSuccess(null, 'Unauthorized'), { status: 401 });
+        }
+
+        const vendor = await Store.findById(params.id)
+            .populate('category', 'name')
+            .populate('vendorId', 'name email phone');
+
+        if (!vendor) return NextResponse.json(apiError('Vendor not found'), { status: 404 });
+
+        return NextResponse.json(apiSuccess({ vendor }, 'Vendor details fetched successfully'));
+    } catch (error: any) {
+        return NextResponse.json(apiError(error.message), { status: 500 });
+    }
+}
 
 // PUT - Update Vendor (Edit)
 export async function PUT(
@@ -20,8 +45,8 @@ export async function PUT(
         }
 
         const body = await request.json();
-        // Use partial schema for updates
-        const validatedData = updateVendorSchema.parse(body);
+        // Use admin schema for updates
+        const validatedData = adminUpdateVendorSchema.parse(body);
 
         const vendor = await Store.findByIdAndUpdate(
             params.id,
