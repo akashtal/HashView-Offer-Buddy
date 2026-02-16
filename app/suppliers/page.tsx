@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, MapPin, ChevronDown } from 'lucide-react';
 import { useLocation } from '@/lib/LocationContext';
-import { sortByDistance, INDIAN_CITIES } from '@/lib/location-utils';
+import { INDIAN_CITIES } from '@/lib/location-utils';
 import SupplierCard from '@/components/IndiaMART/SupplierCard';
 import Link from 'next/link';
 
@@ -16,14 +16,18 @@ export default function SuppliersPage() {
 
     const loadSuppliers = useCallback(async () => {
         try {
-            const response = await fetch('/api/vendors');
-            const data = await response.json();
-            let suppliersData = data.data.vendors || data.data || [];
-
-            // Sort by distance if location available
+            // Build URL with location params so server computes distance via $geoNear
+            const params = new URLSearchParams();
             if (location?.coordinates) {
-                suppliersData = sortByDistance(suppliersData, location.coordinates);
+                params.set('latitude', String(location.coordinates.latitude));
+                params.set('longitude', String(location.coordinates.longitude));
+                params.set('radius', '100');
             }
+            params.set('limit', '50');
+
+            const response = await fetch(`/api/vendors?${params.toString()}`);
+            const data = await response.json();
+            const suppliersData = data.data.vendors || data.data || [];
 
             setSuppliers(suppliersData);
             setIsLoading(false);

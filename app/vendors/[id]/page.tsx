@@ -94,11 +94,21 @@ export default function VendorDetailPage() {
                 const vendorData = vendorRes.data.data.vendor;
 
                 if (location?.coordinates && vendorData.location?.coordinates) {
-                    const [vendorLng, vendorLat] = vendorData.location.coordinates.coordinates;
-                    vendorData.distance = calculateDistance(
-                        location.coordinates,
-                        { latitude: vendorLat, longitude: vendorLng }
-                    );
+                    let vendorLng, vendorLat;
+                    const coords = vendorData.location.coordinates;
+
+                    if (Array.isArray(coords)) {
+                        [vendorLng, vendorLat] = coords;
+                    } else if (coords?.coordinates && Array.isArray(coords.coordinates)) {
+                        [vendorLng, vendorLat] = coords.coordinates;
+                    }
+
+                    if (typeof vendorLng === 'number' && typeof vendorLat === 'number') {
+                        vendorData.distance = calculateDistance(
+                            location.coordinates,
+                            { latitude: vendorLat, longitude: vendorLng }
+                        );
+                    }
                 }
                 setVendor(vendorData);
 
@@ -131,6 +141,12 @@ export default function VendorDetailPage() {
                 sortBy: filters.sortBy || 'relevance',
             };
 
+            // Pass user location so API computes distance server-side
+            if (location?.coordinates) {
+                params.latitude = location.coordinates.latitude;
+                params.longitude = location.coordinates.longitude;
+            }
+
             if (searchQuery) params.query = searchQuery;
             if (filters.category) params.category = filters.category;
             if (filters.hasOffer) params.hasOffer = true;
@@ -161,7 +177,7 @@ export default function VendorDetailPage() {
         } finally {
             setIsProductsLoading(false);
         }
-    }, [vendorId, searchQuery, filters, page]);
+    }, [vendorId, searchQuery, filters, page, location]);
 
     // Trigger fetch when filters/search change
     useEffect(() => {
@@ -440,6 +456,8 @@ export default function VendorDetailPage() {
                                                     price={product.price}
                                                     offer={product.offer}
                                                     vendor={{ shopName: vendor.shopName, city: vendor.location?.city }}
+                                                    vendorId={product.vendorId?._id || product.vendorId}
+                                                    distance={product.distance}
                                                 />
                                             ))}
                                             {isProductsLoading && (

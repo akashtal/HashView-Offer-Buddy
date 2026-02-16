@@ -99,8 +99,13 @@ export default function ProductDetailPage() {
       }
 
       if (productData.category?._id) {
+        const similarParams: any = { category: productData.category._id, limit: 6 };
+        if (location?.coordinates) {
+          similarParams.latitude = location.coordinates.latitude;
+          similarParams.longitude = location.coordinates.longitude;
+        }
         const similarRes = await axios.get(`/api/products`, {
-          params: { category: productData.category._id, limit: 6 },
+          params: similarParams,
         });
         setSimilarProducts(
           similarRes.data.data.products.filter((p: any) => p._id !== productId)
