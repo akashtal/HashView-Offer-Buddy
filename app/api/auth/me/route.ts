@@ -87,3 +87,71 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const token = request.cookies.get('token')?.value ||
+      request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(apiError('Unauthorized'), { status: 401 });
+    }
+
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    const userId = payload.userId as string;
+    const role = payload.role as string;
+
+    const body = await request.json();
+    await dbConnect();
+
+    let updatedUser;
+
+    if (role === 'vendor') {
+      // For vendors, we might update VendorAuth or Store, but usually Profile means Store for customers
+      // But here /api/auth/me usually refers to the User/VendorAuth entity
+      // Let's update VendorAuth basic info
+      updatedUser = await VendorAuth.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            businessName: body.businessName,
+            mobile: body.mobile,
+            gstNumber: body.gstNumber
+          }
+        },
+        { new: true }
+      ).select('-password');
+    } else {
+      // Update User
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            name: body.name,
+            phone: body.phone,
+            location: body.location,
+            preferences: body.preferences
+          }
+        },
+        { new: true }
+      ).select('-password');
+    }
+
+    if (!updatedUser) {
+      return NextResponse.json(apiError('User not found'), { status: 404 });
+    }
+
+    return NextResponse.json(
+      apiSuccess({ user: updatedUser }, 'Profile updated successfully'),
+      { status: 200 }
+    );
+
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    return NextResponse.json(
+      apiError('Failed to update profile'),
+      { status: 500 }
+    );
+  }
+}

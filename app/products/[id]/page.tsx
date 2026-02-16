@@ -81,11 +81,21 @@ export default function ProductDetailPage() {
       setProduct(productData);
 
       if (location?.coordinates && productData.vendorId?.location?.coordinates) {
-        const [vendorLng, vendorLat] = productData.vendorId.location.coordinates.coordinates;
-        productData.distance = calculateDistance(
-          location.coordinates,
-          { latitude: vendorLat, longitude: vendorLng }
-        );
+        let vendorLng, vendorLat;
+        const coords = productData.vendorId.location.coordinates;
+
+        if (Array.isArray(coords)) {
+          [vendorLng, vendorLat] = coords;
+        } else if (coords?.coordinates && Array.isArray(coords.coordinates)) {
+          [vendorLng, vendorLat] = coords.coordinates;
+        }
+
+        if (typeof vendorLng === 'number' && typeof vendorLat === 'number') {
+          productData.distance = calculateDistance(
+            location.coordinates,
+            { latitude: vendorLat, longitude: vendorLng }
+          );
+        }
       }
 
       if (productData.category?._id) {

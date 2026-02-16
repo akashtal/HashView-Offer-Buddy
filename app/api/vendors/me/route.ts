@@ -77,3 +77,58 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const token = request.cookies.get('token')?.value ||
+      request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json(apiError('Unauthorized'), { status: 401 });
+    }
+
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    const userId = payload.userId as string;
+    const role = payload.role as string;
+
+    if (role !== 'vendor') {
+      return NextResponse.json(apiError('Access denied'), { status: 403 });
+    }
+
+    const body = await request.json();
+    await dbConnect();
+
+    // Update Store
+    const updatedStore = await Store.findOneAndUpdate(
+      { vendorId: userId },
+      {
+        $set: {
+          shopName: body.shopName,
+          shopDescription: body.shopDescription,
+          contactInfo: body.contactInfo,
+          location: body.location,
+          businessHours: body.businessHours,
+          // Add other fields as necessary, preventing overwriting simplified fields
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedStore) {
+      return NextResponse.json(apiError('Store not found'), { status: 404 });
+    }
+
+    return NextResponse.json(
+      apiSuccess({ vendor: updatedStore }, 'Vendor profile updated successfully'),
+      { status: 200 }
+    );
+
+  } catch (error: any) {
+    console.error('Update vendor profile error:', error);
+    return NextResponse.json(
+      apiError('Failed to update vendor profile'),
+      { status: 500 }
+    );
+  }
+}

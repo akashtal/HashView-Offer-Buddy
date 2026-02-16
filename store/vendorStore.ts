@@ -14,6 +14,7 @@ interface Vendor {
     city: string;
     state: string;
     pincode: string;
+    country?: string;
   };
   contactInfo: {
     phone: string;

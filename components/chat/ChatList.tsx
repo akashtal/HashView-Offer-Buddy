@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
+import { useVendorStore } from '@/store/vendorStore';
 import { formatDistanceToNow } from 'date-fns';
 import { User, Store } from 'lucide-react';
 import Image from 'next/image';
@@ -18,6 +19,15 @@ const ChatList: React.FC = () => {
         isLoading
     } = useChatStore();
     const { user } = useAuthStore();
+    // Also get vendor profile to know the store ID for Pusher subscription
+    // We need to fetch it if not available, but usually dashboard fetches it.
+    // However, ChatList might be used elsewhere? 
+    // Assuming ChatList is used in Dashboard where fetchMyProfile is called.
+    // If not, we might miss it. But for now relying on store state is okay.
+    // Actually, useVendorStore might not be populated if we just reload page and go to /chat (if strictly chat page existed)
+    // But Vendor Dashboard calls fetchMyProfile.
+    // Let's import useVendorStore
+    const { myVendorProfile } = useVendorStore();
 
     useEffect(() => {
         fetchConversations();
@@ -26,16 +36,28 @@ const ChatList: React.FC = () => {
     useEffect(() => {
         if (!user?.id) return;
 
+        // Subscribe to user's personal channel (VendorAuth ID or User ID)
         const channel = pusherClient.subscribe(`user-chats-${user.id}`);
-
         channel.bind('conversation-updated', (data: any) => {
             updateConversationLocally(data.conversationId, data.lastMessage);
         });
 
+        // If vendor, also subscribe to Store ID channel because messages might be sent to Store ID
+        let storeChannel: any = null;
+        if (user.role === 'vendor' && myVendorProfile?._id) {
+            storeChannel = pusherClient.subscribe(`user-chats-${myVendorProfile._id}`);
+            storeChannel.bind('conversation-updated', (data: any) => {
+                updateConversationLocally(data.conversationId, data.lastMessage);
+            });
+        }
+
         return () => {
             pusherClient.unsubscribe(`user-chats-${user.id}`);
+            if (storeChannel) {
+                pusherClient.unsubscribe(`user-chats-${myVendorProfile?._id}`);
+            }
         };
-    }, [user?.id, updateConversationLocally]);
+    }, [user?.id, user?.role, myVendorProfile?._id, updateConversationLocally]);
 
     if (isLoading && conversations.length === 0) {
         return (
