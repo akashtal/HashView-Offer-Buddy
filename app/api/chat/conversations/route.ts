@@ -73,8 +73,17 @@ export async function GET(request: NextRequest) {
             return NextResponse.json(apiError('Unauthorized'), { status: 401 });
         }
 
+        let participantQuery: any[] = [{ 'participants.participantId': currentUser.userId }];
+
+        if (currentUser.role === 'vendor') {
+            const vendorStore = await Store.findOne({ vendorId: currentUser.userId });
+            if (vendorStore) {
+                participantQuery.push({ 'participants.participantId': vendorStore._id });
+            }
+        }
+
         const conversations = await Conversation.find({
-            'participants.participantId': currentUser.userId,
+            $or: participantQuery
         })
             .populate('lastMessage')
             .sort({ updatedAt: -1 });

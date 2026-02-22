@@ -171,6 +171,10 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
+          // Clear chat store to prevent history lingering across sessions
+          const { useChatStore } = require('./chatStore');
+          useChatStore.getState().clearChat();
+
           set({
             user: null,
             token: null,

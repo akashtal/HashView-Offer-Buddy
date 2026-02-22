@@ -46,6 +46,7 @@ interface ChatState {
     addMessage: (message: Message) => void;
     updateConversationLocally: (conversationId: string, lastMessage: Message) => void;
     initiateChat: (recipientId: string, recipientModel: 'User' | 'Vendor') => Promise<string>;
+    clearChat: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -162,5 +163,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
             console.error('Initiate chat error:', error);
             throw error;
         }
+    },
+
+    clearChat: () => {
+        set({
+            conversations: [],
+            activeConversationId: null,
+            messages: [],
+        });
     },
 }));

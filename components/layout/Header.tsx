@@ -256,15 +256,55 @@ export default function Header() {
               </Link>
 
               {/* Profile - Mobile */}
-              <Link
-                href={isAuthenticated
-                  ? (user?.role === 'vendor' ? '/vendor/dashboard' : user?.role === 'admin' ? '/admin/dashboard' : '/profile')
-                  : '/signin'
-                }
-                className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm"
-              >
-                <FiUser size={20} className="text-gray-700" />
-              </Link>
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm"
+                  >
+                    <FiUser size={20} className="text-gray-700" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Link
+                        href={
+                          user?.role === 'vendor'
+                            ? '/vendor/dashboard'
+                            : user?.role === 'admin'
+                              ? '/admin/dashboard'
+                              : '/profile'
+                        }
+                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/profile"
+                        className="block px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Profile
+                      </Link>
+                      <hr className="my-2 border-gray-100" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors font-medium"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/signin"
+                  className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm"
+                >
+                  <FiUser size={20} className="text-gray-700" />
+                </Link>
+              )}
             </div>
           </div>
 

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
 import Message from '@/models/Message';
 import { getUserFromRequest } from '@/lib/auth';
+import Store from '@/models/Store';
 import { apiSuccess, apiError } from '@/lib/utils';
 
 export async function GET(
@@ -26,8 +27,17 @@ export async function GET(
             return NextResponse.json(apiError('Conversation not found'), { status: 404 });
         }
 
+        let validParticipantIds = [currentUser.userId];
+
+        if (currentUser.role === 'vendor') {
+            const vendorStore = await Store.findOne({ vendorId: currentUser.userId });
+            if (vendorStore) {
+                validParticipantIds.push(vendorStore._id.toString());
+            }
+        }
+
         const isParticipant = conversation.participants.some(
-            (p) => p.participantId.toString() === currentUser.userId
+            (p) => validParticipantIds.includes(p.participantId.toString())
         );
 
         if (!isParticipant) {
