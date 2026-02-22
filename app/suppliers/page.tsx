@@ -21,7 +21,7 @@ export default function SuppliersPage() {
             if (location?.coordinates) {
                 params.set('latitude', String(location.coordinates.latitude));
                 params.set('longitude', String(location.coordinates.longitude));
-                params.set('radius', '100');
+                params.set('radius', '20000');
             }
             params.set('limit', '50');
 

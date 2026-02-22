@@ -23,6 +23,7 @@ import IndiaMArtProductCard from '@/components/IndiaMART/ProductCard';
 import ChatButton from '@/components/chat/ChatButton';
 import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
 import FilterChips from '@/components/ui/FilterChips';
+import VendorLocationMap from '@/components/VendorLocationMap';
 
 export default function VendorDetailPage() {
     const params = useParams();
@@ -399,6 +400,70 @@ export default function VendorDetailPage() {
                                         {vendor.location?.state}, India
                                     </div>
                                 </div>
+
+                                {/* Interactive Location Map */}
+                                {(() => {
+                                    const coords = vendor.location?.coordinates?.coordinates;
+                                    const lng = coords?.[0];
+                                    const lat = coords?.[1];
+                                    const hasGPS = lat && lng;
+                                    const addressText = [
+                                        vendor.location?.address,
+                                        vendor.location?.city,
+                                        vendor.location?.state,
+                                        'India'
+                                    ].filter(Boolean).join(', ');
+
+                                    if (!hasGPS && !addressText) return null;
+
+                                    const mapsQuery = hasGPS ? `${lat},${lng}` : encodeURIComponent(addressText);
+                                    const googleMapsUrl = hasGPS
+                                        ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`;
+                                    const directionsUrl = hasGPS
+                                        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressText)}`;
+                                    const embedUrl = hasGPS
+                                        ? `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed&hl=en`
+                                        : `https://maps.google.com/maps?q=${encodeURIComponent(addressText)}&z=14&output=embed&hl=en`;
+
+                                    return (
+                                        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                                            <div className="relative">
+                                                <iframe
+                                                    src={embedUrl}
+                                                    width="100%"
+                                                    height="180"
+                                                    style={{ border: 0 }}
+                                                    allowFullScreen={false}
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                    title={`${vendor.shopName} location`}
+                                                    className="block"
+                                                />
+                                                <a
+                                                    href={googleMapsUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="absolute inset-0 z-10"
+                                                    title="Open in Google Maps"
+                                                />
+                                            </div>
+                                            <div className="bg-white px-3 py-2 flex items-center justify-between gap-2">
+                                                <p className="text-xs text-gray-500 truncate">📍 {vendor.location?.city || 'View on map'}</p>
+                                                <a
+                                                    href={directionsUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+                                                >
+                                                    Directions
+                                                </a>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 {vendor.contactInfo?.phone && (
                                     <div className="flex gap-2 items-center">
                                         <div className="w-6 text-gray-400"><Phone size={16} /></div>
@@ -569,6 +634,68 @@ export default function VendorDetailPage() {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Visit Us — Google Maps link */}
+                                        {(() => {
+                                            const coords = vendor.location?.coordinates?.coordinates;
+                                            const lng = coords?.[0];
+                                            const lat = coords?.[1];
+                                            const hasGPS = lat && lng;
+                                            const addressText = [
+                                                vendor.location?.address,
+                                                vendor.location?.city,
+                                                vendor.location?.state,
+                                                'India'
+                                            ].filter(Boolean).join(', ');
+                                            if (!hasGPS && !addressText) return null;
+                                            const googleMapsUrl = hasGPS
+                                                ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`;
+                                            const directionsUrl = hasGPS
+                                                ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                                                : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressText)}`;
+                                            const embedUrl = hasGPS
+                                                ? `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed&hl=en`
+                                                : `https://maps.google.com/maps?q=${encodeURIComponent(addressText)}&z=14&output=embed&hl=en`;
+                                            return (
+                                                <div className="flex items-start gap-3">
+                                                    <div className="bg-gray-100 p-2 rounded-full shrink-0"><MapPin size={20} className="text-[#FDB913]" /></div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-900 mb-2">Visit Us</h4>
+                                                        {/* Embedded mini map */}
+                                                        <div className="relative rounded-lg overflow-hidden border border-gray-200 mb-2">
+                                                            <iframe
+                                                                src={embedUrl}
+                                                                width="100%"
+                                                                height="180"
+                                                                style={{ border: 0 }}
+                                                                allowFullScreen={false}
+                                                                loading="lazy"
+                                                                referrerPolicy="no-referrer-when-downgrade"
+                                                                title="Vendor location map"
+                                                                className="block"
+                                                            />
+                                                            <a
+                                                                href={googleMapsUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="absolute inset-0 z-10"
+                                                                title="Open in Google Maps"
+                                                            />
+                                                        </div>
+                                                        <a
+                                                            href={directionsUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                                                        >
+                                                            <MapPin size={14} />
+                                                            Get Directions
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
 
                                     <div className="bg-gray-50 p-6 rounded-lg">

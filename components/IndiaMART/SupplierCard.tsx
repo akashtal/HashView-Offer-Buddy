@@ -30,7 +30,7 @@ export default function SupplierCard({
     phone,
     email,
     description,
-    rating = 4.2,
+    rating,
     verified = true,
     distance,
 }: SupplierCardProps) {
@@ -54,10 +54,10 @@ export default function SupplierCard({
                         </div>
                     )}
                 </div>
-                {verified && (
+                {rating != null && (
                     <div className="verified-badge">
                         <Star size={12} fill="currentColor" />
-                        Verified
+                        {rating}
                     </div>
                 )}
             </div>
@@ -73,7 +73,7 @@ export default function SupplierCard({
                 <div className="location-badge mb-3">
                     <MapPin size={14} />
                     <span>{location.city}{location.state ? `, ${location.state}` : ''}</span>
-                    {distance !== undefined && (
+                    {distance != null && distance < 99999 && (
                         <span className="distance-badge ml-2">
                             {distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`} away
                         </span>

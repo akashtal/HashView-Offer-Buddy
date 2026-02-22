@@ -240,11 +240,10 @@ export default function ClientHomePage() {
                                     id={product._id}
                                     name={product.title}
                                     image={product.images?.[0]}
-                                    rating={product.rating || 4.2}
-                                    reviewCount={Math.floor(Math.random() * 500) + 100}
-                                    deliveryTime="30-35 mins"
-                                    cuisine={product.description || 'Industrial Supplies'}
-                                    priceForTwo={product.price?.original || 300}
+                                    rating={product.rating}
+                                    reviewCount={product.reviewCount}
+                                    cuisine={product.description}
+                                    priceForTwo={product.price?.original}
                                     offer={product.offer}
                                     distance={product.distance}
                                 />

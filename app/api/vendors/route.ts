@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const latitude = parseFloat(searchParams.get('latitude') || '0');
     const longitude = parseFloat(searchParams.get('longitude') || '0');
     const radiusKm = parseFloat(searchParams.get('radius') || '50'); // Default 50km
-    const maxRadius = Math.min(radiusKm, 100); // Cap at 100km for performance
+    const maxRadius = Math.min(radiusKm, 20000); // Cap at 20000km (effectively global)
 
     const category = searchParams.get('category');
     const sortBy = searchParams.get('sortBy') || 'distance'; // distance, rating, newest

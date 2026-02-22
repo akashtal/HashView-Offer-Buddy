@@ -206,9 +206,11 @@ export default function CategoryCarousel({ onCategorySelect, selectedCategory }:
                                             <div className="p-2.5 flex-1 flex flex-col justify-between gap-2">
                                                 <div>
                                                     <div className="flex items-center justify-between mb-1">
-                                                        <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                                                            <Star size={8} fill="currentColor" /> {vendor.rating || '4.5'}
-                                                        </span>
+                                                        {vendor.rating != null && (
+                                                            <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                                                                <Star size={8} fill="currentColor" /> {vendor.rating}
+                                                            </span>
+                                                        )}
                                                         <span className="text-[10px] text-gray-500 truncate max-w-[80px]">{vendor.location?.city}</span>
                                                     </div>
                                                 </div>

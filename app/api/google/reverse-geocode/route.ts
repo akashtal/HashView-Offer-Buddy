@@ -33,11 +33,19 @@ export async function GET(request: NextRequest) {
         const data = await response.json();
 
         if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-            console.error('❌ Geocoding failed on server:', data.status);
-            return NextResponse.json(
-                { error: `Geocoding failed: ${data.status}` },
-                { status: 500 }
-            );
+            console.warn('⚠️ Geocoding API returned non-OK status:', data.status, '— returning coordinate fallback');
+            // Return a graceful fallback using raw coordinates instead of a 500 error
+            return NextResponse.json({
+                city: `Location (${parseFloat(lat).toFixed(2)}°, ${parseFloat(lng).toFixed(2)}°)`,
+                state: '',
+                country: 'India',
+                address: `${lat}, ${lng}`,
+                coordinates: {
+                    latitude: parseFloat(lat),
+                    longitude: parseFloat(lng)
+                },
+                fallback: true
+            });
         }
 
         // Extract address components

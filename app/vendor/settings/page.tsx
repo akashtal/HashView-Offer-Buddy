@@ -7,7 +7,7 @@ import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
-import { FiSave, FiShoppingBag, FiMapPin, FiPhone, FiClock } from 'react-icons/fi';
+import { FiSave, FiShoppingBag, FiMapPin, FiPhone, FiClock, FiNavigation } from 'react-icons/fi';
 import Loading from '@/components/ui/Loading';
 import axios from 'axios';
 
@@ -17,6 +17,7 @@ export default function VendorSettingsPage() {
     const { myVendorProfile, fetchMyProfile, isLoading: isVendorLoading } = useVendorStore();
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
     const [formData, setFormData] = useState({
         shopName: '',
         shopDescription: '',
@@ -32,8 +33,9 @@ export default function VendorSettingsPage() {
             state: '',
             country: 'India',
             pincode: '',
+            coordinates: null as { latitude: number; longitude: number } | null,
         },
-        businessHours: [] as any[] // Simplified for now
+        businessHours: [] as any[]
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -48,6 +50,14 @@ export default function VendorSettingsPage() {
 
     useEffect(() => {
         if (myVendorProfile) {
+            const coords: any = myVendorProfile.location?.coordinates;
+            // coords is a GeoJSON object { type: 'Point', coordinates: [lng, lat] } or undefined
+            let latitude: number | null = null;
+            let longitude: number | null = null;
+            if (coords?.coordinates && Array.isArray(coords.coordinates) && coords.coordinates.length === 2) {
+                [longitude, latitude] = coords.coordinates;
+            }
+
             setFormData({
                 shopName: myVendorProfile.shopName || '',
                 shopDescription: myVendorProfile.shopDescription || '',
@@ -63,6 +73,7 @@ export default function VendorSettingsPage() {
                     state: myVendorProfile.location?.state || '',
                     country: myVendorProfile.location?.country || 'India',
                     pincode: myVendorProfile.location?.pincode || '',
+                    coordinates: latitude && longitude ? { latitude, longitude } : null,
                 },
                 businessHours: myVendorProfile.businessHours || []
             });
@@ -88,6 +99,79 @@ export default function VendorSettingsPage() {
         }
     };
 
+    // Geocode the saved address to get GPS coordinates
+    const detectLocationFromAddress = async () => {
+        setIsDetectingLocation(true);
+        setError('');
+        try {
+            // First try browser geolocation (most accurate)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        setFormData(prev => ({
+                            ...prev,
+                            location: {
+                                ...prev.location,
+                                coordinates: {
+                                    latitude: position.coords.latitude,
+                                    longitude: position.coords.longitude,
+                                }
+                            }
+                        }));
+                        setSuccess('✅ Location detected from your device! Save to apply.');
+                        setIsDetectingLocation(false);
+                    },
+                    async () => {
+                        // Fallback: geocode from address string
+                        await geocodeFromAddress();
+                    },
+                    { timeout: 8000 }
+                );
+            } else {
+                await geocodeFromAddress();
+            }
+        } catch (err) {
+            setError('Could not detect location. Please enter coordinates manually.');
+            setIsDetectingLocation(false);
+        }
+    };
+
+    const geocodeFromAddress = async () => {
+        try {
+            const addressQuery = [
+                formData.location.address,
+                formData.location.city,
+                formData.location.state,
+                formData.location.pincode,
+                'India'
+            ].filter(Boolean).join(', ');
+
+            const res = await axios.get(`/api/google/places/autocomplete?input=${encodeURIComponent(addressQuery)}`);
+            const place = res.data?.predictions?.[0];
+
+            if (place?.place_id) {
+                const detailsRes = await axios.get(`/api/google/places/details?placeId=${place.place_id}`);
+                const loc = detailsRes.data?.location;
+                if (loc?.lat && loc?.lng) {
+                    setFormData(prev => ({
+                        ...prev,
+                        location: {
+                            ...prev.location,
+                            coordinates: { latitude: loc.lat, longitude: loc.lng }
+                        }
+                    }));
+                    setSuccess('✅ Location found from address! Save to apply.');
+                    return;
+                }
+            }
+            setError('Could not geocode address. Please enter coordinates manually or fill in a more specific address.');
+        } catch {
+            setError('Could not geocode address. Please enter coordinates manually.');
+        } finally {
+            setIsDetectingLocation(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -95,9 +179,35 @@ export default function VendorSettingsPage() {
         setSuccess('');
 
         try {
-            await axios.put('/api/vendors/me', formData);
+            // Build payload — include coordinates in GeoJSON format if present
+            const payload: any = {
+                shopName: formData.shopName,
+                shopDescription: formData.shopDescription,
+                contactInfo: formData.contactInfo,
+                location: {
+                    address: formData.location.address,
+                    city: formData.location.city,
+                    state: formData.location.state,
+                    country: formData.location.country,
+                    pincode: formData.location.pincode,
+                },
+                businessHours: formData.businessHours,
+            };
+
+            // Attach coordinates if they exist
+            if (formData.location.coordinates?.latitude && formData.location.coordinates?.longitude) {
+                payload.location.coordinates = {
+                    type: 'Point',
+                    coordinates: [
+                        formData.location.coordinates.longitude,
+                        formData.location.coordinates.latitude,
+                    ],
+                };
+            }
+
+            await axios.put('/api/vendors/me', payload);
             setSuccess('Shop profile updated successfully');
-            fetchMyProfile(); // Refresh data
+            fetchMyProfile();
             window.scrollTo(0, 0);
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to update shop profile');
@@ -233,6 +343,57 @@ export default function VendorSettingsPage() {
                                     onChange={(e) => handleChange(e, 'location')}
                                     disabled
                                 />
+                            </div>
+
+                            {/* GPS Coordinates Section */}
+                            <div className="border rounded-lg p-4 bg-blue-50 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1">
+                                            <FiNavigation className="text-blue-600" /> GPS Coordinates
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            Required to show accurate distance to customers
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={detectLocationFromAddress}
+                                        disabled={isDetectingLocation}
+                                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        <FiNavigation size={14} />
+                                        {isDetectingLocation ? 'Detecting...' : 'Detect My Location'}
+                                    </button>
+                                </div>
+
+                                {formData.location.coordinates ? (
+                                    <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg p-3">
+                                        <FiMapPin className="text-green-600 shrink-0" />
+                                        <div>
+                                            <p className="font-medium">✅ Location set</p>
+                                            <p className="text-xs text-gray-500">
+                                                Lat: {formData.location.coordinates.latitude.toFixed(6)},
+                                                Lng: {formData.location.coordinates.longitude.toFixed(6)}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({
+                                                ...prev,
+                                                location: { ...prev.location, coordinates: null }
+                                            }))}
+                                            className="ml-auto text-xs text-red-500 hover:text-red-700"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+                                        ⚠️ No GPS coordinates set. Customers will not see distance to your shop.
+                                        Click &quot;Detect My Location&quot; above.
+                                    </div>
+                                )}
                             </div>
                         </CardBody>
                     </Card>

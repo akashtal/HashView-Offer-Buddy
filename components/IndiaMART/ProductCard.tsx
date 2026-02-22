@@ -112,7 +112,7 @@ export default function IndiaMArtProductCard({
                             <div className="flex items-center gap-1 text-xs">
                                 <MapPin size={12} />
                                 <span>{vendor.city}</span>
-                                {distance !== undefined && (
+                                {distance != null && distance < 99999 && (
                                     <span className="distance-badge ml-2">
                                         {distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`} away
                                     </span>

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
 import Store from '@/models/Store';
+import Review from '@/models/Review';
 import VendorSubcategory from '@/models/VendorSubcategory';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { getUserFromRequest } from '@/lib/auth';
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
                     }
                   }
                 },
-                else: 999999
+                else: null
               }
             }
           }
@@ -223,6 +224,33 @@ export async function GET(request: NextRequest) {
           path: '$category',
           preserveNullAndEmptyArrays: true
         }
+      }
+    );
+
+    // Lookup Reviews to compute real rating + reviewCount
+    productsPipeline.push(
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'productId',
+          as: 'reviews'
+        }
+      },
+      {
+        $addFields: {
+          reviewCount: { $size: '$reviews' },
+          rating: {
+            $cond: {
+              if: { $gt: [{ $size: '$reviews' }, 0] },
+              then: { $round: [{ $avg: '$reviews.rating' }, 1] },
+              else: null
+            }
+          }
+        }
+      },
+      {
+        $project: { reviews: 0 } // Drop the full reviews array from the result
       }
     );
 
