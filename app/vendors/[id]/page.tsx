@@ -24,6 +24,7 @@ import ChatButton from '@/components/chat/ChatButton';
 import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
 import FilterChips from '@/components/ui/FilterChips';
 import VendorLocationMap from '@/components/VendorLocationMap';
+import { useToast } from '@/components/ui/Toast';
 
 export default function VendorDetailPage() {
     const params = useParams();
@@ -39,6 +40,12 @@ export default function VendorDetailPage() {
     const [isProductsLoading, setIsProductsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('products');
     const [showEnquiryModal, setShowEnquiryModal] = useState(false);
+
+    // Contact Supplier Form State
+    const [contactMobile, setContactMobile] = useState('');
+    const [contactRequirement, setContactRequirement] = useState('');
+    const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+    const { showToast } = useToast();
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -85,6 +92,31 @@ export default function VendorDetailPage() {
     const handleFilterChange = (newFilters: FilterOptions) => {
         setFilters(newFilters);
         // Reset to page 1 is handled by the effect dependency
+    };
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!contactMobile.trim() || !contactRequirement.trim()) {
+            showToast('Please provide both mobile number and requirement', 'error');
+            return;
+        }
+
+        try {
+            setIsSubmittingContact(true);
+            await axios.post(`/api/vendors/${vendorId}/contact`, {
+                mobileNumber: contactMobile.trim(),
+                requirement: contactRequirement.trim()
+            });
+            showToast('Requirement submitted successfully. The vendor will contact you soon.', 'success');
+            setShowEnquiryModal(false);
+            setContactMobile('');
+            setContactRequirement('');
+        } catch (error: any) {
+            console.error('Contact submit error:', error);
+            showToast(error.response?.data?.error || 'Failed to submit requirement', 'error');
+        } finally {
+            setIsSubmittingContact(false);
+        }
     };
 
     // Load Vendor Details (Run once)
@@ -728,11 +760,35 @@ export default function VendorDetailPage() {
                             <h3 className="text-xl font-bold">Contact Supplier</h3>
                             <p className="text-sm opacity-90">{vendor.shopName}</p>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <input type="tel" className="block w-full rounded-md border-gray-300 border p-2" placeholder="Mobile number" />
-                            <textarea rows={3} className="block w-full rounded-md border-gray-300 border p-2" placeholder="Describe your requirement..."></textarea>
-                            <button className="w-full indiamart-btn-primary py-3">Submit Requirement</button>
-                        </div>
+                        <form onSubmit={handleContactSubmit} className="p-6 space-y-4">
+                            <input
+                                type="tel"
+                                className="block w-full rounded-md border-gray-300 border p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Mobile number"
+                                value={contactMobile}
+                                onChange={(e) => setContactMobile(e.target.value)}
+                                required
+                            />
+                            <textarea
+                                rows={3}
+                                className="block w-full rounded-md border-gray-300 border p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Describe your requirement..."
+                                value={contactRequirement}
+                                onChange={(e) => setContactRequirement(e.target.value)}
+                                required
+                            ></textarea>
+                            <button
+                                type="submit"
+                                disabled={isSubmittingContact}
+                                className="w-full indiamart-btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+                            >
+                                {isSubmittingContact ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    "Submit Requirement"
+                                )}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
