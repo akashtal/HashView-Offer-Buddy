@@ -25,6 +25,7 @@ import ComprehensiveFilters, { FilterOptions } from '@/components/ui/Comprehensi
 import FilterChips from '@/components/ui/FilterChips';
 import VendorLocationMap from '@/components/VendorLocationMap';
 import { useToast } from '@/components/ui/Toast';
+import { useAuthStore } from '@/store/authStore';
 
 export default function VendorDetailPage() {
     const params = useParams();
@@ -40,6 +41,9 @@ export default function VendorDetailPage() {
     const [isProductsLoading, setIsProductsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('products');
     const [showEnquiryModal, setShowEnquiryModal] = useState(false);
+
+    // Auth State
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
 
     // Contact Supplier Form State
     const [contactMobile, setContactMobile] = useState('');
@@ -118,6 +122,13 @@ export default function VendorDetailPage() {
             setIsSubmittingContact(false);
         }
     };
+
+    // Authentication Protection
+    useEffect(() => {
+        if (!isAuthLoading && !isAuthenticated) {
+            router.push(`/signin?from=/vendors/${vendorId}`);
+        }
+    }, [isAuthLoading, isAuthenticated, router, vendorId]);
 
     // Load Vendor Details (Run once)
     useEffect(() => {
@@ -224,6 +235,15 @@ export default function VendorDetailPage() {
 
     // Check if any filter is active (for chips display)
     const hasActiveFilters = filters.category || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0 || (filters.maxPrice && filters.maxPrice < 50000);
+
+    // Prevent rendering vendor content if unauthenticated
+    if (isAuthLoading || !isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return <div className="min-h-screen bg-gray-50 p-8 text-center">Loading Supplier Profile...</div>;
