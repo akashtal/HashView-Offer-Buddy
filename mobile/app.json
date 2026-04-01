@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "offer-buddy-mobile",
+    "slug": "offer-buddy-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo-icon.png",
+    "scheme": "Offer Buddy",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.offersbuddy.offerbuddymobile"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9da69e7f-975e-4fb0-944b-52548a0aceda"
+      }
+    }
+  }
+}

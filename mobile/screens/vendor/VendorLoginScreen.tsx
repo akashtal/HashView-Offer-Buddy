@@ -1,0 +1,261 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { useAuthStore } from '@/store/authStore';
+import AuthTabs from '@/components/auth/AuthTabs';
+
+export default function VendorLoginScreen() {
+    const router = useRouter();
+    const { from } = useLocalSearchParams<{ from: string }>();
+    const { loginVendor, isAuthenticated, user } = useAuthStore();
+
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (isAuthenticated && user?.role === 'vendor') {
+            router.replace((from as any) || '/vendor/dashboard');
+        }
+    }, [isAuthenticated, user, router, from]);
+
+    const handleSubmit = async () => {
+        if (!email || !password) {
+            setError('Please fill in all fields');
+            return;
+        }
+        setIsLoading(true);
+        setError('');
+
+        try {
+            await loginVendor(email, password);
+            router.push('/vendor/dashboard');
+        } catch (err: any) {
+            setError(err.message || 'Invalid vendor credentials.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <KeyboardAvoidingView
+                style={styles.keyboardView}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+                <View style={styles.content}>
+                    {/* Switch Link */}
+                    <View style={styles.headerBox}>
+
+                        <View style={styles.switchRow}>
+                            <Text style={styles.switchText}>New vendor? </Text>
+                            <TouchableOpacity onPress={() => router.push('/vendor-register' as any)}>
+                                <Text style={styles.switchLink}>Register your business</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Login Card */}
+                    <View style={styles.card}>
+                        <AuthTabs />
+
+                        <View style={styles.formSpace}>
+                            {error ? (
+                                <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            ) : null}
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Business Email</Text>
+                                <View style={styles.inputBox}>
+                                    <Feather name="mail" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="vendor@business.com"
+                                        placeholderTextColor="#9CA3AF"
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Password</Text>
+                                <View style={styles.inputBox}>
+                                    <Feather name="lock" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="••••••••"
+                                        placeholderTextColor="#9CA3AF"
+                                        secureTextEntry
+                                        value={password}
+                                        onChangeText={setPassword}
+                                    />
+                                </View>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+                                onPress={handleSubmit}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#FFF" />
+                                ) : (
+                                    <View style={styles.btnRow}>
+                                        <Text style={styles.primaryBtnText}>Access Dashboard</Text>
+                                        <Feather name="arrow-right" size={16} color="#FFF" />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
+    keyboardView: { flex: 1 },
+    content: {
+        flex: 1,
+        padding: 16,
+        justifyContent: 'center',
+    },
+    headerBox: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    logoRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    logoHighlight: {
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#FDB913',
+    },
+    logoText: {
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    badge: {
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginLeft: 8,
+        justifyContent: 'center',
+    },
+    badgeText: {
+        fontSize: 10,
+        color: '#6B7280',
+    },
+    tagline: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#4B5563',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginTop: 4,
+        marginBottom: 16,
+    },
+    switchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    switchText: {
+        fontSize: 14,
+        color: '#4B5563',
+    },
+    switchLink: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#00A651',
+    },
+    card: {
+        backgroundColor: '#FFF',
+        padding: 24,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    errorBox: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FECACA',
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+    },
+    errorText: {
+        color: '#DC2626',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    formSpace: {
+        gap: 20,
+        marginTop: 16,
+    },
+    inputGroup: {
+        marginBottom: 4,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#374151',
+        marginBottom: 8,
+    },
+    inputBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 8,
+        backgroundColor: '#FFF',
+    },
+    inputIcon: {
+        paddingHorizontal: 12,
+    },
+    input: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingRight: 12,
+        fontSize: 15,
+        color: '#111827',
+    },
+    primaryBtn: {
+        backgroundColor: '#002B4E',
+        paddingVertical: 14,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 8,
+    },
+    primaryBtnDisabled: {
+        opacity: 0.7,
+    },
+    btnRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    primaryBtnText: {
+        color: '#FFF',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+});

@@ -1,0 +1,29 @@
+# Node modules (these are installed on the build servers)
+node_modules/
+
+# Expo and build output
+.expo/
+dist/
+web-build/
+*.DS_Store
+
+# Git directories
+.git/
+.github/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Test files and coverage
+__tests__/
+coverage/
+
+# Documentation and design
+docs/
+*.md
+
+# Optional: Environment variables (uncomment if you don't want to upload local .env files)
+# .env
+# .env.local
