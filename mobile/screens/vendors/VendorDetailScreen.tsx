@@ -108,7 +108,10 @@ export default function VendorDetailScreen() {
     // Authentication Protection
     useEffect(() => {
         if (!isAuthLoading && !isAuthenticated) {
-            router.push('/(auth)/signin');
+            const timeout = setTimeout(() => {
+                router.replace('/signin' as any);
+            }, 100);
+            return () => clearTimeout(timeout);
         }
     }, [isAuthLoading, isAuthenticated, router]);
 
@@ -212,7 +215,7 @@ export default function VendorDetailScreen() {
         fetchGithubProducts(true);
     };
 
-    const hasActiveFilters = filters.category || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0 || (filters.maxPrice && filters.maxPrice < 50000);
+    const hasActiveFilters = Boolean(filters.category || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0 || (filters.maxPrice && filters.maxPrice < 50000));
 
     const openMap = (lat: number, lng: number, addressText: string) => {
         const hasGPS = lat && lng;
@@ -287,7 +290,7 @@ export default function VendorDetailScreen() {
                                     <Text style={[styles.vendorMetaText, { color: '#16A34A', fontWeight: 'bold' }]}>TrustSEAL Verified</Text>
                                 </View>
                             )}
-                            {vendor.rating && (
+                            {!!vendor.rating && vendor.rating > 0 && (
                                 <View style={styles.vendorMetaRow}>
                                     <Text style={styles.ratingText}>{vendor.rating}</Text>
                                     <FontAwesome name="star" size={12} color="#FDB913" />
@@ -304,7 +307,7 @@ export default function VendorDetailScreen() {
                                     <Feather name="phone" size={16} color="#111827" />
                                     <Text style={styles.primaryActionText}>Contact Supplier</Text>
                                 </TouchableOpacity>
-                                {vendor.contactInfo?.whatsapp && (
+                                {!!vendor.contactInfo?.whatsapp && (
                                     <TouchableOpacity onPress={openWhatsApp} style={styles.whatsappBtn}>
                                         <FontAwesome name="whatsapp" size={16} color="#FFF" />
                                         <Text style={styles.whatsappBtnText}>WhatsApp</Text>
@@ -456,7 +459,7 @@ export default function VendorDetailScreen() {
                                 <Text style={styles.factValue}>Proprietorship</Text>
                             </View>
 
-                            {vendor.businessHours && (
+                            {vendor.businessHours && vendor.businessHours.length > 0 && (
                                 <View style={{ marginTop: 24 }}>
                                     <Text style={styles.sectionTitle}>Opening Hours</Text>
                                     {vendor.businessHours.map((h: any, i: number) => (
@@ -496,7 +499,7 @@ export default function VendorDetailScreen() {
                                 </View>
                             </View>
 
-                            {vendor.contactInfo?.email && (
+                            {!!vendor.contactInfo?.email && (
                                 <View style={styles.contactItemRow}>
                                     <View style={styles.contactIconBg}><Feather name="mail" size={20} color="#FDB913" /></View>
                                     <View style={styles.contactItemContent}>

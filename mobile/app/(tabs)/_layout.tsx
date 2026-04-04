@@ -15,7 +15,7 @@ export default function TabLayout() {
       <Tabs.Screen name="suppliers" />
       <Tabs.Screen name="categories" />
       <Tabs.Screen name="cart" />
-      
+
       {/* 
         Hidden from the physical bottom bar by ignoring them in MobileBottomNav,
         but they get the bottom nav layout contexts.
@@ -28,6 +28,9 @@ export default function TabLayout() {
       <Tabs.Screen name="reset-password" />
       <Tabs.Screen name="vendor-login" />
       <Tabs.Screen name="vendor-register" />
+      <Tabs.Screen name="vendors/[id]" />
+      <Tabs.Screen name="chat/index" />
+      <Tabs.Screen name="chat/[id]" />
     </Tabs>
   );
 }

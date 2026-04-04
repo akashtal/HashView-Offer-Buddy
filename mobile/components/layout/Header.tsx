@@ -41,7 +41,7 @@ export default function Header() {
         {/* Top Bar */}
         <View style={styles.topRow}>
           {/* Logo */}
-          <Image source={require('@/assets/images/logo.jpeg')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
 
           {/* Location */}
           <TouchableOpacity style={styles.locationWrap} onPress={requestLocation}>

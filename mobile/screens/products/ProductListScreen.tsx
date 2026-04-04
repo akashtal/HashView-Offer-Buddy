@@ -8,6 +8,8 @@ import axios from 'axios';
 // Design system components (will be converted to RN in components phase)
 import ProductCard from '@/components/products/ProductCard';
 import ProductCardSkeleton from '@/components/products/ProductCardSkeleton';
+import ComprehensiveFilters, { FilterOptions } from '@/components/ui/ComprehensiveFilters';
+import FilterChips from '@/components/ui/FilterChips';
 
 export default function ProductListScreen() {
     const router = useRouter();
@@ -16,7 +18,14 @@ export default function ProductListScreen() {
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState(params.category || '');
+    const [filters, setFilters] = useState<FilterOptions>({
+        category: params.category || '',
+        query: params.query || '',
+        minPrice: params.minPrice ? Number(params.minPrice) : undefined,
+        maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
+        hasOffer: params.hasOffer === 'true',
+        sortBy: 'newest'
+    });
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -25,11 +34,11 @@ export default function ProductListScreen() {
         try {
             const pageNum = reset ? 1 : page;
             const queryParams: any = { page: pageNum, limit: 20 };
-            if (selectedCategory) queryParams.category = selectedCategory;
-            if (params.query) queryParams.query = params.query;
-            if (params.hasOffer) queryParams.hasOffer = params.hasOffer;
-            if (params.minPrice) queryParams.minPrice = params.minPrice;
-            if (params.maxPrice) queryParams.maxPrice = params.maxPrice;
+            if (filters.category) queryParams.category = filters.category;
+            if (filters.query) queryParams.query = filters.query;
+            if (filters.hasOffer) queryParams.hasOffer = filters.hasOffer;
+            if (filters.minPrice) queryParams.minPrice = filters.minPrice;
+            if (filters.maxPrice) queryParams.maxPrice = filters.maxPrice;
 
             const res = await axios.get('/api/products', { params: queryParams });
             const data = res.data.data;
@@ -66,7 +75,7 @@ export default function ProductListScreen() {
         setIsLoading(true);
         setPage(1);
         fetchProducts(true);
-    }, [selectedCategory]);
+    }, [filters]);
 
     const loadMore = () => {
         if (!hasMore || loadingMore) return;
@@ -74,44 +83,28 @@ export default function ProductListScreen() {
         fetchProducts(false);
     };
 
-    const currentFilters = {
-        category: selectedCategory,
-        minPrice: params.minPrice ? Number(params.minPrice) : undefined,
-        maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
-        hasOffer: params.hasOffer === 'true',
-        query: params.query,
-        sortBy: 'newest' as const,
-        rating: 0,
-    };
-
-    const headerTitle = params.query ? `Results for "${params.query}"` : 'All Products';
-
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* Category Filter Scroll */}
+            {/* Filter Bar */}
             <View style={styles.filterBar}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <TouchableOpacity
-                        style={[styles.pill, selectedCategory === '' && styles.pillActive]}
-                        onPress={() => setSelectedCategory('')}
-                    >
-                        <Text style={[styles.pillText, selectedCategory === '' && styles.pillTextActive]}>All</Text>
-                    </TouchableOpacity>
-                    {categories.map((cat) => (
-                        <TouchableOpacity
-                            key={cat._id}
-                            style={[styles.pill, selectedCategory === cat._id && styles.pillActive]}
-                            onPress={() => setSelectedCategory(cat._id)}
-                        >
-                            <Text style={[styles.pillText, selectedCategory === cat._id && styles.pillTextActive]}>{cat.name}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            <View style={styles.resultsHeader}>
-                <Text style={styles.headerTitle}>{headerTitle}</Text>
-                <Text style={styles.countText}>{products.length} products</Text>
+                <View style={styles.resultsHeader}>
+                    <View>
+                        <Text style={styles.headerTitle}>{filters.query ? `Results for "${filters.query}"` : 'All Products'}</Text>
+                        <Text style={styles.countText}>{products.length} products</Text>
+                    </View>
+                    <ComprehensiveFilters
+                        onApplyFilters={setFilters}
+                        currentFilters={filters}
+                        categories={categories}
+                    />
+                </View>
+                <View style={{ marginTop: 10 }}>
+                    <FilterChips
+                        currentFilters={filters}
+                        categories={categories}
+                        onApplyFilters={setFilters}
+                    />
+                </View>
             </View>
 
             {isLoading ? (
@@ -150,14 +143,10 @@ export default function ProductListScreen() {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#F5F5F5' },
-    filterBar: { backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: '#EEE' },
-    pill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F0F0F0', marginRight: 8, borderWidth: 1, borderColor: '#DDD' },
-    pillActive: { backgroundColor: '#FDB913', borderColor: '#FDB913' },
-    pillText: { fontSize: 13, color: '#555' },
-    pillTextActive: { color: '#000', fontWeight: '600' },
-    resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
+    filterBar: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#EEE' },
+    resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#282C3F' },
-    countText: { fontSize: 13, color: '#888' },
+    countText: { fontSize: 13, color: '#888', marginTop: 2 },
     skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
     grid: { padding: 8, paddingBottom: 40 },
     cardWrapper: { width: '50%', padding: 6 },

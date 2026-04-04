@@ -1,0 +1,9 @@
+# Ignore web app and root node_modules for mobile builds
+web/
+node_modules/
+.git/
+.expo/
+dist/
+build/
+*.DS_Store
+*.log

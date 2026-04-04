@@ -76,7 +76,7 @@ export default function Header() {
               <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                 <div className="relative w-10 h-10">
                   <Image
-                    src="/logo.jpeg"
+                    src="/logo.png"
                     alt="Offer Buddy"
                     fill
                     className="object-contain"

@@ -46,7 +46,7 @@ export default function VendorProductCreateScreen() {
 
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
-            router.push('/(auth)/signin');
+            router.push('/(tabs)/signin' as any);
             return;
         }
         fetchMyProfile().catch(() => router.push('/vendor/onboarding'));

@@ -81,7 +81,7 @@ export default function AnimatedSplashScreen({ onFinish }: AnimatedSplashScreenP
             {/* Logo */}
             <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
                 <Image
-                    source={require('@/assets/images/logo-icon.png')}
+                    source={require('@/assets/images/logo.png')}
                     style={styles.logo}
                     resizeMode="contain"
                 />
