@@ -1,4 +1,3 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -236,12 +235,9 @@ export default function AdminVendorsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={24} color="#111827" />
-                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>Vendor Management</Text>
                 </View>
 
@@ -332,7 +328,7 @@ export default function AdminVendorsScreen() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -341,7 +337,6 @@ const styles = StyleSheet.create({
 
     header: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#E5E7EB' },
     headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    backBtn: { padding: 4, marginRight: 8 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
 
     searchFilterContainer: { gap: 12 },

@@ -171,6 +171,14 @@ export default function VendorOnboardingScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Feather name="arrow-left" size={24} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Setup Your Shop</Text>
+            </View>
+
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
                 <Card>
                     <CardHeader style={{ alignItems: 'center' }}>
@@ -431,7 +439,10 @@ export default function VendorOnboardingScreen() {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-    scrollContent: { padding: 16 },
+    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#E5E7EB' },
+    backBtn: { padding: 4, marginRight: 12 },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
+    scrollContent: { padding: 16, paddingBottom: 100 },
     pageTitle: { fontSize: 24, fontWeight: 'bold', color: '#002B4E', marginBottom: 4 },
     pageSub: { fontSize: 14, color: '#6B7280' },
     formSpace: { gap: 24, paddingVertical: 8 },

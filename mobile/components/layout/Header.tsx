@@ -31,7 +31,7 @@ export default function Header() {
       else if (user?.role === 'admin') router.push('/admin/dashboard');
       else router.push('/profile' as any);
     } else {
-      router.push('/signin' as any);
+      router.push('/(tabs)/signin' as any);
     }
   };
 

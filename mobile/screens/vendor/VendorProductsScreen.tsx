@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     statLabel: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
     statValue: { fontSize: 18, fontWeight: 'bold' },
 
-    listContent: { paddingHorizontal: 16, paddingBottom: 24 },
+    listContent: { paddingHorizontal: 16, paddingBottom: 100 },
 
     productCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
     cardInfoRow: { flexDirection: 'row', marginBottom: 12 },

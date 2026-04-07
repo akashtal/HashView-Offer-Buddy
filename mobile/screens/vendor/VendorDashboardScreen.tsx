@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -8,8 +8,6 @@ import { useVendorStore } from '@/store/vendorStore';
 import { useChatStore } from '@/store/chatStore';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
-
-const { width } = Dimensions.get('window');
 
 // Formatting util map
 const formatCurrency = (amount: number) => {
@@ -22,7 +20,7 @@ const formatCurrency = (amount: number) => {
 
 export default function VendorDashboardScreen() {
     const router = useRouter();
-    const { user, isAuthenticated } = useAuthStore();
+    const { user, isAuthenticated, logout } = useAuthStore();
     const { activeConversationId } = useChatStore();
     const {
         myVendorProfile,
@@ -94,43 +92,67 @@ export default function VendorDashboardScreen() {
         );
     };
 
+    const handleLogout = () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to log out of your vendor account?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: async () => {
+                        await logout();
+                        router.replace('/(tabs)/signin');
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.headerBox}>
-                <View style={styles.headerContent}>
-                    <View style={styles.headerInfoRow}>
-                        {myVendorProfile.shopLogo ? (
-                            <Image source={{ uri: myVendorProfile.shopLogo }} style={styles.shopLogoImg} />
-                        ) : (
-                            <View style={styles.shopLogoFallback}>
-                                <Text style={styles.shopLogoFallbackTxt}>{myVendorProfile.shopName?.[0]}</Text>
+                {/* Row 1: Back + Shop Info + Actions */}
+                <View style={styles.headerRow}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                        <Feather name="arrow-left" size={22} color="#FFF" />
+                    </TouchableOpacity>
+
+                    {/* Shop Logo */}
+                    {myVendorProfile.shopLogo ? (
+                        <Image source={{ uri: myVendorProfile.shopLogo }} style={styles.shopLogoImg} />
+                    ) : (
+                        <View style={styles.shopLogoFallback}>
+                            <Text style={styles.shopLogoFallbackTxt}>{myVendorProfile.shopName?.[0]}</Text>
+                        </View>
+                    )}
+
+                    {/* Shop Name + Badges */}
+                    <View style={styles.headerTextCol}>
+                        <Text style={styles.headerShopName} numberOfLines={1}>{myVendorProfile.shopName}</Text>
+                        <View style={styles.headerBadges}>
+                            <View style={[styles.badge, myVendorProfile.isApproved ? styles.badgeSuccess : styles.badgeWarning]}>
+                                <Text style={[styles.badgeTxt, myVendorProfile.isApproved ? styles.badgeTxtSuccess : styles.badgeTxtWarning]}>
+                                    {myVendorProfile.isApproved ? '✓ Approved' : '⏳ Pending'}
+                                </Text>
                             </View>
-                        )}
-                        <View style={styles.headerTextCol}>
-                            <Text style={styles.headerShopName} numberOfLines={1}>{myVendorProfile.shopName}</Text>
-                            <View style={styles.headerBadges}>
-                                <View style={[styles.badge, myVendorProfile.isApproved ? styles.badgeSuccess : styles.badgeWarning]}>
-                                    <Text style={[styles.badgeTxt, myVendorProfile.isApproved ? styles.badgeTxtSuccess : styles.badgeTxtWarning]}>
-                                        {myVendorProfile.isApproved ? 'Approved' : 'Pending Approval'}
-                                    </Text>
-                                </View>
-                                <View style={[styles.badge, myVendorProfile.isActive ? styles.badgeSuccess : styles.badgeDanger]}>
-                                    <Text style={[styles.badgeTxt, myVendorProfile.isActive ? styles.badgeTxtSuccess : styles.badgeTxtDanger]}>
-                                        {myVendorProfile.isActive ? 'Active' : 'Inactive'}
-                                    </Text>
-                                </View>
+                            <View style={[styles.badge, myVendorProfile.isActive ? styles.badgeSuccess : styles.badgeDanger]}>
+                                <Text style={[styles.badgeTxt, myVendorProfile.isActive ? styles.badgeTxtSuccess : styles.badgeTxtDanger]}>
+                                    {myVendorProfile.isActive ? 'Active' : 'Inactive'}
+                                </Text>
                             </View>
                         </View>
                     </View>
 
-                    <View style={styles.headerActionsRow}>
-                        <TouchableOpacity onPress={() => router.push(`/vendors/${myVendorProfile._id}` as any)} style={styles.headerBtnOutline}>
-                            <Text style={styles.headerBtnOutlineTxt}>View Public Profile</Text>
+                    {/* Actions */}
+                    <View style={styles.headerActionsCols}>
+                        <TouchableOpacity onPress={() => router.push('/vendor/settings')} style={styles.editBtn}>
+                            <Feather name="edit-2" size={16} color="#FFF" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/vendor/settings')} style={styles.headerBtnPrimary}>
-                            <Feather name="edit" size={14} color="#FFF" style={{ marginRight: 4 }} />
-                            <Text style={styles.headerBtnPrimaryTxt}>Edit Profile</Text>
+                        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+                            <Feather name="log-out" size={16} color="#FFF" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -347,7 +369,7 @@ export default function VendorDashboardScreen() {
                                 </View>
                             ) : (
                                 <View style={styles.flx1}>
-                                    <ChatList />
+                                    <ChatList scrollEnabled={false} />
                                 </View>
                             )}
                         </View>
@@ -364,35 +386,40 @@ const styles = StyleSheet.create({
     loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     loadingText: { marginTop: 12, fontSize: 14, color: '#4B5563' },
 
-    headerBox: { backgroundColor: '#1E293B', paddingTop: 24, paddingBottom: 24, paddingHorizontal: 16 },
+    headerBox: { backgroundColor: '#0F172A', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    backBtn: { padding: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)' },
+    shopLogoImg: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: '#334155' },
+    shopLogoFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#4F46E5', justifyContent: 'center', alignItems: 'center' },
+    shopLogoFallbackTxt: { fontSize: 18, fontWeight: 'bold', color: '#FFF' },
+    headerTextCol: { flex: 1 },
+    headerShopName: { fontSize: 16, fontWeight: '700', color: '#F1F5F9', letterSpacing: 0.1 },
+    headerBadges: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+    badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 },
+    badgeSuccess: { backgroundColor: '#14532D' },
+    badgeWarning: { backgroundColor: '#713F12' },
+    badgeDanger: { backgroundColor: '#7F1D1D' },
+    badgeTxt: { fontSize: 9, fontWeight: '700', letterSpacing: 0.2 },
+    badgeTxtSuccess: { color: '#86EFAC' },
+    badgeTxtWarning: { color: '#FDE68A' },
+    badgeTxtDanger: { color: '#FCA5A5' },
+    headerActionsCols: { flexDirection: 'row', gap: 8 },
+    editBtn: { padding: 8, borderRadius: 8, backgroundColor: '#4F46E5' },
+    logoutBtn: { padding: 8, borderRadius: 8, backgroundColor: '#DC2626' },
     headerContent: { flex: 1 },
-    headerInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-    shopLogoImg: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFF' },
-    shopLogoFallback: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#3730A3', justifyContent: 'center', alignItems: 'center' },
-    shopLogoFallbackTxt: { fontSize: 28, fontWeight: 'bold', color: '#FFF' },
-    headerTextCol: { marginLeft: 16, flex: 1 },
-    headerShopName: { fontSize: 22, fontWeight: 'bold', color: '#FFF' },
-    headerBadges: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-    badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
-    badgeSuccess: { backgroundColor: '#DCFCE7' },
-    badgeWarning: { backgroundColor: '#FEF08A' },
-    badgeDanger: { backgroundColor: '#FEE2E2' },
-    badgeTxt: { fontSize: 10, fontWeight: 'bold' },
-    badgeTxtSuccess: { color: '#16A34A' },
-    badgeTxtWarning: { color: '#CA8A04' },
-    badgeTxtDanger: { color: '#DC2626' },
+    headerInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
     headerActionsRow: { flexDirection: 'row', gap: 12 },
     headerBtnOutline: { flex: 1, borderWidth: 1, borderColor: '#FFF', borderRadius: 6, paddingVertical: 8, alignItems: 'center' },
     headerBtnOutlineTxt: { color: '#FFF', fontWeight: '500', fontSize: 13 },
     headerBtnPrimary: { flex: 1, flexDirection: 'row', backgroundColor: '#4F46E5', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
     headerBtnPrimaryTxt: { color: '#FFF', fontWeight: '500', fontSize: 13 },
 
-    scrollContent: { paddingVertical: 16 },
+    scrollContent: { paddingVertical: 16, paddingBottom: 100 },
     warningBox: { backgroundColor: '#FEFCE8', borderWidth: 1, borderColor: '#FEF08A', marginHorizontal: 16, padding: 16, borderRadius: 8, marginBottom: 16 },
     warningTxt: { color: '#854D0E', fontWeight: '500', fontSize: 13, lineHeight: 20 },
 
     statsScrollContent: { paddingHorizontal: 16, paddingBottom: 16 },
-    statCard: { width: width * 0.6, backgroundColor: '#FFF', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+    statCard: { width: 180, backgroundColor: '#FFF', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
     statContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     statLeft: { flex: 1 },
     statLabel: { fontSize: 12, color: '#4B5563', marginBottom: 4 },
@@ -448,6 +475,6 @@ const styles = StyleSheet.create({
     analyticsListValue: { fontSize: 14, fontWeight: 'bold', color: '#1E293B' },
     noDataText: { paddingVertical: 16, color: '#6B7280', fontSize: 13, textAlign: 'center' },
 
-    messagesContainer: { height: Dimensions.get('window').height * 0.6, backgroundColor: '#FFF', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
+    messagesContainer: { minHeight: 400, backgroundColor: '#FFF', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
     flx1: { flex: 1 },
 });

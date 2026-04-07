@@ -8,7 +8,8 @@
     "scheme": "offer-buddy",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.offersbuddy.offerbuddymobile"
     },
     "android": {
       "adaptiveIcon": {

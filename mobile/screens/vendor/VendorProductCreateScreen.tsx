@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     backBtn: { padding: 4, marginRight: 12 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
     
-    scrollContent: { padding: 16, paddingBottom: 40 },
+    scrollContent: { padding: 16, paddingBottom: 100 },
     errorBox: { backgroundColor: '#FEF2F2', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', marginBottom: 16 },
     errorText: { color: '#DC2626', fontSize: 13 },
     

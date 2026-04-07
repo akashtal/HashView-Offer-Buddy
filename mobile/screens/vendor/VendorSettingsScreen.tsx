@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -10,7 +10,7 @@ import * as Location from 'expo-location';
 
 export default function VendorSettingsScreen() {
     const router = useRouter();
-    const { user, isAuthenticated } = useAuthStore();
+    const { user, isAuthenticated, logout } = useAuthStore();
     const { myVendorProfile, fetchMyProfile, isLoading: isVendorLoading } = useVendorStore();
 
     const [isLoading, setIsLoading] = useState(false);
@@ -193,6 +193,24 @@ export default function VendorSettingsScreen() {
         }
     };
 
+    const handleLogout = () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to log out of your vendor account?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: async () => {
+                        await logout();
+                        router.replace('/(tabs)/signin');
+                    }
+                }
+            ]
+        );
+    };
+
     if (isVendorLoading || !myVendorProfile) {
         return (
             <View style={styles.centerFlex}>
@@ -208,6 +226,10 @@ export default function VendorSettingsScreen() {
                     <Feather name="arrow-left" size={24} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Shop Settings</Text>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={handleLogout} style={styles.logoutHeaderBtn}>
+                    <Feather name="log-out" size={20} color="#DC2626" />
+                </TouchableOpacity>
             </View>
 
             <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -399,8 +421,9 @@ const styles = StyleSheet.create({
     headerBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderColor: '#E5E7EB' },
     backBtn: { marginRight: 16 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
+    logoutHeaderBtn: { padding: 8, backgroundColor: '#FEE2E2', borderRadius: 8 },
 
-    scrollContent: { padding: 16, paddingBottom: 40 },
+    scrollContent: { padding: 16, paddingBottom: 100 },
 
     errorText: { backgroundColor: '#FEE2E2', color: '#DC2626', padding: 12, borderRadius: 8, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#FCA5A5' },
     successText: { backgroundColor: '#DCFCE7', color: '#16A34A', padding: 12, borderRadius: 8, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#86EFAC' },

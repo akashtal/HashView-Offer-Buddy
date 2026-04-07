@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
+import {
     View, Text, Image, TouchableOpacity, ScrollView, FlatList,
     TextInput, ActivityIndicator, StyleSheet, Linking, Modal, Dimensions
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Redirect } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import axios from 'axios';
 import { useLocation } from '@/context/LocationContext';
@@ -40,7 +40,7 @@ export default function VendorDetailScreen() {
     const [isSubmittingContact, setIsSubmittingContact] = useState(false);
 
     const showToast = (message: string, type: 'success' | 'error' | 'info') => {
-      Toast.show({ type, text1: message });
+        Toast.show({ type, text1: message });
     };
 
     // Pagination state
@@ -106,15 +106,7 @@ export default function VendorDetailScreen() {
     };
 
     // Authentication Protection
-    useEffect(() => {
-        if (!isAuthLoading && !isAuthenticated) {
-            const timeout = setTimeout(() => {
-                router.replace('/signin' as any);
-            }, 100);
-            return () => clearTimeout(timeout);
-        }
-    }, [isAuthLoading, isAuthenticated, router]);
-
+    // (Handled declaratively below)
     // Load Vendor Details (Run once)
     useEffect(() => {
         const fetchVendor = async () => {
@@ -239,6 +231,17 @@ export default function VendorDetailScreen() {
         }
     };
 
+    // Authentication Protection
+    useEffect(() => {
+        if (!isAuthLoading && !isAuthenticated) {
+            // Timeout prevents "onUnhandledAction" crash when routing on initial mount
+            const timer = setTimeout(() => {
+                router.push('/(tabs)/signin' as any);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isAuthLoading, isAuthenticated, router]);
+
     // Prevent rendering vendor content if unauthenticated
     if (isAuthLoading || !isAuthenticated) {
         return (
@@ -261,10 +264,10 @@ export default function VendorDetailScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.headerTop}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Feather name="arrow-left" size={24} color="#111827" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle} numberOfLines={1}>{vendor.shopName}</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Feather name="arrow-left" size={24} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>{vendor.shopName}</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -328,7 +331,7 @@ export default function VendorDetailScreen() {
                         { id: 'profile', label: 'Company Profile' },
                         { id: 'contact', label: 'Contact Us' }
                     ].map((tab) => (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             key={tab.id}
                             onPress={() => setActiveTab(tab.id)}
                             style={[styles.tabBtn, activeTab === tab.id && styles.activeTabBtn]}
@@ -366,13 +369,13 @@ export default function VendorDetailScreen() {
                                         facets={facets}
                                     />
                                 </View>
-                                
+
                                 {hasActiveFilters && (
                                     <View style={styles.chipsRowWrap}>
                                         <FilterChips currentFilters={filters} categories={categories} onApplyFilters={handleFilterChange} />
                                     </View>
                                 )}
-                                
+
                                 {searchQuery ? (
                                     <View style={styles.activeSearchChip}>
                                         <Text style={styles.activeSearchLabel}>Searching:</Text>
@@ -384,57 +387,57 @@ export default function VendorDetailScreen() {
                                 ) : null}
                             </View>
 
-                        {/* Products — FlatList for virtualization (only renders visible items) */}
-                        {products.length === 0 && !isProductsLoading ? (
-                            <View style={styles.noProductsBox}>
-                                <Feather name="search" size={40} color="#D1D5DB" />
-                                <Text style={styles.noProductsText}>No products found</Text>
-                                <Text style={styles.noProductsSub}>
-                                    {searchQuery || hasActiveFilters ? 'Try different search terms or clear filters' : 'No products listed by this supplier yet.'}
-                                </Text>
-                                {(searchQuery || hasActiveFilters) && (
-                                    <TouchableOpacity onPress={() => { setFilters({ sortBy: 'relevance', rating: 0, hasOffer: false }); clearSearch(); }}>
-                                        <Text style={styles.clearFiltersLink}>Clear all filters</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        ) : (
-                            <View>
-                                <FlatList
-                                    data={products}
-                                    keyExtractor={(p: any) => p._id}
-                                    numColumns={2}
-                                    scrollEnabled={false}
-                                    columnWrapperStyle={styles.productsGrid}
-                                    renderItem={({ item: product }: { item: any }) => (
-                                        <View style={styles.productCell}>
-                                            <ProductCard
-                                                product={{
-                                                    ...product,
-                                                    images: product.images || [],
-                                                    vendorId: {
-                                                        _id: product.vendorId?._id || product.vendorId || vendor._id,
-                                                        shopName: vendor.shopName,
-                                                        location: vendor.location
-                                                    }
-                                                }}
-                                            />
-                                        </View>
+                            {/* Products — FlatList for virtualization (only renders visible items) */}
+                            {products.length === 0 && !isProductsLoading ? (
+                                <View style={styles.noProductsBox}>
+                                    <Feather name="search" size={40} color="#D1D5DB" />
+                                    <Text style={styles.noProductsText}>No products found</Text>
+                                    <Text style={styles.noProductsSub}>
+                                        {searchQuery || hasActiveFilters ? 'Try different search terms or clear filters' : 'No products listed by this supplier yet.'}
+                                    </Text>
+                                    {(searchQuery || hasActiveFilters) && (
+                                        <TouchableOpacity onPress={() => { setFilters({ sortBy: 'relevance', rating: 0, hasOffer: false }); clearSearch(); }}>
+                                            <Text style={styles.clearFiltersLink}>Clear all filters</Text>
+                                        </TouchableOpacity>
                                     )}
-                                    ListFooterComponent={isProductsLoading ? (
-                                        <View style={styles.loadingRow}>
-                                            {[1, 2].map((i) => (<View key={`l-${i}`} style={[styles.productCell, styles.shimmer]} />))}
-                                        </View>
-                                    ) : null}
-                                />
-                                {hasMore && !isProductsLoading && (
-                                    <TouchableOpacity onPress={loadMore} style={styles.loadMoreBtn}>
-                                        <Text style={styles.loadMoreBtnText}>Load More Products</Text>
-                                    </TouchableOpacity>
-                                )}
-                                <Text style={styles.showingText}>Showing {products.length} of {totalProducts} products</Text>
-                            </View>
-                        )}
+                                </View>
+                            ) : (
+                                <View>
+                                    <FlatList
+                                        data={products}
+                                        keyExtractor={(p: any) => p._id}
+                                        numColumns={2}
+                                        scrollEnabled={false}
+                                        columnWrapperStyle={styles.productsGrid}
+                                        renderItem={({ item: product }: { item: any }) => (
+                                            <View style={styles.productCell}>
+                                                <ProductCard
+                                                    product={{
+                                                        ...product,
+                                                        images: product.images || [],
+                                                        vendorId: {
+                                                            _id: product.vendorId?._id || product.vendorId || vendor._id,
+                                                            shopName: vendor.shopName,
+                                                            location: vendor.location
+                                                        }
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+                                        ListFooterComponent={isProductsLoading ? (
+                                            <View style={styles.loadingRow}>
+                                                {[1, 2].map((i) => (<View key={`l-${i}`} style={[styles.productCell, styles.shimmer]} />))}
+                                            </View>
+                                        ) : null}
+                                    />
+                                    {hasMore && !isProductsLoading && (
+                                        <TouchableOpacity onPress={loadMore} style={styles.loadMoreBtn}>
+                                            <Text style={styles.loadMoreBtnText}>Load More Products</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    <Text style={styles.showingText}>Showing {products.length} of {totalProducts} products</Text>
+                                </View>
+                            )}
                         </View>
                     )}
 
@@ -478,7 +481,7 @@ export default function VendorDetailScreen() {
                     {activeTab === 'contact' && (
                         <View style={styles.cardBox}>
                             <Text style={styles.sectionTitle}>Contact Us</Text>
-                            
+
                             <View style={styles.contactItemRow}>
                                 <View style={styles.contactIconBg}><Feather name="map-pin" size={20} color="#FDB913" /></View>
                                 <View style={styles.contactItemContent}>
@@ -515,7 +518,7 @@ export default function VendorDetailScreen() {
                                 const lng = coords?.[0];
                                 const lat = coords?.[1];
                                 const addressText = [vendor.location?.address, vendor.location?.city, vendor.location?.state, 'India'].filter(Boolean).join(', ');
-                                
+
                                 if (!lat && !lng && !addressText) return null;
 
                                 return (
@@ -525,7 +528,7 @@ export default function VendorDetailScreen() {
                                             <Text style={styles.contactHdr}>Visit Us</Text>
                                             <View style={styles.mapPlaceholderBox}>
                                                 <Text style={styles.mapPlaceholderText}>Map Interactive View</Text>
-                                                <TouchableOpacity 
+                                                <TouchableOpacity
                                                     onPress={() => openMap(lat, lng, addressText)}
                                                     style={styles.openMapBtn}
                                                 >
@@ -581,23 +584,23 @@ export default function VendorDetailScreen() {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.modalBody}>
-                            <TextInput 
-                                style={styles.modalInput} 
-                                placeholder="Mobile Number" 
-                                value={contactMobile} 
-                                onChangeText={setContactMobile} 
-                                keyboardType="phone-pad" 
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Mobile Number"
+                                value={contactMobile}
+                                onChangeText={setContactMobile}
+                                keyboardType="phone-pad"
                             />
-                            <TextInput 
-                                style={[styles.modalInput, { height: 100 }]} 
-                                placeholder="Describe your requirement..." 
-                                value={contactRequirement} 
-                                onChangeText={setContactRequirement} 
-                                multiline 
-                                textAlignVertical="top" 
+                            <TextInput
+                                style={[styles.modalInput, { height: 100 }]}
+                                placeholder="Describe your requirement..."
+                                value={contactRequirement}
+                                onChangeText={setContactRequirement}
+                                multiline
+                                textAlignVertical="top"
                             />
-                            <TouchableOpacity 
-                                onPress={handleContactSubmit} 
+                            <TouchableOpacity
+                                onPress={handleContactSubmit}
                                 disabled={isSubmittingContact}
                                 style={styles.modalSubmitBtn}
                             >
@@ -618,13 +621,13 @@ const styles = StyleSheet.create({
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     messageBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
     messageText: { fontSize: 16, color: '#6B7280' },
-    
+
     headerTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#F3F4F6' },
     backBtn: { marginRight: 12 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', flex: 1 },
-    
+
     scrollContent: { paddingBottom: 100 },
-    
+
     bannerContainer: { backgroundColor: '#FFF', padding: 16 },
     logoRow: { flexDirection: 'row', alignItems: 'flex-start' },
     logoBox: { width: 80, height: 80, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden', marginRight: 16 },
@@ -649,7 +652,7 @@ const styles = StyleSheet.create({
     activeTabBtnText: { color: '#111827' },
 
     mainContent: { padding: 16 },
-    
+
     filterBar: { backgroundColor: '#FFF', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
     searchRow: { flexDirection: 'row', alignItems: 'center' },
     searchInputBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 20, paddingHorizontal: 12, height: 40 },

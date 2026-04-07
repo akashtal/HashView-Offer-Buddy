@@ -1,4 +1,3 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -132,14 +131,7 @@ export default function AdminVendorDetailScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.headerBox}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={24} color="#111827" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>Edit Vendor: {formData.shopName}</Text>
-            </View>
-
+        <View style={styles.container}>
             <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     
@@ -349,7 +341,7 @@ export default function AdminVendorDetailScreen() {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -357,11 +349,6 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F3F4F6' },
     flex1: { flex: 1 },
     centerFlex: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    
-    headerBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderColor: '#E5E7EB' },
-    backBtn: { marginRight: 16 },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B', flex: 1 },
-    
     scrollContent: { padding: 16, paddingBottom: 40 },
     
     errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#FCA5A5' },

@@ -6,7 +6,11 @@ import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 
-const ChatList: React.FC = () => {
+interface ChatListProps {
+    scrollEnabled?: boolean;
+}
+
+const ChatList: React.FC<ChatListProps> = ({ scrollEnabled = true }) => {
     const router = useRouter();
     const {
         conversations,
@@ -47,6 +51,7 @@ const ChatList: React.FC = () => {
                 <Text style={styles.headerTitle}>Messages</Text>
             </View>
             <FlatList
+                scrollEnabled={scrollEnabled}
                 data={conversations}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item: conv }) => {

@@ -1,6 +1,9 @@
 # Ignore web app and root node_modules for mobile builds
 web/
 node_modules/
+mobile/node_modules/
+mobile/ios/
+mobile/android/
 .git/
 .expo/
 dist/

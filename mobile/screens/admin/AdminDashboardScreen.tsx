@@ -1,4 +1,3 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -46,15 +45,7 @@ export default function AdminDashboardScreen() {
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Feather name="menu" size={24} color="#111827" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Admin Dashboard</Text>
-            </View>
-
+        <View style={styles.page}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.welcomeBox}>
                     <Text style={styles.welcomeTitle}>Dashboard Overview</Text>
@@ -107,17 +98,12 @@ export default function AdminDashboardScreen() {
                     </CardBody>
                 </Card>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#F3F4F6' },
-
-    header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#E5E7EB' },
-    backBtn: { padding: 4, marginRight: 12 },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-
+    page: { flex: 1, backgroundColor: '#F3F4F6' },
     scrollContent: { padding: 16, paddingBottom: 40 },
 
     welcomeBox: { marginBottom: 20 },
