@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "offer-buddy-mobile",
-    "slug": "offer-buddy-mobile",
+    "name": "Offer Buddy",
+    "slug": "Offer Buddy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
