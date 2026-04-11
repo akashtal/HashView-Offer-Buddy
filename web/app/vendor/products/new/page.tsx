@@ -8,7 +8,8 @@ import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
-import { FiPackage, FiImage, FiTag, FiDollarSign, FiUpload, FiX, FiPlus, FiFolder } from 'react-icons/fi';
+import { FiPackage, FiImage, FiTag, FiUpload, FiX, FiPlus, FiFolder } from 'react-icons/fi';
+import { FaIndianRupeeSign } from 'react-icons/fa6';
 
 export default function NewProductPage() {
     const router = useRouter();
@@ -391,7 +392,7 @@ export default function NewProductPage() {
                             {/* Pricing & Offer */}
                             <div className="space-y-4">
                                 <h3 className="text-lg font-medium border-b pb-2 flex items-center gap-2">
-                                    <FiDollarSign /> Pricing & Offer
+                                    <FaIndianRupeeSign /> Pricing & Offer
                                 </h3>
 
                                 <div className="space-y-4">

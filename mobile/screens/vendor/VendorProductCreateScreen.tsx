@@ -19,7 +19,7 @@ export default function VendorProductCreateScreen() {
 
     const [categories, setCategories] = useState<any[]>([]);
     const [subcategories, setSubcategories] = useState<any[]>([]);
-    
+
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -31,7 +31,7 @@ export default function VendorProductCreateScreen() {
         offerType: 'discount',
         validUntil: '',
     });
-    
+
     // UI Helpers
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [showSubcategoryPicker, setShowSubcategoryPicker] = useState(false);
@@ -163,7 +163,7 @@ export default function VendorProductCreateScreen() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                
+
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -173,7 +173,7 @@ export default function VendorProductCreateScreen() {
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-                    
+
                     {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
                     {/* Basic Info */}
@@ -208,8 +208,8 @@ export default function VendorProductCreateScreen() {
                                 {showCategoryPicker && (
                                     <View style={styles.pickerList}>
                                         {categories.map(cat => (
-                                            <TouchableOpacity 
-                                                key={cat._id} 
+                                            <TouchableOpacity
+                                                key={cat._id}
                                                 style={styles.pickerItem}
                                                 onPress={() => { handleChange('category', cat._id); setShowCategoryPicker(false); setShowSubcategoryPicker(false); handleChange('subcategory', ''); }}
                                             >
@@ -230,15 +230,15 @@ export default function VendorProductCreateScreen() {
                                 </TouchableOpacity>
                                 {showSubcategoryPicker && (
                                     <View style={styles.pickerList}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={styles.pickerItem}
                                             onPress={() => { handleChange('subcategory', ''); setShowSubcategoryPicker(false); }}
                                         >
                                             <Text style={styles.pickerItemText}>None</Text>
                                         </TouchableOpacity>
                                         {subcategories.map(cat => (
-                                            <TouchableOpacity 
-                                                key={cat._id} 
+                                            <TouchableOpacity
+                                                key={cat._id}
                                                 style={styles.pickerItem}
                                                 onPress={() => { handleChange('subcategory', cat._id); setShowSubcategoryPicker(false); }}
                                             >
@@ -254,7 +254,6 @@ export default function VendorProductCreateScreen() {
                     {/* Pricing */}
                     <Card style={styles.cardSpacing}>
                         <CardHeader style={styles.cardHeader}>
-                            <Feather name="dollar-sign" size={18} color="#002B4E" />
                             <Text style={styles.cardTitle}>Pricing & Offer</Text>
                         </CardHeader>
                         <CardBody style={styles.fieldSpacing}>
@@ -293,7 +292,7 @@ export default function VendorProductCreateScreen() {
                                                 onChangeText={(val) => handleChange('offerDescription', val)}
                                             />
                                         </View>
-                                        
+
                                         <View style={{ marginBottom: 12 }}>
                                             <Text style={styles.label}>Offer Type</Text>
                                             <TouchableOpacity style={styles.pickerBox} onPress={() => setShowOfferPicker(!showOfferPicker)}>
@@ -305,8 +304,8 @@ export default function VendorProductCreateScreen() {
                                             {showOfferPicker && (
                                                 <View style={styles.pickerList}>
                                                     {offerTypeOptions.map(opt => (
-                                                        <TouchableOpacity 
-                                                            key={opt.value} 
+                                                        <TouchableOpacity
+                                                            key={opt.value}
                                                             style={styles.pickerItem}
                                                             onPress={() => { handleChange('offerType', opt.value); setShowOfferPicker(false); }}
                                                         >
@@ -345,7 +344,7 @@ export default function VendorProductCreateScreen() {
                                         </TouchableOpacity>
                                     </View>
                                 ))}
-                                
+
                                 {images.length < 10 && (
                                     <TouchableOpacity style={styles.uploadImgBox} onPress={handleImageUpload} disabled={uploading}>
                                         {uploading ? (
@@ -373,7 +372,7 @@ export default function VendorProductCreateScreen() {
                     >
                         Create Product
                     </Button>
-                    
+
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -385,11 +384,11 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#E5E7EB' },
     backBtn: { padding: 4, marginRight: 12 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-    
+
     scrollContent: { padding: 16, paddingBottom: 100 },
     errorBox: { backgroundColor: '#FEF2F2', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', marginBottom: 16 },
     errorText: { color: '#DC2626', fontSize: 13 },
-    
+
     cardSpacing: { marginBottom: 16 },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827' },

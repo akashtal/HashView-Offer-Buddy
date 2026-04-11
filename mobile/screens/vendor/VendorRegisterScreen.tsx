@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Keyboard, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -16,6 +16,35 @@ export default function VendorRegisterScreen() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    const scrollViewRef = useRef<ScrollView>(null);
+    const keyboardPadding = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const keyboardShowListener = Keyboard.addListener(showEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? e.duration : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        const keyboardHideListener = Keyboard.addListener(hideEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration || 250) : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        return () => {
+            keyboardShowListener.remove();
+            keyboardHideListener.remove();
+        };
+    }, []);
 
     const handleSubmit = async () => {
         if (!shopName || !email || !phone || !password) {
@@ -41,133 +70,169 @@ export default function VendorRegisterScreen() {
         }
     };
 
+    const scrollToInput = (y: number) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
-            <KeyboardAvoidingView
-                style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <ScrollView
+                ref={scrollViewRef}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                bounces={true}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    {/* Switch Link */}
-                    <View style={styles.headerBox}>
+                {/* Switch Link */}
+                <View style={styles.headerBox}>
 
-                        <View style={styles.switchRow}>
-                            <Text style={styles.switchText}>Already a vendor? </Text>
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchText}>Already a vendor? </Text>
+                        <TouchableOpacity onPress={() => router.push('/vendor-login' as any)}>
+                            <Text style={styles.switchLink}>Sign in to portal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Register Card */}
+                <View style={styles.card}>
+                    <AuthTabs />
+
+                    <View style={styles.formSpace}>
+                        {error ? (
+                            <View style={styles.errorBox}>
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
+                        ) : null}
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business / Shop Name</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="briefcase" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="My Awesome Store"
+                                    placeholderTextColor="#9CA3AF"
+                                    value={shopName}
+                                    onChangeText={setShopName}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business Email</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="mail" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="vendor@business.com"
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Contact Phone</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="phone" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="9876543210"
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="phone-pad"
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Password</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="lock" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#9CA3AF"
+                                    secureTextEntry
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+                            onPress={handleSubmit}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#FFF" />
+                            ) : (
+                                <View style={styles.btnRow}>
+                                    <Text style={styles.primaryBtnText}>Register Business</Text>
+                                    <Feather name="arrow-right" size={16} color="#FFF" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.footerBox}>
+                        <Text style={styles.footerText}>
+                            Looking for verified leads? Join India's fastest growing B2B network.
+                        </Text>
+                        <View style={styles.footerRow}>
+                            <Text style={styles.footerRowText}>Already registered? </Text>
                             <TouchableOpacity onPress={() => router.push('/vendor-login' as any)}>
-                                <Text style={styles.switchLink}>Sign in to portal</Text>
+                                <Text style={styles.footerLoginLink}>Vendor Login</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
+                </View>
 
-                    {/* Register Card */}
-                    <View style={styles.card}>
-                        <AuthTabs />
-
-                        <View style={styles.formSpace}>
-                            {error ? (
-                                <View style={styles.errorBox}>
-                                    <Text style={styles.errorText}>{error}</Text>
-                                </View>
-                            ) : null}
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Business / Shop Name</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="briefcase" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="My Awesome Store"
-                                        placeholderTextColor="#9CA3AF"
-                                        value={shopName}
-                                        onChangeText={setShopName}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Business Email</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="mail" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="vendor@business.com"
-                                        placeholderTextColor="#9CA3AF"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Contact Phone</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="phone" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="9876543210"
-                                        placeholderTextColor="#9CA3AF"
-                                        keyboardType="phone-pad"
-                                        value={phone}
-                                        onChangeText={setPhone}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Password</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="lock" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="••••••••"
-                                        placeholderTextColor="#9CA3AF"
-                                        secureTextEntry
-                                        value={password}
-                                        onChangeText={setPassword}
-                                    />
-                                </View>
-                            </View>
-
-                            <TouchableOpacity
-                                style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
-                                onPress={handleSubmit}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <ActivityIndicator color="#FFF" />
-                                ) : (
-                                    <View style={styles.btnRow}>
-                                        <Text style={styles.primaryBtnText}>Register Business</Text>
-                                        <Feather name="arrow-right" size={16} color="#FFF" />
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.footerBox}>
-                            <Text style={styles.footerText}>
-                                Looking for verified leads? Join India's fastest growing B2B network.
-                            </Text>
-                            <View style={styles.footerRow}>
-                                <Text style={styles.footerRowText}>Already registered? </Text>
-                                <TouchableOpacity onPress={() => router.push('/vendor-login' as any)}>
-                                    <Text style={styles.footerLoginLink}>Vendor Login</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                {/* Animated bottom spacer that grows when keyboard is visible */}
+                <Animated.View style={{ height: keyboardPadding }} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-    keyboardView: { flex: 1 },
     scrollContent: {
+        flexGrow: 1,
         padding: 16,
         paddingVertical: 32,
     },

@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Keyboard, Platform, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -17,6 +17,35 @@ export default function SignInScreen() {
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    const scrollViewRef = useRef<ScrollView>(null);
+    const keyboardPadding = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const keyboardShowListener = Keyboard.addListener(showEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? e.duration : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        const keyboardHideListener = Keyboard.addListener(hideEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration || 250) : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        return () => {
+            keyboardShowListener.remove();
+            keyboardHideListener.remove();
+        };
+    }, []);
 
     const handleSignIn = async () => {
         if (!email || !password) {
@@ -42,96 +71,121 @@ export default function SignInScreen() {
         }
     };
 
+    const scrollToInput = (y: number) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={styles.container}>
-                    {/* Logo / Brand */}
-                    <View style={styles.brand}>
-                        <Text style={styles.logo}>Offer Buddy</Text>
-                        <Text style={styles.tagline}>Find the best deals near you</Text>
+            <ScrollView
+                ref={scrollViewRef}
+                contentContainerStyle={styles.container}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+            >
+                {/* Logo / Brand */}
+                <View style={styles.brand}>
+                    <Text style={styles.logo}>Offer Buddy</Text>
+                    <Text style={styles.tagline}>Find the best deals near you</Text>
+                </View>
+
+                {/* Card */}
+                <View style={styles.card}>
+                    <AuthTabs />
+                    <Text style={styles.title}>Sign in to your account</Text>
+                    <Text style={styles.subtitle}>
+                        Don't have one?{' '}
+                        <Link href="/(tabs)/signup" style={styles.link}>Create a new account</Link>
+                    </Text>
+
+                    {error !== '' && (
+                        <View style={styles.errorBox}>
+                            <Feather name="alert-circle" size={14} color="#C62828" />
+                            <Text style={styles.errorText}>{error}</Text>
+                        </View>
+                    )}
+
+                    {/* Email */}
+                    <Text style={styles.label}>Email address</Text>
+                    <View style={styles.inputRow}>
+                        <Feather name="mail" size={18} color="#888" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="you@example.com"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onFocus={(e) => {
+                                (e.target as any)?.measureLayout?.(
+                                    scrollViewRef.current,
+                                    (_x: number, y: number) => scrollToInput(y),
+                                    () => {}
+                                );
+                            }}
+                        />
                     </View>
 
-                    {/* Card */}
-                    <View style={styles.card}>
-                        <AuthTabs />
-                        <Text style={styles.title}>Sign in to your account</Text>
-                        <Text style={styles.subtitle}>
-                            Don't have one?{' '}
-                            <Link href="/(tabs)/signup" style={styles.link}>Create a new account</Link>
-                        </Text>
-
-                        {error !== '' && (
-                            <View style={styles.errorBox}>
-                                <Feather name="alert-circle" size={14} color="#C62828" />
-                                <Text style={styles.errorText}>{error}</Text>
-                            </View>
-                        )}
-
-                        {/* Email */}
-                        <Text style={styles.label}>Email address</Text>
-                        <View style={styles.inputRow}>
-                            <Feather name="mail" size={18} color="#888" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="you@example.com"
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
-                        </View>
-
-                        {/* Password */}
-                        <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputRow}>
-                            <Feather name="lock" size={18} color="#888" style={styles.inputIcon} />
-                            <TextInput
-                                style={[styles.input, { flex: 1 }]}
-                                placeholder="••••••••"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry={!showPassword}
-                                autoCapitalize="none"
-                            />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#888" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Options row */}
-                        <View style={styles.optionsRow}>
-                            <TouchableOpacity style={styles.rememberRow} onPress={() => setRememberMe(!rememberMe)}>
-                                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                                    {rememberMe && <Feather name="check" size={12} color="#FFF" />}
-                                </View>
-                                <Text style={styles.rememberText}>Remember me</Text>
-                            </TouchableOpacity>
-                            <Link href="/(tabs)/forgot-password" style={styles.link}>Forgot your password?</Link>
-                        </View>
-
-                        {/* Submit */}
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleSignIn} disabled={isLoading}>
-                            {isLoading ? (
-                                <ActivityIndicator color="#FFF" />
-                            ) : (
-                                <>
-                                    <Text style={styles.submitBtnText}>Sign in</Text>
-                                    <Feather name="arrow-right" size={16} color="#FFF" />
-                                </>
-                            )}
+                    {/* Password */}
+                    <Text style={styles.label}>Password</Text>
+                    <View style={styles.inputRow}>
+                        <Feather name="lock" size={18} color="#888" style={styles.inputIcon} />
+                        <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            placeholder="••••••••"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            onFocus={(e) => {
+                                (e.target as any)?.measureLayout?.(
+                                    scrollViewRef.current,
+                                    (_x: number, y: number) => scrollToInput(y),
+                                    () => {}
+                                );
+                            }}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#888" />
                         </TouchableOpacity>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+
+                    {/* Options row */}
+                    <View style={styles.optionsRow}>
+                        <TouchableOpacity style={styles.rememberRow} onPress={() => setRememberMe(!rememberMe)}>
+                            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                                {rememberMe && <Feather name="check" size={12} color="#FFF" />}
+                            </View>
+                            <Text style={styles.rememberText}>Remember me</Text>
+                        </TouchableOpacity>
+                        <Link href="/(tabs)/forgot-password" style={styles.link}>Forgot your password?</Link>
+                    </View>
+
+                    {/* Submit */}
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleSignIn} disabled={isLoading}>
+                        {isLoading ? (
+                            <ActivityIndicator color="#FFF" />
+                        ) : (
+                            <>
+                                <Text style={styles.submitBtnText}>Sign in</Text>
+                                <Feather name="arrow-right" size={16} color="#FFF" />
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* Animated bottom spacer that grows when keyboard is visible */}
+                <Animated.View style={{ height: keyboardPadding }} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#F9F9F9' },
-    container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+    container: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40 },
     brand: { alignItems: 'center', marginBottom: 28 },
     logo: { fontSize: 30, fontWeight: 'bold', color: '#FDB913', letterSpacing: -0.5 },
     tagline: { fontSize: 14, color: '#888', marginTop: 4 },

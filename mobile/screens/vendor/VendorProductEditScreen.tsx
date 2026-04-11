@@ -273,7 +273,6 @@ export default function VendorProductEditScreen() {
                     {/* Pricing */}
                     <Card style={styles.cardSpacing}>
                         <CardHeader style={styles.cardHeader}>
-                            <Feather name="dollar-sign" size={18} color="#002B4E" />
                             <Text style={styles.cardTitle}>Pricing & Offer</Text>
                         </CardHeader>
                         <CardBody style={styles.fieldSpacing}>

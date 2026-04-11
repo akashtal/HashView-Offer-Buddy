@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Keyboard, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -16,11 +16,40 @@ export default function VendorLoginScreen() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const scrollViewRef = useRef<ScrollView>(null);
+    const keyboardPadding = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
         if (isAuthenticated && user?.role === 'vendor') {
             router.replace((from as any) || '/vendor/dashboard');
         }
     }, [isAuthenticated, user, router, from]);
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const keyboardShowListener = Keyboard.addListener(showEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? e.duration : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        const keyboardHideListener = Keyboard.addListener(hideEvent, (e) => {
+            Animated.timing(keyboardPadding, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration || 250) : 200,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        return () => {
+            keyboardShowListener.remove();
+            keyboardHideListener.remove();
+        };
+    }, []);
 
     const handleSubmit = async () => {
         if (!email || !password) {
@@ -40,95 +69,117 @@ export default function VendorLoginScreen() {
         }
     };
 
+    const scrollToInput = (y: number) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
-            <KeyboardAvoidingView
-                style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <ScrollView
+                ref={scrollViewRef}
+                contentContainerStyle={styles.content}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                bounces={true}
             >
-                <View style={styles.content}>
-                    {/* Switch Link */}
-                    <View style={styles.headerBox}>
+                {/* Switch Link */}
+                <View style={styles.headerBox}>
 
-                        <View style={styles.switchRow}>
-                            <Text style={styles.switchText}>New vendor? </Text>
-                            <TouchableOpacity onPress={() => router.push('/vendor-register' as any)}>
-                                <Text style={styles.switchLink}>Register your business</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Login Card */}
-                    <View style={styles.card}>
-                        <AuthTabs />
-
-                        <View style={styles.formSpace}>
-                            {error ? (
-                                <View style={styles.errorBox}>
-                                    <Text style={styles.errorText}>{error}</Text>
-                                </View>
-                            ) : null}
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Business Email</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="mail" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="vendor@business.com"
-                                        placeholderTextColor="#9CA3AF"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Password</Text>
-                                <View style={styles.inputBox}>
-                                    <Feather name="lock" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="••••••••"
-                                        placeholderTextColor="#9CA3AF"
-                                        secureTextEntry
-                                        value={password}
-                                        onChangeText={setPassword}
-                                    />
-                                </View>
-                            </View>
-
-                            <TouchableOpacity
-                                style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
-                                onPress={handleSubmit}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <ActivityIndicator color="#FFF" />
-                                ) : (
-                                    <View style={styles.btnRow}>
-                                        <Text style={styles.primaryBtnText}>Access Dashboard</Text>
-                                        <Feather name="arrow-right" size={16} color="#FFF" />
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchText}>New vendor? </Text>
+                        <TouchableOpacity onPress={() => router.push('/vendor-register' as any)}>
+                            <Text style={styles.switchLink}>Register your business</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
-            </KeyboardAvoidingView>
+
+                {/* Login Card */}
+                <View style={styles.card}>
+                    <AuthTabs />
+
+                    <View style={styles.formSpace}>
+                        {error ? (
+                            <View style={styles.errorBox}>
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
+                        ) : null}
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Business Email</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="mail" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="vendor@business.com"
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Password</Text>
+                            <View style={styles.inputBox}>
+                                <Feather name="lock" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#9CA3AF"
+                                    secureTextEntry
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => {}
+                                        );
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+                            onPress={handleSubmit}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#FFF" />
+                            ) : (
+                                <View style={styles.btnRow}>
+                                    <Text style={styles.primaryBtnText}>Access Dashboard</Text>
+                                    <Feather name="arrow-right" size={16} color="#FFF" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Animated bottom spacer that grows when keyboard is visible */}
+                <Animated.View style={{ height: keyboardPadding }} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-    keyboardView: { flex: 1 },
     content: {
-        flex: 1,
+        flexGrow: 1,
         padding: 16,
-        justifyContent: 'center',
+        paddingTop: 40,
+        paddingBottom: 40,
     },
     headerBox: {
         alignItems: 'center',

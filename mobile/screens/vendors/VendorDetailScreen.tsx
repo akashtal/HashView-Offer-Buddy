@@ -35,9 +35,24 @@ export default function VendorDetailScreen() {
     const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
 
     // Contact Supplier Form State
+    const [contactName, setContactName] = useState('');
+    const [contactEmail, setContactEmail] = useState('');
     const [contactMobile, setContactMobile] = useState('');
+    const [contactLocation, setContactLocation] = useState('');
+    const [contactProductInterest, setContactProductInterest] = useState('');
+    const [contactQuantity, setContactQuantity] = useState('');
     const [contactRequirement, setContactRequirement] = useState('');
     const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+
+    // Contact tab form state (separate from modal)
+    const [tabName, setTabName] = useState('');
+    const [tabEmail, setTabEmail] = useState('');
+    const [tabMobile, setTabMobile] = useState('');
+    const [tabLocation, setTabLocation] = useState('');
+    const [tabProductInterest, setTabProductInterest] = useState('');
+    const [tabQuantity, setTabQuantity] = useState('');
+    const [tabRequirement, setTabRequirement] = useState('');
+    const [isSubmittingTab, setIsSubmittingTab] = useState(false);
 
     const showToast = (message: string, type: 'success' | 'error' | 'info') => {
         Toast.show({ type, text1: message });
@@ -82,26 +97,85 @@ export default function VendorDetailScreen() {
     };
 
     const handleContactSubmit = async () => {
-        if (!contactMobile.trim() || !contactRequirement.trim()) {
-            showToast('Please provide both mobile number and requirement', 'error');
+        if (!contactName.trim()) {
+            showToast('Please enter your name', 'error');
+            return;
+        }
+        if (!contactMobile.trim()) {
+            showToast('Please enter your mobile number', 'error');
+            return;
+        }
+        if (!contactRequirement.trim()) {
+            showToast('Please describe your requirement', 'error');
             return;
         }
 
         try {
             setIsSubmittingContact(true);
             await axios.post(`/api/vendors/${vendorId}/contact`, {
+                name: contactName.trim(),
+                email: contactEmail.trim() || undefined,
                 mobileNumber: contactMobile.trim(),
-                requirement: contactRequirement.trim()
+                requirement: contactRequirement.trim(),
+                location: contactLocation.trim() || undefined,
+                productInterest: contactProductInterest.trim() || undefined,
+                quantity: contactQuantity.trim() || undefined,
             });
-            showToast('Requirement submitted successfully. The vendor will contact you soon.', 'success');
+            showToast('Enquiry submitted successfully! The vendor will contact you soon.', 'success');
             setShowEnquiryModal(false);
+            setContactName('');
+            setContactEmail('');
             setContactMobile('');
+            setContactLocation('');
+            setContactProductInterest('');
+            setContactQuantity('');
             setContactRequirement('');
         } catch (error: any) {
             console.error('Contact submit error:', error);
-            showToast(error.response?.data?.error || 'Failed to submit requirement', 'error');
+            showToast(error.response?.data?.error || 'Failed to submit enquiry', 'error');
         } finally {
             setIsSubmittingContact(false);
+        }
+    };
+
+    const handleTabContactSubmit = async () => {
+        if (!tabName.trim()) {
+            showToast('Please enter your name', 'error');
+            return;
+        }
+        if (!tabMobile.trim()) {
+            showToast('Please enter your mobile number', 'error');
+            return;
+        }
+        if (!tabRequirement.trim()) {
+            showToast('Please describe your requirement', 'error');
+            return;
+        }
+
+        try {
+            setIsSubmittingTab(true);
+            await axios.post(`/api/vendors/${vendorId}/contact`, {
+                name: tabName.trim(),
+                email: tabEmail.trim() || undefined,
+                mobileNumber: tabMobile.trim(),
+                requirement: tabRequirement.trim(),
+                location: tabLocation.trim() || undefined,
+                productInterest: tabProductInterest.trim() || undefined,
+                quantity: tabQuantity.trim() || undefined,
+            });
+            showToast('Enquiry submitted successfully! The vendor will contact you soon.', 'success');
+            setTabName('');
+            setTabEmail('');
+            setTabMobile('');
+            setTabLocation('');
+            setTabProductInterest('');
+            setTabQuantity('');
+            setTabRequirement('');
+        } catch (error: any) {
+            console.error('Tab contact submit error:', error);
+            showToast(error.response?.data?.error || 'Failed to submit enquiry', 'error');
+        } finally {
+            setIsSubmittingTab(false);
         }
     };
 
@@ -544,15 +618,76 @@ export default function VendorDetailScreen() {
                                 );
                             })()}
 
-                            {/* Contact Form mock layout */}
+                            {/* Professional Contact Form */}
                             <View style={styles.msgFormBox}>
-                                <Text style={styles.msgFormTitle}>Send Message</Text>
-                                <TextInput style={styles.msgInput} placeholder="Your Name" />
-                                <TextInput style={styles.msgInput} placeholder="Mobile Number" keyboardType="phone-pad" />
-                                <TextInput style={[styles.msgInput, { height: 80 }]} placeholder="Requirement Details" multiline textAlignVertical="top" />
-                                <TouchableOpacity style={styles.msgSubmitBtn}>
-                                    <Text style={styles.msgSubmitTxt}>Submit</Text>
+                                <View style={styles.msgFormHeaderRow}>
+                                    <Feather name="send" size={20} color="#FDB913" />
+                                    <Text style={styles.msgFormTitle}>Send Enquiry</Text>
+                                </View>
+                                <Text style={styles.msgFormSubtitle}>Fill in the details below to send your requirement directly to the vendor.</Text>
+
+                                <Text style={styles.fieldLabel}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
+                                <View style={styles.inputWithIcon}>
+                                    <Feather name="user" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                    <TextInput style={styles.fieldInput} placeholder="Enter your name" value={tabName} onChangeText={setTabName} />
+                                </View>
+
+                                <Text style={styles.fieldLabel}>Email Address</Text>
+                                <View style={styles.inputWithIcon}>
+                                    <Feather name="mail" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                    <TextInput style={styles.fieldInput} placeholder="you@example.com" value={tabEmail} onChangeText={setTabEmail} keyboardType="email-address" autoCapitalize="none" />
+                                </View>
+
+                                <Text style={styles.fieldLabel}>Mobile Number <Text style={styles.requiredStar}>*</Text></Text>
+                                <View style={styles.inputWithIcon}>
+                                    <Feather name="phone" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                    <TextInput style={styles.fieldInput} placeholder="Enter 10-digit mobile" value={tabMobile} onChangeText={setTabMobile} keyboardType="phone-pad" />
+                                </View>
+
+                                <Text style={styles.fieldLabel}>Your City / Location</Text>
+                                <View style={styles.inputWithIcon}>
+                                    <Feather name="map-pin" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                    <TextInput style={styles.fieldInput} placeholder="e.g. Mumbai, Delhi" value={tabLocation} onChangeText={setTabLocation} />
+                                </View>
+
+                                <View style={styles.rowFields}>
+                                    <View style={styles.halfField}>
+                                        <Text style={styles.fieldLabel}>Product Interest</Text>
+                                        <View style={styles.inputWithIcon}>
+                                            <Feather name="tag" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                            <TextInput style={styles.fieldInput} placeholder="e.g. Laptop" value={tabProductInterest} onChangeText={setTabProductInterest} />
+                                        </View>
+                                    </View>
+                                    <View style={styles.halfField}>
+                                        <Text style={styles.fieldLabel}>Quantity</Text>
+                                        <View style={styles.inputWithIcon}>
+                                            <Feather name="hash" size={16} color="#9CA3AF" style={styles.fieldIcon} />
+                                            <TextInput style={styles.fieldInput} placeholder="e.g. 50" value={tabQuantity} onChangeText={setTabQuantity} keyboardType="number-pad" />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.fieldLabel}>Requirement Details <Text style={styles.requiredStar}>*</Text></Text>
+                                <TextInput
+                                    style={[styles.msgInput, { height: 100, textAlignVertical: 'top', paddingTop: 12 }]}
+                                    placeholder="Describe what you need, specifications, delivery timeline, etc."
+                                    value={tabRequirement}
+                                    onChangeText={setTabRequirement}
+                                    multiline
+                                    textAlignVertical="top"
+                                />
+
+                                <TouchableOpacity style={styles.msgSubmitBtn} onPress={handleTabContactSubmit} disabled={isSubmittingTab}>
+                                    {isSubmittingTab ? (
+                                        <ActivityIndicator color="#111827" />
+                                    ) : (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <Feather name="send" size={16} color="#111827" />
+                                            <Text style={styles.msgSubmitTxt}>Submit Enquiry</Text>
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
+                                <Text style={styles.formDisclaimer}>Your information is shared only with this vendor and not with any third party.</Text>
                             </View>
                         </View>
                     )}
@@ -570,44 +705,131 @@ export default function VendorDetailScreen() {
                 </View>
             )}
 
-            {/* Modal */}
+            {/* Professional Enquiry Modal */}
             <Modal visible={showEnquiryModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <View>
-                                <Text style={styles.modalTitle}>Contact Supplier</Text>
-                                <Text style={styles.modalSubTitle}>{vendor.shopName}</Text>
+                    <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <View>
+                                    <Text style={styles.modalTitle}>Get Quote</Text>
+                                    <Text style={styles.modalSubTitle}>{vendor.shopName}</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setShowEnquiryModal(false)} style={styles.modalCloseBtn}>
+                                    <Feather name="x" size={22} color="#111827" />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={() => setShowEnquiryModal(false)}>
-                                <Feather name="x" size={24} color="#111827" />
-                            </TouchableOpacity>
+                            <View style={styles.modalBody}>
+                                <Text style={styles.modalFieldLabel}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
+                                <View style={styles.modalInputRow}>
+                                    <Feather name="user" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                    <TextInput
+                                        style={styles.modalFieldInput}
+                                        placeholder="Enter your name"
+                                        value={contactName}
+                                        onChangeText={setContactName}
+                                        placeholderTextColor="#9CA3AF"
+                                    />
+                                </View>
+
+                                <Text style={styles.modalFieldLabel}>Email Address</Text>
+                                <View style={styles.modalInputRow}>
+                                    <Feather name="mail" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                    <TextInput
+                                        style={styles.modalFieldInput}
+                                        placeholder="you@example.com"
+                                        value={contactEmail}
+                                        onChangeText={setContactEmail}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        placeholderTextColor="#9CA3AF"
+                                    />
+                                </View>
+
+                                <Text style={styles.modalFieldLabel}>Mobile Number <Text style={styles.requiredStar}>*</Text></Text>
+                                <View style={styles.modalInputRow}>
+                                    <Feather name="phone" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                    <TextInput
+                                        style={styles.modalFieldInput}
+                                        placeholder="Enter 10-digit mobile"
+                                        value={contactMobile}
+                                        onChangeText={setContactMobile}
+                                        keyboardType="phone-pad"
+                                        placeholderTextColor="#9CA3AF"
+                                    />
+                                </View>
+
+                                <Text style={styles.modalFieldLabel}>Your City / Location</Text>
+                                <View style={styles.modalInputRow}>
+                                    <Feather name="map-pin" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                    <TextInput
+                                        style={styles.modalFieldInput}
+                                        placeholder="e.g. Mumbai, Delhi"
+                                        value={contactLocation}
+                                        onChangeText={setContactLocation}
+                                        placeholderTextColor="#9CA3AF"
+                                    />
+                                </View>
+
+                                <View style={styles.rowFields}>
+                                    <View style={styles.halfField}>
+                                        <Text style={styles.modalFieldLabel}>Product Interest</Text>
+                                        <View style={styles.modalInputRow}>
+                                            <Feather name="tag" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                            <TextInput
+                                                style={styles.modalFieldInput}
+                                                placeholder="e.g. Laptop"
+                                                value={contactProductInterest}
+                                                onChangeText={setContactProductInterest}
+                                                placeholderTextColor="#9CA3AF"
+                                            />
+                                        </View>
+                                    </View>
+                                    <View style={styles.halfField}>
+                                        <Text style={styles.modalFieldLabel}>Quantity</Text>
+                                        <View style={styles.modalInputRow}>
+                                            <Feather name="hash" size={16} color="#9CA3AF" style={styles.modalInputIcon} />
+                                            <TextInput
+                                                style={styles.modalFieldInput}
+                                                placeholder="e.g. 50"
+                                                value={contactQuantity}
+                                                onChangeText={setContactQuantity}
+                                                keyboardType="number-pad"
+                                                placeholderTextColor="#9CA3AF"
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.modalFieldLabel}>Requirement Details <Text style={styles.requiredStar}>*</Text></Text>
+                                <TextInput
+                                    style={[styles.modalInput, { height: 100, textAlignVertical: 'top', paddingTop: 12 }]}
+                                    placeholder="Describe what you need — specs, delivery timeline, budget, etc."
+                                    value={contactRequirement}
+                                    onChangeText={setContactRequirement}
+                                    multiline
+                                    textAlignVertical="top"
+                                    placeholderTextColor="#9CA3AF"
+                                />
+
+                                <TouchableOpacity
+                                    onPress={handleContactSubmit}
+                                    disabled={isSubmittingContact}
+                                    style={[styles.modalSubmitBtn, isSubmittingContact && { opacity: 0.7 }]}
+                                >
+                                    {isSubmittingContact ? (
+                                        <ActivityIndicator color="#FFF" />
+                                    ) : (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <Feather name="send" size={16} color="#FFF" />
+                                            <Text style={styles.modalSubmitTxt}>Submit Enquiry</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                                <Text style={styles.formDisclaimer}>🔒 Your info is shared only with this vendor.</Text>
+                            </View>
                         </View>
-                        <View style={styles.modalBody}>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Mobile Number"
-                                value={contactMobile}
-                                onChangeText={setContactMobile}
-                                keyboardType="phone-pad"
-                            />
-                            <TextInput
-                                style={[styles.modalInput, { height: 100 }]}
-                                placeholder="Describe your requirement..."
-                                value={contactRequirement}
-                                onChangeText={setContactRequirement}
-                                multiline
-                                textAlignVertical="top"
-                            />
-                            <TouchableOpacity
-                                onPress={handleContactSubmit}
-                                disabled={isSubmittingContact}
-                                style={styles.modalSubmitBtn}
-                            >
-                                {isSubmittingContact ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSubmitTxt}>Submit Requirement</Text>}
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    </ScrollView>
                 </View>
             </Modal>
 
@@ -702,11 +924,21 @@ const styles = StyleSheet.create({
     directionsBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#2563EB', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, gap: 6 },
     directionsBtnText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
 
-    msgFormBox: { backgroundColor: '#F9FAFB', padding: 20, borderRadius: 8, marginTop: 16 },
-    msgFormTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 16 },
-    msgInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 6, padding: 12, marginBottom: 12, fontSize: 14 },
-    msgSubmitBtn: { backgroundColor: '#FDB913', paddingVertical: 14, borderRadius: 6, alignItems: 'center' },
+    msgFormBox: { backgroundColor: '#F9FAFB', padding: 20, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+    msgFormHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    msgFormTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+    msgFormSubtitle: { fontSize: 13, color: '#6B7280', marginBottom: 20, lineHeight: 18 },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 12 },
+    requiredStar: { color: '#EF4444', fontSize: 13 },
+    inputWithIcon: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12 },
+    fieldIcon: { marginRight: 8 },
+    fieldInput: { flex: 1, fontSize: 14, color: '#111827', paddingVertical: 11 },
+    rowFields: { flexDirection: 'row', gap: 12 },
+    halfField: { flex: 1 },
+    msgInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 14 },
+    msgSubmitBtn: { backgroundColor: '#FDB913', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
     msgSubmitTxt: { fontWeight: 'bold', color: '#111827', fontSize: 15 },
+    formDisclaimer: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12, lineHeight: 16 },
 
     floatingHelpBox: { marginHorizontal: 16, marginBottom: 16, backgroundColor: '#FFF9E6', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#FFEBA1' },
     hlpTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
@@ -714,13 +946,19 @@ const styles = StyleSheet.create({
     hlpActionBtn: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#FDB913', paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
     hlpActionTxt: { color: '#111827', fontWeight: 'bold', fontSize: 14 },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-    modalContent: { backgroundColor: '#FFF', width: '100%', borderRadius: 12, overflow: 'hidden' },
-    modalHeader: { backgroundColor: '#FDB913', padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+    modalScrollContent: { flexGrow: 1, justifyContent: 'center', padding: 16 },
+    modalContent: { backgroundColor: '#FFF', width: '100%', borderRadius: 16, overflow: 'hidden' },
+    modalHeader: { backgroundColor: '#FDB913', padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' },
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
     modalSubTitle: { fontSize: 13, color: '#111827', opacity: 0.8, marginTop: 4 },
     modalBody: { padding: 20 },
-    modalInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 16 },
-    modalSubmitBtn: { backgroundColor: '#111827', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+    modalFieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 12 },
+    modalInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#F9FAFB' },
+    modalInputIcon: { marginRight: 8 },
+    modalFieldInput: { flex: 1, fontSize: 14, color: '#111827', paddingVertical: 11 },
+    modalInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 14, marginBottom: 16, backgroundColor: '#F9FAFB' },
+    modalSubmitBtn: { backgroundColor: '#111827', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
     modalSubmitTxt: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
 });

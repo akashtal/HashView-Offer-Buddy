@@ -9,7 +9,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import axios from 'axios';
-import { FiPackage, FiImage, FiTag, FiDollarSign, FiUpload, FiX } from 'react-icons/fi';
+import { FiPackage, FiImage, FiTag, FiUpload, FiX } from 'react-icons/fi';
+import { FaIndianRupeeSign } from 'react-icons/fa6';
 import Loading from '@/components/ui/Loading';
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
@@ -257,7 +258,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                             {/* Pricing & Offer */}
                             <div className="space-y-4">
                                 <h3 className="text-lg font-medium border-b pb-2 flex items-center gap-2">
-                                    <FiDollarSign /> Pricing & Offer
+                                    <FaIndianRupeeSign /> Pricing & Offer
                                 </h3>
 
                                 <div className="space-y-4">
