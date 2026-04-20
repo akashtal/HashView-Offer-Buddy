@@ -36,15 +36,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create category (Admin only)
+// POST - Create category (Admin or Vendor)
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
     const user = await getUserFromRequest(request);
-    if (!hasRole(user, ['admin'])) {
+    if (!hasRole(user, ['admin', 'vendor'])) {
       return NextResponse.json(
-        apiError('Unauthorized. Only admins can create categories.'),
+        apiError('Unauthorized. Only admins or vendors can create categories.'),
         { status: 403 }
       );
     }

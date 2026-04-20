@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
 import axios from 'axios';
@@ -11,6 +12,7 @@ import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
+import { Modal, Alert } from 'react-native';
 
 export default function VendorProductCreateScreen() {
     const router = useRouter();
@@ -37,6 +39,13 @@ export default function VendorProductCreateScreen() {
     const [showSubcategoryPicker, setShowSubcategoryPicker] = useState(false);
     const [showOfferPicker, setShowOfferPicker] = useState(false);
     const [hasDiscount, setHasDiscount] = useState(false);
+
+    // Category Creation
+    const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryImage, setNewCategoryImage] = useState('');
+    const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+    const [creatingCategory, setCreatingCategory] = useState(false);
 
     const [images, setImages] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -84,15 +93,95 @@ export default function VendorProductCreateScreen() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleImageUpload = () => {
-        // Mock image upload since expo-image-picker requires additional config.
+    const handleCreateCategory = async () => {
+        if (!newCategoryName.trim()) {
+            setError('Please enter a category name');
+            return;
+        }
+        setCreatingCategory(true);
+        setError('');
+        try {
+            const token = useAuthStore.getState().token;
+            const slug = newCategoryName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const response = await axios.post('/api/categories',
+                {
+                    name: newCategoryName.trim(),
+                    slug,
+                    ...(newCategoryImage ? { image: newCategoryImage } : {}),
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const newCat = response.data.data.category;
+            setCategories(prev => [...prev, newCat]);
+            handleChange('category', newCat._id);
+            setNewCategoryName('');
+            setNewCategoryImage('');
+            setShowCreateCategoryModal(false);
+            setShowCategoryPicker(false);
+        } catch (err: any) {
+            const msg = err.response?.data?.error || err.message || 'Failed to create category';
+            setError(msg);
+        } finally {
+            setCreatingCategory(false);
+        }
+    };
+
+    // No native image picker used — vendors paste a URL instead (avoids requiring a native rebuild)
+
+    /** Shared helper: pick from photo library → upload → return hosted URL */
+    const pickAndUploadImage = async (): Promise<string | null> => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Allow photo library access to upload images.');
+            return null;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.85,
+        });
+        if (result.canceled || !result.assets?.[0]) return null;
+
+        const asset = result.assets[0];
+        const token = useAuthStore.getState().token;
+        const formData = new FormData();
+        formData.append('file', {
+            uri: asset.uri,
+            type: asset.mimeType || 'image/jpeg',
+            name: asset.fileName || 'upload.jpg',
+        } as any);
+        const res = await axios.post('/api/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+        });
+        return res.data.data.url as string;
+    };
+
+    const handleImageUpload = async () => {
+        if (images.length >= 10) return;
         setUploading(true);
-        setTimeout(() => {
-            if (images.length < 10) {
-                setImages(prev => [...prev, `https://placehold.co/400x400/png?text=Item+${prev.length + 1}`]);
-            }
+        try {
+            const url = await pickAndUploadImage();
+            if (url) setImages(prev => [...prev, url]);
+        } catch (err: any) {
+            Alert.alert('Upload failed', err.message || 'Could not upload image');
+        } finally {
             setUploading(false);
-        }, 1500);
+        }
+    };
+
+    const handlePickCategoryImage = async () => {
+        setUploadingCategoryImage(true);
+        try {
+            const url = await pickAndUploadImage();
+            if (url) setNewCategoryImage(url);
+        } catch (err: any) {
+            Alert.alert('Upload failed', err.message || 'Could not upload category image');
+        } finally {
+            setUploadingCategoryImage(false);
+        }
     };
 
     const removeImage = (index: number) => {
@@ -216,6 +305,14 @@ export default function VendorProductCreateScreen() {
                                                 <Text style={styles.pickerItemText}>{cat.name}</Text>
                                             </TouchableOpacity>
                                         ))}
+                                        {/* ── Create New Category ── */}
+                                        <TouchableOpacity
+                                            style={[styles.pickerItem, styles.createCategoryItem]}
+                                            onPress={() => { setShowCategoryPicker(false); setShowCreateCategoryModal(true); }}
+                                        >
+                                            <Feather name="plus-circle" size={16} color="#4F46E5" style={{ marginRight: 8 }} />
+                                            <Text style={styles.createCategoryText}>Create New Category</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 )}
                             </View>
@@ -375,6 +472,85 @@ export default function VendorProductCreateScreen() {
 
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Create Category Modal */}
+            <Modal
+                visible={showCreateCategoryModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowCreateCategoryModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Create New Category</Text>
+
+                        {/* Category Image — tap to pick from photo library */}
+                        <View style={styles.catImageSection}>
+                            <Text style={styles.catImageLabel}>
+                                Category Image <Text style={styles.catImageSub}>(optional)</Text>
+                            </Text>
+                            <TouchableOpacity
+                                style={[styles.catImageBox, newCategoryImage ? styles.catImageBoxFilled : null]}
+                                onPress={handlePickCategoryImage}
+                                disabled={uploadingCategoryImage}
+                                activeOpacity={0.75}
+                            >
+                                {uploadingCategoryImage ? (
+                                    <ActivityIndicator size="small" color="#4F46E5" />
+                                ) : newCategoryImage ? (
+                                    <Image source={{ uri: newCategoryImage }} style={styles.catImagePreview} />
+                                ) : (
+                                    <View style={styles.catImagePlaceholder}>
+                                        <Feather name="upload" size={20} color="#9CA3AF" />
+                                        <Text style={styles.catImageHint}>Tap to upload</Text>
+                                        <Text style={styles.catImageSubHint}>Photo library</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                            {newCategoryImage ? (
+                                <TouchableOpacity
+                                    style={styles.catImageRemove}
+                                    onPress={() => setNewCategoryImage('')}
+                                >
+                                    <Feather name="x" size={11} color="#FFF" />
+                                </TouchableOpacity>
+                            ) : null}
+                        </View>
+
+                        <Input
+                            label="Category Name"
+                            placeholder="e.g. Electronics, Fashion"
+                            value={newCategoryName}
+                            onChangeText={setNewCategoryName}
+                            autoFocus
+                        />
+                        {newCategoryName.trim() ? (
+                            <Text style={styles.slugPreview}>
+                                Slug: {newCategoryName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}
+                            </Text>
+                        ) : null}
+                        {error ? <Text style={styles.modalError}>{error}</Text> : null}
+                        <View style={styles.modalActions}>
+                            <Button
+                                variant="ghost"
+                                onPress={() => { setShowCreateCategoryModal(false); setNewCategoryName(''); setNewCategoryImage(''); setError(''); }}
+                                style={{ flex: 1 }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                isLoading={creatingCategory}
+                                disabled={!newCategoryName.trim()}
+                                onPress={handleCreateCategory}
+                                style={{ flex: 1, marginLeft: 12 }}
+                            >
+                                Create
+                            </Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -400,6 +576,8 @@ const styles = StyleSheet.create({
     pickerList: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, backgroundColor: '#FFF', marginTop: 4, overflow: 'hidden' },
     pickerItem: { paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderColor: '#F3F4F6' },
     pickerItemText: { fontSize: 15, color: '#374151' },
+    createCategoryItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F0FF' },
+    createCategoryText: { fontSize: 15, color: '#4F46E5', fontWeight: '600' },
 
     checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
     checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
@@ -414,4 +592,24 @@ const styles = StyleSheet.create({
     prodImg: { width: '100%', height: '100%', borderRadius: 8 },
     removeImgBtn: { position: 'absolute', top: -4, right: -4, backgroundColor: '#EF4444', borderRadius: 10, padding: 2 },
     uploadImgBox: { width: 70, height: 70, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', borderStyle: 'dashed', backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
+
+    // Create Category modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+    modalBox: { backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
+    slugPreview: { fontSize: 12, color: '#6B7280', marginTop: 4, fontFamily: 'monospace' },
+    modalError: { color: '#DC2626', fontSize: 13, marginTop: 8 },
+    modalActions: { flexDirection: 'row', marginTop: 20 },
+
+    // Category image upload
+    catImageSection: { marginBottom: 16, position: 'relative', alignSelf: 'flex-start' },
+    catImageBox: { width: 96, height: 96, borderRadius: 12, borderWidth: 2, borderColor: '#D1D5DB', borderStyle: 'dashed', backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    catImageBoxFilled: { borderStyle: 'solid', borderColor: '#4F46E5' },
+    catImagePreview: { width: '100%', height: '100%' },
+    catImagePlaceholder: { alignItems: 'center', gap: 4 },
+    catImageRemove: { position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, padding: 3, zIndex: 10 },
+    catImageLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
+    catImageSub: { fontSize: 11, color: '#9CA3AF', fontWeight: '400' },
+    catImageHint: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+    catImageSubHint: { fontSize: 10, color: '#9CA3AF' },
 });

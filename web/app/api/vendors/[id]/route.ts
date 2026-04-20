@@ -26,6 +26,14 @@ export async function GET(
       );
     }
 
+    // Hide locked vendors from public-facing pages
+    if (vendor.isLocked) {
+      return NextResponse.json(
+        apiError('This vendor is currently unavailable'),
+        { status: 404 }
+      );
+    }
+
     // Get vendor's products
     const products = await Product.find({
       vendorId: params.id,

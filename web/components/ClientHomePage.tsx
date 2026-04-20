@@ -155,16 +155,21 @@ export default function ClientHomePage() {
                     <div className="flex flex-col gap-3">
                         {/* Top Row: Controls */}
                         <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide pb-1">
-                                <RadiusFilter value={radius} onChange={setRadius} />
-                                <div className="h-6 w-px bg-gray-200 shrink-0"></div>
-                                <ComprehensiveFilters
-                                    onApplyFilters={handleFilterChange}
-                                    currentFilters={filters}
-                                    categories={categories}
-                                    facets={facets}
-                                />
+                            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 min-w-0 flex-1">
+                                <div className="flex-shrink-0">
+                                    <RadiusFilter value={radius} onChange={setRadius} />
+                                </div>
+                                <div className="h-6 w-px bg-gray-200 flex-shrink-0"></div>
+                                <div className="flex-shrink-0">
+                                    <ComprehensiveFilters
+                                        onApplyFilters={handleFilterChange}
+                                        currentFilters={filters}
+                                        categories={categories}
+                                        facets={facets}
+                                    />
+                                </div>
                             </div>
+
                             {/* Desktop: keep chips INLINE (no second row) */}
                             <div className="hidden lg:flex items-center gap-3 min-w-0">
                                 {(selectedCategory || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0) && (

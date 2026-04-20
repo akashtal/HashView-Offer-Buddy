@@ -39,7 +39,7 @@ export default function TabLayout() {
         <Tabs.Screen name="vendor-register" />
         <Tabs.Screen name="vendors/[id]" />
         <Tabs.Screen name="chat/index" />
-        <Tabs.Screen name="chat/[id]" />
+        {/* chat/[id] is auto-discovered as a nested route — no separate declaration needed */}
       </Tabs>
     </View>
   );

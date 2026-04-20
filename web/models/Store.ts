@@ -35,6 +35,8 @@ export interface IStore extends Document {
   }[];
   isApproved: boolean;
   isActive: boolean;
+  isLocked: boolean;
+  lastActive: Date;
   rating?: number;
   totalReviews?: number;
   analytics: {
@@ -170,6 +172,16 @@ const StoreSchema = new Schema<IStore>(
       type: Boolean,
       default: true,
     },
+    isLocked: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
     rating: {
       type: Number,
       min: 0,
@@ -244,8 +256,9 @@ StoreSchema.index({ 'location.coordinates': '2dsphere' });
 
 StoreSchema.index({ vendorId: 1 });
 StoreSchema.index({ category: 1 });
-StoreSchema.index({ isApproved: 1, isActive: 1 });
+StoreSchema.index({ isApproved: 1, isActive: 1, isLocked: 1 });
 StoreSchema.index({ 'location.city': 1 });
+StoreSchema.index({ lastActive: 1, isLocked: 1 }); // Cron query index
 
 
 const Store: Model<IStore> = mongoose.models.Store || mongoose.model<IStore>('Store', StoreSchema);

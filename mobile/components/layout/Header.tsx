@@ -1,16 +1,18 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useWishlistStore } from '@/store/wishlistStore';
+import { useChatStore } from '@/store/chatStore';
 import { useLocation } from '@/context/LocationContext';
 
 export default function Header() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
   const wishlistCount = useWishlistStore((state) => state.getCount());
+  const { unreadCount, fetchUnreadCount } = useChatStore();
 
   const { location, isLoading: locationLoading, requestLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,6 +20,15 @@ export default function Header() {
   const locationLabel = location
     ? [location.city, location.state].filter(Boolean).join(', ')
     : 'Set Location';
+
+  // Fetch unread count periodically when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -30,6 +41,14 @@ export default function Header() {
       if (user?.role === 'vendor') router.push('/vendor/dashboard');
       else if (user?.role === 'admin') router.push('/admin/dashboard');
       else router.push('/profile' as any);
+    } else {
+      router.push('/(tabs)/signin' as any);
+    }
+  };
+
+  const handleChatPress = () => {
+    if (isAuthenticated) {
+      router.push('/(tabs)/chat' as any);
     } else {
       router.push('/(tabs)/signin' as any);
     }
@@ -56,6 +75,16 @@ export default function Header() {
 
           {/* Actions */}
           <View style={styles.actionsWrap}>
+            {/* Chat icon with unread badge */}
+            <TouchableOpacity onPress={handleChatPress} style={styles.iconBtn}>
+              <Feather name="message-circle" size={20} color="#333" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={() => router.push('/wishlist' as any)} style={styles.iconBtn}>
               <Feather name="heart" size={20} color="#333" />
               {wishlistCount > 0 && (
@@ -93,7 +122,7 @@ export default function Header() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#1F2937', // Dark gradient fallback matching web's from-secondary to-secondary
+    backgroundColor: '#1F2937',
   },
   container: {
     paddingHorizontal: 16,
@@ -126,7 +155,7 @@ const styles = StyleSheet.create({
   actionsWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   iconBtn: {
     width: 40,
@@ -148,17 +177,17 @@ const styles = StyleSheet.create({
     right: -4,
     backgroundColor: '#EF4444',
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 1,
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
     borderColor: '#FFF',
   },
   badgeText: {
     color: '#FFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   searchRow: {

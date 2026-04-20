@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { FiMapPin, FiUser, FiSearch, FiTag, FiHelpCircle, FiShoppingCart, FiChevronDown, FiBriefcase, FiGrid, FiHeart } from 'react-icons/fi';
+import { FiMapPin, FiUser, FiSearch, FiTag, FiHelpCircle, FiShoppingCart, FiChevronDown, FiBriefcase, FiGrid, FiHeart, FiMessageCircle } from 'react-icons/fi';
 import { useAuthStore } from '@/store/authStore';
 import LocationSearch from '@/components/ui/LocationSearch';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
+import { useChatStore } from '@/store/chatStore';
 
 export default function Header() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const { unreadCount, fetchUnreadCount } = useChatStore();
 
   useEffect(() => {
     setMounted(true);
@@ -41,6 +43,15 @@ export default function Header() {
       unsubWishlist();
     };
   }, []);
+
+  // Fetch + refresh unread message count every 30s when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, fetchUnreadCount]);
 
   const handleLogout = async () => {
     await logout();
@@ -77,7 +88,7 @@ export default function Header() {
                 <div className="relative w-10 h-10">
                   <Image
                     src="/logo.jpeg"
-                    alt="Offer Buddy"
+                    alt="offers buddy"
                     fill
                     className="object-contain"
                   />
@@ -162,6 +173,17 @@ export default function Header() {
                   )}
                 </Link>
 
+                {/* Chat / Messages */}
+                <Link href="/chat" className="flex items-center gap-1.5 text-gray-700 hover:text-primary transition-colors relative group">
+                  <FiMessageCircle size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-medium hidden xl:inline">Messages</span>
+                  {mounted && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+
                 {/* Vendor Link */}
 
 
@@ -231,7 +253,7 @@ export default function Header() {
               <div className="relative w-10 h-10 bg-white rounded-full overflow-hidden p-1">
                 <Image
                   src="/logo.jpeg"
-                  alt="Offer Buddy"
+                  alt="offers buddy"
                   fill
                   className="object-contain"
                 />
@@ -243,6 +265,19 @@ export default function Header() {
               <LocationSearch className="[&>button]:bg-transparent [&>button]:border-0 [&>button]:p-0 [&>button]:hover:bg-transparent [&>button]:text-white [&_span]:text-white [&_svg]:text-primary" />
             </div>
             <div className="flex items-center gap-3">
+              {/* Chat - Mobile */}
+              <Link
+                href="/chat"
+                className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm relative"
+              >
+                <FiMessageCircle size={20} className="text-gray-700" />
+                {mounted && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center shadow-sm">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+
               {/* Wishlist - Mobile */}
               <Link
                 href="/wishlist"

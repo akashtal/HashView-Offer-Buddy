@@ -88,13 +88,13 @@ export async function POST(
         await sendEmail({
             email: vendorEmail,
             subject: `🔔 New Lead: ${name.trim()} enquired about ${productInterest || 'your products'} — ${store.shopName}`,
-            message: `New customer enquiry for ${store.shopName} on Offer Buddy!\n\n${plainTextDetails}\n\nRequirement:\n${requirement.trim()}`,
+            message: `New customer enquiry for ${store.shopName} on offers buddy!\n\n${plainTextDetails}\n\nRequirement:\n${requirement.trim()}`,
             html: `
                 <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #FDB913 0%, #F59E0B 100%); padding: 24px 32px; border-radius: 12px 12px 0 0;">
                         <h2 style="margin: 0; color: #111827; font-size: 22px;">🔔 New Customer Enquiry</h2>
-                        <p style="margin: 6px 0 0 0; color: #92400E; font-size: 14px;">${store.shopName} — Offer Buddy</p>
+                        <p style="margin: 6px 0 0 0; color: #92400E; font-size: 14px;">${store.shopName} — offers buddy</p>
                     </div>
 
                     <!-- Body -->
@@ -135,7 +135,7 @@ export async function POST(
 
                         <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
                         <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin: 0;">
-                            This enquiry was sent via <strong>Offer Buddy</strong>. Respond quickly to convert this lead!
+                            This enquiry was sent via <strong>offers buddy</strong>. Respond quickly to convert this lead!
                         </p>
                     </div>
                 </div>

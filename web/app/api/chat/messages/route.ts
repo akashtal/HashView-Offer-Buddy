@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
                     await sendEmail({
                         email: recipientEmail,
-                        subject: `New Message from ${senderName} on Offer Buddy`,
+                        subject: `New Message from ${senderName} on offers buddy`,
                         message: `You have received a new message: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
                         html: `
                             <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px;">

@@ -85,7 +85,7 @@ export default function SignUpScreen() {
             >
                 {/* Brand */}
                 <View style={styles.brand}>
-                    <Text style={styles.logo}>Offer Buddy</Text>
+                    <Text style={styles.logo}>offers buddy</Text>
                     <Text style={styles.tagline}>Join thousands of smart shoppers</Text>
                 </View>
 
@@ -119,7 +119,7 @@ export default function SignUpScreen() {
                                 (e.target as any)?.measureLayout?.(
                                     scrollViewRef.current,
                                     (_x: number, y: number) => scrollToInput(y),
-                                    () => {}
+                                    () => { }
                                 );
                             }}
                         />
@@ -141,7 +141,7 @@ export default function SignUpScreen() {
                                 (e.target as any)?.measureLayout?.(
                                     scrollViewRef.current,
                                     (_x: number, y: number) => scrollToInput(y),
-                                    () => {}
+                                    () => { }
                                 );
                             }}
                         />
@@ -162,7 +162,7 @@ export default function SignUpScreen() {
                                 (e.target as any)?.measureLayout?.(
                                     scrollViewRef.current,
                                     (_x: number, y: number) => scrollToInput(y),
-                                    () => {}
+                                    () => { }
                                 );
                             }}
                         />

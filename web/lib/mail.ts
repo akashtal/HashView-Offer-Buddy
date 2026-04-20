@@ -17,7 +17,7 @@ export const sendEmail = async (options: {
   html?: string;
 }) => {
   const mailOptions = {
-    from: `"${process.env.FROM_EMAIL_NAME || 'Offer Buddy'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+    from: `"${process.env.FROM_EMAIL_NAME || 'offers buddy'}" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
     to: options.email,
     subject: options.subject,
     text: options.message,
@@ -34,7 +34,7 @@ export const sendPasswordResetOTPEmail = async (email: string, otp: string) => {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9eb; border-radius: 8px;">
       <h2 style="color: #111827; margin-bottom: 16px;">Password Reset OTP</h2>
       <p style="color: #4b5563; line-height: 1.5; margin-bottom: 24px;">
-        You are receiving this email because you (or someone else) have requested the reset of the password for your Offer Buddy account.
+        You are receiving this email because you (or someone else) have requested the reset of the password for your offers buddy account.
       </p>
       <div style="text-align: center; margin-bottom: 24px;">
         <div style="background-color: #f3f4f6; color: #111827; padding: 16px; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 6px; display: inline-block; border: 1px solid #e5e7eb;">
@@ -66,7 +66,7 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string) =>
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e9e9eb; rounded: 8px;">
       <h2 style="color: #111827; margin-bottom: 16px;">Password Reset Request</h2>
       <p style="color: #4b5563; line-height: 1.5; margin-bottom: 24px;">
-        You are receiving this email because you (or someone else) have requested the reset of the password for your Offer Buddy account.
+        You are receiving this email because you (or someone else) have requested the reset of the password for your offers buddy account.
       </p>
       <div style="text-align: center; margin-bottom: 24px;">
         <a href="${resetUrl}" style="background-color: #00A651; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">

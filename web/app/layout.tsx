@@ -7,7 +7,7 @@ import RootLayoutClient from '@/components/layout/RootLayoutClient';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Offer Buddy - Discover Local Deals Near You',
+  title: 'offers buddy - Discover Local Deals Near You',
   description:
     'Find the best local deals and offers from nearby shops. Connect with local businesses and save money on products and services in your area.',
   keywords: [
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     'discounts',
     'local business',
   ],
-  authors: [{ name: 'Offer Buddy' }],
+  authors: [{ name: 'offers buddy' }],
   openGraph: {
-    title: 'Offer Buddy - Discover Local Deals Near You',
+    title: 'offers buddy - Discover Local Deals Near You',
     description:
       'Find the best local deals and offers from nearby shops.',
     type: 'website',

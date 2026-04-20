@@ -1,5 +1,5 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -8,6 +8,9 @@ import { useVendorStore } from '@/store/vendorStore';
 import { useChatStore } from '@/store/chatStore';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
+import axios from 'axios';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
 
 // Formatting util map
 const formatCurrency = (amount: number) => {
@@ -34,6 +37,11 @@ export default function VendorDashboardScreen() {
 
     const { tab } = useLocalSearchParams();
     const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'analytics' | 'messages'>('overview');
+    const [isLocked, setIsLocked] = useState(false);
+    const [isUnlocking, setIsUnlocking] = useState(false);
+
+    // Get the stored auth token
+    const token = (useAuthStore.getState() as any).token as string | undefined;
 
     useEffect(() => {
         if (tab && ['overview', 'products', 'analytics', 'messages'].includes(tab as string)) {
@@ -46,8 +54,48 @@ export default function VendorDashboardScreen() {
             router.push('/(tabs)/signin');
             return;
         }
-        fetchMyProfile();
+        fetchMyProfile().then(() => {
+            // Fire heartbeat to update lastActive and read lock state
+            axios.post(
+                `${API_URL}/api/vendors/me/heartbeat`,
+                {},
+                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+            )
+            .then((res) => {
+                if (res.data?.data?.isLocked !== undefined) {
+                    setIsLocked(res.data.data.isLocked);
+                }
+            })
+            .catch(() => {});
+        });
     }, [isAuthenticated, user, fetchMyProfile, router]);
+
+    // Sync isLocked from profile
+    useEffect(() => {
+        if (myVendorProfile) {
+            setIsLocked((myVendorProfile as any).isLocked ?? false);
+        }
+    }, [myVendorProfile]);
+
+    const handleUnlock = useCallback(async () => {
+        setIsUnlocking(true);
+        try {
+            const res = await axios.post(
+                `${API_URL}/api/vendors/me/unlock`,
+                {},
+                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+            );
+            if (res.data?.success) {
+                setIsLocked(false);
+                await fetchMyProfile();
+                Alert.alert('✅ Unlocked', 'Your profile is now visible to customers!');
+            }
+        } catch {
+            Alert.alert('Error', 'Failed to unlock profile. Please try again.');
+        } finally {
+            setIsUnlocking(false);
+        }
+    }, [fetchMyProfile, token]);
 
     useEffect(() => {
         if (error === 'Vendor profile not found' || error?.includes('not found')) {
@@ -159,6 +207,37 @@ export default function VendorDashboardScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* ===== LOCKED BANNER ===== */}
+                {isLocked && (
+                    <View style={styles.lockedBanner}>
+                        <View style={styles.lockedBannerIconRow}>
+                            <View style={styles.lockedIconCircle}>
+                                <Feather name="lock" size={22} color="#DC2626" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.lockedBannerTitle}>⚠️ Profile Locked</Text>
+                                <Text style={styles.lockedBannerSub}>
+                                    Your shop is hidden from customers due to 24h inactivity.
+                                    Tap below to unlock instantly.
+                                </Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            onPress={handleUnlock}
+                            disabled={isUnlocking}
+                            style={[styles.unlockBtn, isUnlocking && styles.unlockBtnDisabled]}
+                        >
+                            <Feather name="unlock" size={16} color="#FFF" />
+                            <Text style={styles.unlockBtnTxt}>
+                                {isUnlocking ? 'Unlocking...' : 'Unlock Profile'}
+                            </Text>
+                        </TouchableOpacity>
+                        <Text style={styles.lockedBannerTip}>
+                            💡 Log in at least once every 24h to stay active.
+                        </Text>
+                    </View>
+                )}
+
                 {/* Approval Warning */}
                 {!myVendorProfile.isApproved && (
                     <View style={styles.warningBox}>
@@ -214,11 +293,19 @@ export default function VendorDashboardScreen() {
                             <View style={styles.card}>
                                 <Text style={styles.cardHeaderTxt}>Quick Actions</Text>
                                 <View style={styles.quickActionsGrid}>
-                                    <TouchableOpacity onPress={() => router.push('/vendor/products/new')} style={styles.qaBtnPrimary}>
+                                    <TouchableOpacity
+                                        onPress={() => !isLocked && router.push('/vendor/products/new')}
+                                        style={[styles.qaBtnPrimary, isLocked && styles.btnDisabled]}
+                                        disabled={isLocked}
+                                    >
                                         <Feather name="plus" size={16} color="#FFF" />
                                         <Text style={styles.qaBtnPrimaryTxt}>Add New Product</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => router.push('/vendor/settings')} style={styles.qaBtnOutline}>
+                                    <TouchableOpacity
+                                        onPress={() => !isLocked && router.push('/vendor/settings')}
+                                        style={[styles.qaBtnOutline, isLocked && styles.btnDisabledOutline]}
+                                        disabled={isLocked}
+                                    >
                                         <Feather name="edit" size={16} color="#4F46E5" />
                                         <Text style={styles.qaBtnOutlineTxt}>Edit Shop Profile</Text>
                                     </TouchableOpacity>
@@ -261,7 +348,11 @@ export default function VendorDashboardScreen() {
                         <View>
                             <View style={styles.prodsHeaderRow}>
                                 <Text style={styles.prodsHeaderTxt}>Your Products</Text>
-                                <TouchableOpacity onPress={() => router.push('/vendor/products/new')} style={styles.headerBtnPrimary}>
+                                <TouchableOpacity
+                                    onPress={() => !isLocked && router.push('/vendor/products/new')}
+                                    style={[styles.headerBtnPrimary, isLocked && styles.btnDisabled]}
+                                    disabled={isLocked}
+                                >
                                     <Feather name="plus" size={14} color="#FFF" style={{ marginRight: 4 }} />
                                     <Text style={styles.headerBtnPrimaryTxt}>Add Product</Text>
                                 </TouchableOpacity>
@@ -417,6 +508,20 @@ const styles = StyleSheet.create({
     scrollContent: { paddingVertical: 16, paddingBottom: 100 },
     warningBox: { backgroundColor: '#FEFCE8', borderWidth: 1, borderColor: '#FEF08A', marginHorizontal: 16, padding: 16, borderRadius: 8, marginBottom: 16 },
     warningTxt: { color: '#854D0E', fontWeight: '500', fontSize: 13, lineHeight: 20 },
+
+    // Locked banner
+    lockedBanner: { backgroundColor: '#FEF2F2', borderWidth: 1.5, borderColor: '#FCA5A5', marginHorizontal: 16, marginBottom: 16, borderRadius: 12, padding: 16 },
+    lockedBannerIconRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 12 },
+    lockedIconCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' },
+    lockedBannerTitle: { fontSize: 15, fontWeight: '700', color: '#991B1B', marginBottom: 3 },
+    lockedBannerSub: { fontSize: 13, color: '#B91C1C', lineHeight: 18 },
+    unlockBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#DC2626', borderRadius: 8, paddingVertical: 12, marginBottom: 8 },
+    unlockBtnDisabled: { backgroundColor: '#F87171' },
+    unlockBtnTxt: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    lockedBannerTip: { fontSize: 11, color: '#EF4444', textAlign: 'center' },
+
+    btnDisabled: { opacity: 0.5 },
+    btnDisabledOutline: { opacity: 0.5 },
 
     statsScrollContent: { paddingHorizontal: 16, paddingBottom: 16 },
     statCard: { width: 180, backgroundColor: '#FFF', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },

@@ -45,6 +45,13 @@ export default function NewProductPage() {
     const [newSubcatName, setNewSubcatName] = useState('');
     const [creatingSubcat, setCreatingSubcat] = useState(false);
 
+    // Category Creation State
+    const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryImage, setNewCategoryImage] = useState('');
+    const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+    const [creatingCategory, setCreatingCategory] = useState(false);
+
     // Auth & Profile Check
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
@@ -127,6 +134,62 @@ export default function NewProductPage() {
             setError(err.message || 'Failed to create subcategory');
         } finally {
             setCreatingSubcat(false);
+        }
+    };
+
+    const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingCategoryImage(true);
+        try {
+            const data = new FormData();
+            data.append('file', file);
+            const res = await fetch('/api/upload', { method: 'POST', body: data });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Upload failed');
+            setNewCategoryImage(result.data.url);
+        } catch (err: any) {
+            setError('Failed to upload category image');
+        } finally {
+            setUploadingCategoryImage(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleCreateCategory = async () => {
+        if (!newCategoryName.trim()) {
+            setError('Please enter a category name');
+            return;
+        }
+        setCreatingCategory(true);
+        setError('');
+        try {
+            const slug = newCategoryName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const token = useAuthStore.getState().token;
+            const response = await fetch('/api/categories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    name: newCategoryName.trim(),
+                    slug,
+                    ...(newCategoryImage ? { image: newCategoryImage } : {}),
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to create category');
+            const newCat = data.data.category;
+            setCategories(prev => [...prev, newCat]);
+            setFormData(prev => ({ ...prev, category: newCat._id }));
+            setNewCategoryName('');
+            setNewCategoryImage('');
+            setShowCreateCategoryModal(false);
+        } catch (err: any) {
+            setError(err.message || 'Failed to create category');
+        } finally {
+            setCreatingCategory(false);
         }
     };
 
@@ -273,11 +336,13 @@ export default function NewProductPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Category
                                     </label>
+                                    {/* Category select + Create button */}
+                                <div className="flex gap-2">
                                     <select
                                         name="category"
                                         value={formData.category}
                                         onChange={handleChange}
-                                        className="input-field w-full"
+                                        className="input-field flex-1"
                                         required
                                     >
                                         <option value="">Select Category</option>
@@ -285,6 +350,16 @@ export default function NewProductPage() {
                                             <option key={cat._id} value={cat._id}>{cat.name}</option>
                                         ))}
                                     </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCreateCategoryModal(true)}
+                                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1 text-sm whitespace-nowrap"
+                                        title="Create new category"
+                                    >
+                                        <FiPlus size={16} />
+                                        <span className="hidden sm:inline">New</span>
+                                    </button>
+                                </div>
                                 </div>
 
                                 {/* Subcategory Section */}
@@ -331,6 +406,95 @@ export default function NewProductPage() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Create Category Modal */}
+                            {showCreateCategoryModal && (
+                                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                                    <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+                                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                            <FiTag className="text-indigo-600" />
+                                            Create New Category
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Category Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={newCategoryName}
+                                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                                    placeholder="e.g. Electronics, Fashion"
+                                                    className="input-field w-full"
+                                                    autoFocus
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
+                                                />
+                                            </div>
+
+                                            {/* Category Image Upload */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Category Image <span className="text-xs text-gray-400">(optional)</span>
+                                                </label>
+                                                {newCategoryImage ? (
+                                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
+                                                        <Image src={newCategoryImage} alt="Category" fill className="object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setNewCategoryImage('')}
+                                                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                                        >
+                                                            <FiX size={20} className="text-white" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <label className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+                                                        {uploadingCategoryImage ? (
+                                                            <span className="text-xs text-gray-400 animate-pulse">...</span>
+                                                        ) : (
+                                                            <>
+                                                                <FiUpload size={18} className="text-gray-400 mb-1" />
+                                                                <span className="text-[10px] text-gray-400 text-center">Upload</span>
+                                                            </>
+                                                        )}
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={handleCategoryImageUpload}
+                                                            className="hidden"
+                                                            disabled={uploadingCategoryImage}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+
+                                            {newCategoryName.trim() && (
+                                                <p className="text-xs text-gray-500">
+                                                    Slug: <span className="font-mono text-indigo-600">{newCategoryName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}</span>
+                                                </p>
+                                            )}
+                                            <div className="flex gap-3 justify-end pt-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => { setShowCreateCategoryModal(false); setNewCategoryName(''); setNewCategoryImage(''); }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="primary"
+                                                    onClick={handleCreateCategory}
+                                                    isLoading={creatingCategory}
+                                                    disabled={!newCategoryName.trim()}
+                                                >
+                                                    Create Category
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Create Subcategory Modal */}
                             {showCreateSubcatModal && (

@@ -86,7 +86,7 @@ export default function SignInScreen() {
             >
                 {/* Logo / Brand */}
                 <View style={styles.brand}>
-                    <Text style={styles.logo}>Offer Buddy</Text>
+                    <Text style={styles.logo}>offers buddy</Text>
                     <Text style={styles.tagline}>Find the best deals near you</Text>
                 </View>
 
@@ -122,7 +122,7 @@ export default function SignInScreen() {
                                 (e.target as any)?.measureLayout?.(
                                     scrollViewRef.current,
                                     (_x: number, y: number) => scrollToInput(y),
-                                    () => {}
+                                    () => { }
                                 );
                             }}
                         />
@@ -143,7 +143,7 @@ export default function SignInScreen() {
                                 (e.target as any)?.measureLayout?.(
                                     scrollViewRef.current,
                                     (_x: number, y: number) => scrollToInput(y),
-                                    () => {}
+                                    () => { }
                                 );
                             }}
                         />

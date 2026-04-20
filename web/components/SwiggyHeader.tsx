@@ -1,14 +1,27 @@
 'use client';
 
 import { MapPin, ChevronDown, Search, MessageCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLocation } from '@/lib/LocationContext';
 import { INDIAN_CITIES } from '@/lib/location-utils';
+import { useChatStore } from '@/store/chatStore';
+import { useAuthStore } from '@/store/authStore';
 
 export default function SwiggyHeader() {
     const { location, setManualLocation } = useLocation();
     const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+    const { unreadCount, fetchUnreadCount } = useChatStore();
+    const { isAuthenticated } = useAuthStore();
+
+    // Fetch unread count on mount and periodically
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUnreadCount();
+            const interval = setInterval(fetchUnreadCount, 30000); // refresh every 30s
+            return () => clearInterval(interval);
+        }
+    }, [isAuthenticated, fetchUnreadCount]);
 
     return (
         <header className="bg-white border-b border-[#E9E9EB] sticky top-0 z-40">
@@ -97,8 +110,19 @@ export default function SwiggyHeader() {
                         <Link href="/signin" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors">
                             Sign In
                         </Link>
-                        <Link href="/chat" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors flex items-center gap-1">
-                            <MessageCircle size={18} />
+                        {/* Chat Button with Unread Badge */}
+                        <Link
+                            href="/chat"
+                            className="relative text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors flex items-center gap-1"
+                        >
+                            <span className="relative">
+                                <MessageCircle size={18} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </span>
                             Messages
                         </Link>
                         <Link href="/cart" className="text-sm font-medium text-[#282C3F] hover:text-[#FD9139] transition-colors flex items-center gap-1">

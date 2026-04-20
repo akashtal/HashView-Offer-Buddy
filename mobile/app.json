@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Offer Buddy",
-    "slug": "Offer Buddy",
+    "name": "Offers Buddy",
+    "slug": "offers buddy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "offer-buddy",
+    "scheme": "offers-buddy",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -28,6 +28,15 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo.png",
+          "color": "#FF6B00",
+          "defaultChannel": "vendor-alerts",
+          "sounds": []
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
@@ -48,6 +57,7 @@
       "eas": {
         "projectId": "9da69e7f-975e-4fb0-944b-52548a0aceda"
       }
-    }
+    },
+    "owner": "offersbuddy"
   }
 }

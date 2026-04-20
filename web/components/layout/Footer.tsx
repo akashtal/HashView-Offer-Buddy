@@ -22,7 +22,7 @@ export default function Footer() {
               <div className="relative w-10 h-10">
                 <Image
                   src="/logo-icon.png"
-                  alt="Offer Buddy"
+                  alt="offers buddy"
                   fill
                   className="object-contain"
                 />
@@ -144,7 +144,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
-          <p>&copy; {currentYear} Offer Buddy. All rights reserved.</p>
+          <p>&copy; {currentYear} offers buddy. All rights reserved.</p>
           <div className="flex justify-center gap-6 mt-2">
             <Link href="/privacy" className="hover:text-primary transition-colors">
               Privacy Policy

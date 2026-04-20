@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +24,7 @@ import Badge from '@/components/ui/Badge';
 import Loading from '@/components/ui/Loading';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
+import LockedBanner from '@/components/vendor/LockedBanner';
 import { formatCurrency } from '@/lib/utils';
 
 // ... existing imports
@@ -47,6 +48,8 @@ function VendorDashboardContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'analytics' | 'messages'>('overview');
+  const [isLocked, setIsLocked] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   useEffect(() => {
     if (tabParam && ['overview', 'products', 'analytics', 'messages'].includes(tabParam)) {
@@ -60,8 +63,41 @@ function VendorDashboardContent() {
       return;
     }
 
-    fetchMyProfile();
+    fetchMyProfile().then(() => {
+      // Fire heartbeat silently after profile loads
+      fetch('/api/vendors/me/heartbeat', { method: 'POST' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.data?.isLocked !== undefined) {
+            setIsLocked(data.data.isLocked);
+          }
+        })
+        .catch(() => {});
+    });
   }, [isAuthenticated, user, fetchMyProfile, router]);
+
+  // Sync isLocked from profile once loaded
+  useEffect(() => {
+    if (myVendorProfile) {
+      setIsLocked((myVendorProfile as any).isLocked ?? false);
+    }
+  }, [myVendorProfile]);
+
+  const handleUnlock = useCallback(async () => {
+    setIsUnlocking(true);
+    try {
+      const res = await fetch('/api/vendors/me/unlock', { method: 'POST' });
+      const data = await res.json();
+      if (data?.success) {
+        setIsLocked(false);
+        await fetchMyProfile();
+      }
+    } catch {
+      // silent
+    } finally {
+      setIsUnlocking(false);
+    }
+  }, [fetchMyProfile]);
 
   useEffect(() => {
     if (error === 'Vendor profile not found' || error?.includes('not found')) {
@@ -157,6 +193,9 @@ function VendorDashboardContent() {
       </div>
 
       <div className="container-custom py-8">
+        {/* Locked Banner */}
+        {isLocked && <LockedBanner onUnlock={handleUnlock} />}
+
         {/* Approval Warning */}
         {!myVendorProfile.isApproved && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -239,14 +278,14 @@ function VendorDashboardContent() {
               </CardHeader>
               <CardBody>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Link href="/vendor/products/new">
-                    <Button variant="primary" fullWidth>
+                  <Link href={isLocked ? '#' : '/vendor/products/new'}>
+                    <Button variant="primary" fullWidth disabled={isLocked}>
                       <FiPlus className="inline mr-2" />
                       Add New Product
                     </Button>
                   </Link>
-                  <Link href="/vendor/settings">
-                    <Button variant="outline" fullWidth>
+                  <Link href={isLocked ? '#' : '/vendor/settings'}>
+                    <Button variant="outline" fullWidth disabled={isLocked}>
                       <FiEdit className="inline mr-2" />
                       Edit Shop Profile
                     </Button>
@@ -311,8 +350,8 @@ function VendorDashboardContent() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-secondary">Your Products</h2>
-              <Link href="/vendor/products/new">
-                <Button variant="primary">
+              <Link href={isLocked ? '#' : '/vendor/products/new'}>
+                <Button variant="primary" disabled={isLocked}>
                   <FiPlus className="inline mr-2" />
                   Add Product
                 </Button>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import axios from 'axios';
 import CategoryCarousel from '@/components/SwiggyComponents/CategoryCarousel';
 import RestaurantCard from '@/components/SwiggyComponents/RestaurantCard';
@@ -157,7 +157,13 @@ export default function ClientHomePage() {
             />
 
             <View style={styles.controlsWrap}>
-                <View style={styles.controlsRow}>
+                {/* Horizontal scroll so Filter button never gets clipped */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.controlsRow}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <RadiusFilter value={radius} onChange={setRadius} />
                     <View style={styles.divider} />
                     <ComprehensiveFilters
@@ -166,7 +172,7 @@ export default function ClientHomePage() {
                         categories={categories}
                         facets={facets}
                     />
-                </View>
+                </ScrollView>
 
                 {(selectedCategory || filters.hasOffer || (filters.rating || 0) > 0 || (filters.minPrice || 0) > 0) && (
                     <FilterChips
@@ -240,9 +246,9 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F9F9F9' },
     loadingState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     headerArea: { paddingBottom: 16 },
-    controlsWrap: { paddingHorizontal: 16, paddingTop: 16, backgroundColor: '#FFF', paddingBottom: 12, borderBottomWidth: 1, borderColor: '#EEE' },
-    controlsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-    divider: { width: 1, height: 20, backgroundColor: '#DDD', marginHorizontal: 10 },
+    controlsWrap: { paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#FFF', paddingBottom: 12, borderBottomWidth: 1, borderColor: '#EEE' },
+    controlsRow: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
+    divider: { width: 1, height: 20, backgroundColor: '#DDD', marginHorizontal: 10, flexShrink: 0 },
 
     sectionHeaderWrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#282C3F' },

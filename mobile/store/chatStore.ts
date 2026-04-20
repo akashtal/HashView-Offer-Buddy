@@ -38,6 +38,7 @@ interface ChatState {
     activeConversationId: string | null;
     messages: Message[];
     isLoading: boolean;
+    unreadCount: number;
 
     fetchConversations: () => Promise<void>;
     setActiveConversation: (conversationId: string | null) => void;
@@ -46,6 +47,7 @@ interface ChatState {
     addMessage: (message: Message) => void;
     updateConversationLocally: (conversationId: string, lastMessage: Message) => void;
     initiateChat: (recipientId: string, recipientModel: 'User' | 'Vendor') => Promise<string>;
+    fetchUnreadCount: () => Promise<void>;
     clearChat: () => void;
 }
 
@@ -54,6 +56,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     activeConversationId: null,
     messages: [],
     isLoading: false,
+    unreadCount: 0,
 
     fetchConversations: async () => {
         try {
@@ -165,11 +168,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     },
 
+    fetchUnreadCount: async () => {
+        try {
+            const token = useAuthStore.getState().token;
+            if (!token) return;
+            const response = await axios.get('/api/chat/messages/unread-count', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            set({ unreadCount: response.data.data?.unreadCount ?? 0 });
+        } catch (error) {
+            console.error('Fetch unread count error:', error);
+        }
+    },
+
     clearChat: () => {
         set({
             conversations: [],
             activeConversationId: null,
             messages: [],
+            unreadCount: 0,
         });
     },
 }));

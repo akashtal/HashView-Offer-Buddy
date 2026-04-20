@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
             query: {
               isActive: true,
               isApproved: true,
+              isLocked: false,
               ...(category && { category: new mongoose.Types.ObjectId(category) })
             }
           }
@@ -97,6 +98,7 @@ export async function GET(request: NextRequest) {
             query: {
               isActive: true,
               isApproved: true,
+              isLocked: false,
               ...(category && { category: new mongoose.Types.ObjectId(category) })
             }
           }
@@ -129,6 +131,7 @@ export async function GET(request: NextRequest) {
       const query: any = {
         isActive: true,
         isApproved: true,
+        isLocked: false,
       };
 
       if (category) {

@@ -11,7 +11,7 @@ export default function AboutPage() {
                     Putting Savings Back in Your Pocket
                 </h1>
                 <p className="text-xl text-gray-600 mb-8">
-                    Offer Buddy was created out of a simple frustration: it&apos;s too hard to find genuinely good deals nearby. We realized that local businesses have great offers, but shoppers waste time and fuel hunting for them.
+                    offers buddy was created out of a simple frustration: it&apos;s too hard to find genuinely good deals nearby. We realized that local businesses have great offers, but shoppers waste time and fuel hunting for them.
                 </p>
             </div>
 
@@ -49,7 +49,7 @@ export default function AboutPage() {
             {/* Closing */}
             <div className="text-center bg-accent-light p-12 rounded-2xl">
                 <h2 className="text-2xl font-bold text-secondary mb-4">
-                    We are Offer Buddy
+                    We are offers buddy
                 </h2>
                 <p className="text-lg text-gray-600">
                     And we&apos;re dedicated to helping you shop smarter, not harder.
