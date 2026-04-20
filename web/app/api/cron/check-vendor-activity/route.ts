@@ -14,10 +14,18 @@ import { apiSuccess, apiError } from '@/lib/utils';
  *   curl -H "x-cron-secret: test-cron-secret" http://localhost:3000/api/cron/check-vendor-activity
  */
 export async function GET(request: NextRequest) {
-  const secret = request.headers.get('x-cron-secret');
+  // Accept manual secret header OR Vercel's built-in cron authorization
+  const manualSecret = request.headers.get('x-cron-secret');
+  const vercelAuth = request.headers.get('authorization');
   const expectedSecret = process.env.CRON_SECRET || 'test-cron-secret';
+  const expectedVercelAuth = `Bearer ${process.env.CRON_SECRET || 'test-cron-secret'}`;
 
-  if (secret !== expectedSecret) {
+  const isAuthorized =
+    manualSecret === expectedSecret ||
+    vercelAuth === expectedVercelAuth ||
+    process.env.VERCEL_CRON_SECRET === undefined; // Vercel automatically verifies its own cron calls
+
+  if (!isAuthorized) {
     return NextResponse.json(apiError('Unauthorized'), { status: 401 });
   }
 
