@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Offers Buddy",
-    "slug": "offers buddy",
+    "slug": "offer-buddy-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -55,9 +55,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9da69e7f-975e-4fb0-944b-52548a0aceda"
+        "projectId": "b7d9c2c8-1ec1-46f1-a888-05b5f2f9a098"
       }
     },
-    "owner": "offersbuddy"
+    "owner": "hashview"
   }
 }

@@ -10,13 +10,15 @@ import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import { useWebPush } from '@/hooks/useWebPush';
 
 export default function RootLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = ['/signin', '/signup'].includes(pathname);
   const isChatPage = pathname.startsWith('/chat');
   const isAdminPage = pathname.startsWith('/admin');
-  const { token, fetchUser } = useAuthStore();
+  const { token, isAuthenticated, fetchUser } = useAuthStore();
+  const { registerAndSubscribe } = useWebPush(token);
 
   useEffect(() => {
     if (token) {
@@ -25,6 +27,13 @@ export default function RootLayoutClient({ children }: { children: ReactNode }) 
       fetchUser();
     }
   }, [token, fetchUser]);
+
+  // Request Web Push Permission & Sync Token when authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      registerAndSubscribe();
+    }
+  }, [isAuthenticated, token, registerAndSubscribe]);
 
   return (
     <LocationProvider>

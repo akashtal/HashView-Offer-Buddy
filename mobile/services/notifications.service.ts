@@ -29,8 +29,7 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotifications(): Promise<string | null> {
   // Push notifications don't work on web or simulators — only real devices
   if (!Device.isDevice) {
-    console.log('[Notifications] Not a real device. Skipping push token registration.');
-    return null;
+    console.warn('[Notifications] Not a real device. Push notifications may not work.');
   }
 
   // Check current permission status
@@ -44,7 +43,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('[Notifications] Push notification permission denied.');
+    console.warn('[Notifications] Push notification permission denied.');
     return null;
   }
 
@@ -67,8 +66,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-  return tokenData.data; // e.g. "ExponentPushToken[xxxxxx]"
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    return tokenData.data; // e.g. "ExponentPushToken[xxxxxx]"
+  } catch (error) {
+    console.error('[Notifications] Error getting Expo push token:', error);
+    if (!Device.isDevice) {
+      console.warn('⚠️ Must use physical device for Push Notifications');
+    }
+    return null;
+  }
 }
 
 /**
