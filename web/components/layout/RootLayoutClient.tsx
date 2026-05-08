@@ -18,7 +18,7 @@ export default function RootLayoutClient({ children }: { children: ReactNode }) 
   const isChatPage = pathname.startsWith('/chat');
   const isAdminPage = pathname.startsWith('/admin');
   const { token, isAuthenticated, fetchUser } = useAuthStore();
-  const { registerAndSubscribe } = useWebPush(token);
+  const { permission, registerAndSubscribe } = useWebPush(token);
 
   useEffect(() => {
     if (token) {
@@ -28,16 +28,29 @@ export default function RootLayoutClient({ children }: { children: ReactNode }) 
     }
   }, [token, fetchUser]);
 
-  // Request Web Push Permission & Sync Token when authenticated
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      registerAndSubscribe();
-    }
-  }, [isAuthenticated, token, registerAndSubscribe]);
+  // Removed the automatic useEffect call to registerAndSubscribe()
+  // because mobile browsers block it without a user gesture.
 
   return (
     <LocationProvider>
       {!isAdminPage && <Header />}
+
+      {/* Push Notification Banner for Mobile browsers */}
+      {!isAdminPage && permission === 'default' && (
+        <div className="bg-[#FFF8E7] border-b border-[#FDB913] px-4 py-3 flex justify-between items-center z-50 shadow-sm relative">
+          <div className="flex-1 pr-4">
+            <p className="text-sm font-semibold text-[#B45309]">Enable Notifications</p>
+            <p className="text-xs text-gray-600 mt-0.5">Get instant alerts for the best local offers</p>
+          </div>
+          <button
+            onClick={() => registerAndSubscribe()}
+            className="whitespace-nowrap bg-[#FDB913] hover:bg-[#E5A600] text-black text-xs font-bold px-4 py-2 rounded-full transition-all active:scale-95 shadow-sm"
+          >
+            Enable Now
+          </button>
+        </div>
+      )}
+
       <main className={`flex-1 ${!isAdminPage && !isChatPage ? 'pb-16 md:pb-0' : ''}`}>{children}</main>
       {!isAdminPage && (
         <div className="hidden md:block">

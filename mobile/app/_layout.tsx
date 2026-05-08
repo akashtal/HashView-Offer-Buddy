@@ -34,10 +34,13 @@ export default function RootLayout() {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    if (appReady && isAuthenticated && token) {
+    if (appReady) {
       (async () => {
+        // Request permissions immediately on app launch, regardless of login state
         const pushToken = await registerForPushNotifications();
-        if (pushToken) {
+        
+        // Only sync to backend if user is authenticated
+        if (pushToken && isAuthenticated && token) {
           await syncPushTokenWithBackend(pushToken, token);
         }
       })();

@@ -33,11 +33,11 @@ export default function ComprehensiveFilters({ onApplyFilters, currentFilters = 
     const activeFiltersCount = Object.keys(currentFilters).filter(key => {
         const k = key as keyof FilterOptions;
         const value = currentFilters[k];
-        if (k === 'sortBy' && value === 'distance') return false;
+        if (k === 'sortBy') return false;
         if (k === 'minPrice' && (!value || value === 0)) return false;
         if (k === 'maxPrice' && (!value || value === 50000)) return false;
         if (k === 'query') return false;
-        return value !== undefined && value !== 0 && value !== false;
+        return value !== undefined && value !== 0 && value !== false && value !== '';
     }).length;
 
     return (

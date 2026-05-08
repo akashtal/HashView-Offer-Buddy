@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 // Utility to convert Base64 VAPID key to Uint8Array required by pushManager
@@ -24,7 +24,7 @@ export function useWebPush(authToken?: string | null) {
     }
   }, []);
 
-  const registerAndSubscribe = async () => {
+  const registerAndSubscribe = useCallback(async () => {
     if (!isSupported) {
       console.log('[WebPush] Push notifications are not supported in this browser.');
       return null;
@@ -83,7 +83,7 @@ export function useWebPush(authToken?: string | null) {
       console.error('[WebPush] Failed to register push:', error);
       return null;
     }
-  };
+  }, [isSupported, authToken]);
 
   return { isSupported, permission, registerAndSubscribe };
 }
