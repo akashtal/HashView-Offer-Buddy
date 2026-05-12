@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 import './Category'; // Ensure Category model is registered
 import './VendorSubcategory'; // Ensure VendorSubcategory model is registered
 import './Store'; // Ensure Store model is registered
+import './AiStyle'; // Ensure AiStyle model is registered
 
 export interface IProduct extends Document {
   _id: mongoose.Types.ObjectId;
@@ -42,6 +43,15 @@ export interface IProduct extends Document {
       count: number;
     }[];
   };
+  aiGallery?: {
+    originalUrl: string;
+    enhancedUrl: string;
+    styleId?: mongoose.Types.ObjectId;
+    customBackgroundUrl?: string;
+    status: 'pending' | 'processing' | 'done' | 'failed';
+    predictionId?: string;
+    createdAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -155,6 +165,21 @@ const ProductSchema = new Schema<IProduct>(
         },
       ],
     },
+    aiGallery: [
+      {
+        originalUrl: { type: String, required: true },
+        enhancedUrl: { type: String, default: '' },
+        styleId: { type: Schema.Types.ObjectId, ref: 'AiStyle', default: null },
+        customBackgroundUrl: { type: String, default: null },
+        status: {
+          type: String,
+          enum: ['pending', 'processing', 'done', 'failed'],
+          default: 'pending',
+        },
+        predictionId: { type: String, default: null },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

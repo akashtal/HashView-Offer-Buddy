@@ -1,21 +1,23 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
 import axios from 'axios';
+import { Alert } from 'react-native';
 
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
-import { Modal, Alert } from 'react-native';
+import { Modal } from 'react-native';
 
 export default function VendorProductCreateScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const { user, isAuthenticated } = useAuthStore();
     const { myVendorProfile, fetchMyProfile } = useVendorStore();
 
@@ -52,6 +54,14 @@ export default function VendorProductCreateScreen() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // If we come back from the AI enhance screen with an enhanced image, add it
+    useEffect(() => {
+        const aiUrl = params.aiEnhancedUrl as string;
+        if (aiUrl) {
+            setImages(prev => prev.includes(aiUrl) ? prev : [aiUrl, ...prev]);
+        }
+    }, [params.aiEnhancedUrl]);
 
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
@@ -456,6 +466,32 @@ export default function VendorProductCreateScreen() {
                                     </TouchableOpacity>
                                 )}
                             </View>
+
+                            {/* AI Enhance Banner */}
+                            {images.length > 0 && (
+                                <TouchableOpacity
+                                    style={styles.aiEnhanceBanner}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: '/vendor/products/ai-enhance',
+                                            params: {
+                                                imageUrl: images[0],
+                                                productId: 'preview',
+                                                productName: formData.title || 'product',
+                                            },
+                                        } as any)
+                                    }
+                                >
+                                    <View style={styles.aiEnhanceBannerLeft}>
+                                        <Text style={styles.aiEnhanceBannerIcon}>✨</Text>
+                                        <View>
+                                            <Text style={styles.aiEnhanceBannerTitle}>Enhance with AI</Text>
+                                            <Text style={styles.aiEnhanceBannerSub}>Transform into pro e-commerce photos</Text>
+                                        </View>
+                                    </View>
+                                    <Feather name="chevron-right" size={18} color="#7C3AED" />
+                                </TouchableOpacity>
+                            )}
                         </CardBody>
                     </Card>
 
@@ -586,6 +622,23 @@ const styles = StyleSheet.create({
 
     discountArea: { marginTop: 8, paddingLeft: 12, borderLeftWidth: 2, borderColor: '#002B4E', gap: 16 },
     offerDetailsBox: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 8, marginTop: 8 },
+
+    // AI Enhance banner
+    aiEnhanceBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 14,
+        backgroundColor: '#F5F3FF',
+        borderRadius: 10,
+        padding: 12,
+        borderWidth: 1.5,
+        borderColor: '#DDD6FE',
+    },
+    aiEnhanceBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    aiEnhanceBannerIcon: { fontSize: 24 },
+    aiEnhanceBannerTitle: { fontSize: 13, fontWeight: '700', color: '#4C1D95' },
+    aiEnhanceBannerSub: { fontSize: 11, color: '#7C3AED', marginTop: 1 },
 
     imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
     imgWrapper: { width: 70, height: 70, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', position: 'relative' },

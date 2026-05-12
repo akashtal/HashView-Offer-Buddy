@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiEdit2, FiTrash2, FiPackage, FiPlus, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPackage, FiPlus, FiEye, FiEyeOff, FiZap } from 'react-icons/fi';
 
 interface VendorProductsClientProps {
     initialProducts: any[];
@@ -194,6 +194,13 @@ export default function VendorProductsClient({
                                                     >
                                                         {product.isActive ? <FiEyeOff size={16} /> : <FiEye size={16} />}
                                                     </button>
+                                                    <Link
+                                                        href={`/vendor/products/${product._id}/ai-enhance`}
+                                                        className="p-2 text-gray-400 hover:text-purple-600"
+                                                        title="AI Enhance"
+                                                    >
+                                                        <FiZap size={16} />
+                                                    </Link>
                                                     <Link
                                                         href={`/vendor/products/${product._id}/edit`}
                                                         className="p-2 text-gray-400 hover:text-primary"

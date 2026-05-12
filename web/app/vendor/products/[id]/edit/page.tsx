@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useVendorStore } from '@/store/vendorStore';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import axios from 'axios';
-import { FiPackage, FiImage, FiTag, FiUpload, FiX } from 'react-icons/fi';
+import { FiPackage, FiImage, FiTag, FiUpload, FiX, FiZap } from 'react-icons/fi';
 import { FaIndianRupeeSign } from 'react-icons/fa6';
 import Loading from '@/components/ui/Loading';
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage() {
     const router = useRouter();
+    const params = useParams();
+    const productId = params.id as string;
     const { user, isAuthenticated } = useAuthStore();
     const { myVendorProfile, fetchMyProfile } = useVendorStore();
 
@@ -54,7 +56,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             try {
                 const [categoriesRes, productRes] = await Promise.all([
                     axios.get('/api/categories?parentOnly=true'),
-                    axios.get(`/api/products/${params.id}`)
+                    axios.get(`/api/products/${productId}`)
                 ]);
 
                 setCategories(categoriesRes.data.data.categories);
@@ -84,10 +86,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             }
         };
 
-        if (isAuthenticated) {
+        if (isAuthenticated && productId) {
             loadData();
         }
-    }, [params.id, isAuthenticated]);
+    }, [productId, isAuthenticated]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -179,7 +181,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             // Note: For full offer removal support, backend might need adjustment or specific payload.
             // For MVP edit, we update what's there.
 
-            await axios.put(`/api/products/${params.id}`, payload);
+            await axios.put(`/api/products/${productId}`, payload);
             router.push('/vendor/dashboard');
             router.refresh();
 
@@ -379,6 +381,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                 </div>
                             </div>
 
+                            {/* AI Enhance Banner */}
+                            {images.length > 0 && (
+                                <a
+                                    href={`/vendor/products/${productId}/ai-enhance`}
+                                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-xl hover:from-purple-100 hover:to-violet-100 transition-all group"
+                                >
+                                    <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                        <FiZap className="text-white w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-purple-900 text-sm">✨ Enhance with AI</p>
+                                        <p className="text-purple-600 text-xs">Transform your product photo into a professional e-commerce image</p>
+                                    </div>
+                                    <span className="text-purple-400 text-sm font-medium">Open Studio →</span>
+                                </a>
+                            )}
                             <div className="pt-4 flex gap-4 justify-end">
                                 <Button
                                     type="button"

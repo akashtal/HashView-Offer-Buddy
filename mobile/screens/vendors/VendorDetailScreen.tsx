@@ -211,8 +211,12 @@ export default function VendorDetailScreen() {
                     const catRes = await axios.get('/api/categories?parentOnly=true');
                     setCategories(catRes.data.data?.categories || []);
                 } catch { }
-            } catch (error) {
-                console.error('Failed to load vendor:', error);
+            } catch (error: any) {
+                if (error.response?.status === 404) {
+                    console.log('Vendor profile is locked or not found.');
+                } else {
+                    console.error('Failed to load vendor:', error);
+                }
             } finally {
                 setIsLoading(false);
             }

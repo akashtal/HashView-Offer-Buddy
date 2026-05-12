@@ -1,0 +1,8 @@
+# Antigravity agents output
+.agents/
+
+# Graphify tool output
+graphify-out/
+graphify.js
+detect_dead_code.js
+.env

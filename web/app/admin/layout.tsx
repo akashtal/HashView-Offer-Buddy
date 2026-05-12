@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
-import { FiUsers, FiShoppingBag, FiPackage, FiGrid, FiBarChart2, FiLogOut } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiPackage, FiGrid, FiBarChart2, FiLogOut, FiZap } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import Loading from '@/components/ui/Loading';
 
@@ -33,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: 'Products', href: '/admin/products', icon: FiPackage },
         { name: 'Categories', href: '/admin/categories', icon: FiGrid },
         { name: 'Users', href: '/admin/users', icon: FiUsers },
+        { name: 'AI Styles', href: '/admin/ai-styles', icon: FiZap },
     ];
 
     const isActive = (href: string) => pathname === href;

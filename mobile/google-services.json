@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "872267935966",
+    "project_id": "offersbuddy-12954",
+    "storage_bucket": "offersbuddy-12954.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872267935966:android:4908a2346a14a1ef00124f",
+        "android_client_info": {
+          "package_name": "com.offersbuddy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7ri5M5iGhYlIvUtRrR1XluIGTCSSquLY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
