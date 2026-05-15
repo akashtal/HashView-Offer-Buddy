@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as EnhanceRequest;
-    const { productId, imageUrl, mode, styleId, customSceneUrl, productName } = body;
+    const {
+      productId,
+      imageUrl,
+      mode,
+      styleId,
+      customSceneUrl,
+      productName,
+      vendorModelReferenceUrl,
+      generationQuality,
+      vendorPreferences,
+      lightingType,
+    } = body;
 
     // Validate input
     if (!productId || !imageUrl || !mode) {
@@ -40,19 +51,30 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (mode === 'style' && !styleId) {
-      return NextResponse.json(apiError('styleId is required when mode is "style"'), { status: 400 });
+    if (generationQuality && !['preview', 'premium'].includes(generationQuality)) {
+      return NextResponse.json(apiError('generationQuality must be "preview" or "premium"'), { status: 400 });
     }
-    if (mode === 'custom-scene' && !customSceneUrl) {
+    if (mode === 'custom-scene' && !customSceneUrl && !vendorModelReferenceUrl) {
       return NextResponse.json(
-        apiError('customSceneUrl is required when mode is "custom-scene"'),
+        apiError('customSceneUrl or vendorModelReferenceUrl is required when mode is "custom-scene"'),
         { status: 400 }
       );
     }
 
     // Run the AI pipeline (asynchronous — returns predictionId immediately)
     const result = await enhanceProductImage(
-      { productId, imageUrl, mode, styleId, customSceneUrl, productName },
+      {
+        productId,
+        imageUrl,
+        mode,
+        styleId,
+        customSceneUrl,
+        productName,
+        vendorModelReferenceUrl,
+        generationQuality,
+        vendorPreferences,
+        lightingType,
+      },
       user.userId
     );
 

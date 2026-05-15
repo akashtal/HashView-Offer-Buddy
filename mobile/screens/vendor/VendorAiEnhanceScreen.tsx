@@ -198,8 +198,33 @@ export default function VendorAiEnhanceScreen() {
         timeout: 120_000,
       });
 
-      setEnhancedUrl(res.data.data.enhancedUrl);
-      setShowAfter(true);
+      const immediateUrl = res.data.data.enhancedUrl;
+      if (immediateUrl) {
+        setEnhancedUrl(immediateUrl);
+        setShowAfter(true);
+        return;
+      }
+
+      const entryId = res.data.data.aiGalleryEntryId;
+      if (!entryId) throw new Error('No enhancement job returned from server');
+
+      const maxPolls = 50;
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise(resolve => setTimeout(resolve, 4000));
+        const statusRes = await axios.get(
+          `/api/vendor/products/ai-enhance/status?productId=${productId}&entryId=${entryId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const { status, enhancedUrl: doneUrl } = statusRes.data.data;
+        if (status === 'done' && doneUrl) {
+          setEnhancedUrl(doneUrl);
+          setShowAfter(true);
+          return;
+        }
+        if (status === 'failed') throw new Error('AI generation failed. Please try another style.');
+      }
+
+      throw new Error('AI processing timed out. Please try again.');
     } catch (err: any) {
       Alert.alert(
         'Enhancement failed',

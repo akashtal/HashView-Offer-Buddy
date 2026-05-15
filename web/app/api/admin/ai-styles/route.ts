@@ -39,7 +39,18 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, promptTemplate, negativePrompt, thumbnailUrl, isActive } = body;
+    const {
+      name,
+      promptTemplate,
+      negativePrompt,
+      thumbnailUrl,
+      isActive,
+      lightingConfig,
+      sceneType,
+      compositionRules,
+      categoryCompatibility,
+      generationTier,
+    } = body;
 
     if (!name || !promptTemplate) {
       return NextResponse.json(apiError('name and promptTemplate are required'), { status: 400 });
@@ -58,6 +69,11 @@ export async function POST(request: NextRequest) {
       promptTemplate: promptTemplate.trim(),
       negativePrompt: negativePrompt?.trim() || '',
       thumbnailUrl: thumbnailUrl || '',
+      lightingConfig: lightingConfig || {},
+      sceneType: sceneType || '',
+      compositionRules: compositionRules || {},
+      categoryCompatibility: Array.isArray(categoryCompatibility) ? categoryCompatibility : [],
+      generationTier: generationTier === 'premium' ? 'premium' : 'preview',
       isActive: isActive !== false,
     });
 

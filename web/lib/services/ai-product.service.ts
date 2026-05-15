@@ -13,6 +13,13 @@ import sharp from 'sharp';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 import AiStyle from '@/models/AiStyle';
+import { analyzeProductImage } from '@/lib/services/ai-photography/product-understanding.service';
+import { buildScenePrompt } from '@/lib/services/ai-photography/prompt-engine.service';
+import { buildCompositionPlan, prepareProductLayer } from '@/lib/services/ai-photography/composition.engine';
+import { generateShadowLayer } from '@/lib/services/ai-photography/shadow.service';
+import { relightProductImage } from '@/lib/services/ai-photography/relighting.service';
+import { getCachedBackground, setCachedBackground } from '@/lib/services/ai-photography/background-cache.service';
+import type { AiPhotographyMetadata, CompositionPlan, GenerationQuality, ProductUnderstanding, ScenePrompt } from '@/lib/services/ai-photography/types';
 
 // ── Cloudinary setup ──────────────────────────────────────────────
 cloudinary.config({
@@ -38,6 +45,10 @@ export interface EnhanceRequest {
   styleId?: string;           // if mode === 'style'
   customSceneUrl?: string;    // if mode === 'custom-scene' (Cloudinary URL)
   productName?: string;       // used to personalise the prompt
+  vendorModelReferenceUrl?: string;
+  generationQuality?: GenerationQuality;
+  vendorPreferences?: string;
+  lightingType?: string;
 }
 
 export interface EnhanceResult {
@@ -133,30 +144,39 @@ function extractPublicId(cloudinaryUrl: string): string {
 // This guarantees 100% product preservation — the product image is never
 // passed to any AI model, so it cannot be replaced or distorted.
 // ─────────────────────────────────────────────────────────────────
-async function generateBackgroundAsync(
-  promptTemplate: string,
-  productName: string
-): Promise<string> {
-  const product = productName || 'product';
-  const styleDescription = promptTemplate.replace(/\{product\}/gi, product);
+async function generateBackgroundAsync(scenePrompt: ScenePrompt): Promise<string> {
+  const isPremium = scenePrompt.quality === 'premium';
+  const model = isPremium
+    ? (process.env.REPLICATE_PREMIUM_MODEL || 'black-forest-labs/flux-dev')
+    : (process.env.REPLICATE_PREVIEW_MODEL || 'black-forest-labs/flux-schnell');
 
-  const prompt =
-    `Professional product photography background scene. ${styleDescription}. ` +
-    `Empty scene with no products and no people — only the environment, ` +
-    `background surface, lighting setup, and atmosphere. High quality, 4K, photorealistic.`;
+  // IMPORTANT: Flux Schnell (preview) does NOT support negative_prompt.
+  // It is a 4-step distilled model that silently ignores negative_prompt.
+  // Product suppression for Schnell is handled entirely inside the affirmative prompt.
+  // Flux Dev (premium) supports negative_prompt; use it as secondary reinforcement.
+  const input: Record<string, unknown> = {
+    prompt: scenePrompt.prompt,
+    num_outputs: 1,
+    aspect_ratio: '1:1',
+    output_format: 'webp',
+    output_quality: isPremium ? 95 : 90,
+    go_fast: false, // always off: faster inference degrades instruction-following
+  };
+
+  if (isPremium && scenePrompt.negativePrompt) {
+    input.negative_prompt = scenePrompt.negativePrompt;
+    input.guidance = 3.5; // Flux Dev: increase prompt adherence
+    input.num_inference_steps = 28;
+  } else {
+    // Flux Schnell: 4 steps default — leave num_inference_steps unset
+    input.num_inference_steps = 4;
+  }
+
+  console.log(`[AI] Background generation — model: ${model.split('/').pop()}, quality: ${scenePrompt.quality}`);
+  console.log(`[AI] Prompt (first 200 chars): ${scenePrompt.prompt.slice(0, 200)}`);
 
   const prediction = await retryWithBackoff(() =>
-    replicate.predictions.create({
-      model: 'black-forest-labs/flux-schnell',
-      input: {
-        prompt,
-        num_outputs: 1,
-        aspect_ratio: '1:1',
-        output_format: 'webp',
-        output_quality: 90,
-        go_fast: true,
-      },
-    })
+    replicate.predictions.create({ model, input })
   );
 
   return prediction.id;
@@ -170,10 +190,37 @@ async function generateBackgroundAsync(
 async function compositeProductOnBackground(
   cutoutProduct: string | Buffer,   // transparent PNG: URL or Buffer from local bg-removal
   backgroundImageUrl: string,
-  vendorId: string
+  vendorId: string,
+  metadata?: Pick<AiPhotographyMetadata, 'lightingProfile' | 'composition' | 'productUnderstanding'>
 ): Promise<string> {
   const CANVAS = 1024;
-  const PRODUCT_SIZE = 820;
+  const fallbackUnderstanding: ProductUnderstanding = {
+    category: 'generic',
+    subcategory: 'product',
+    material: 'unknown',
+    orientation: 'square',
+    dominantColor: '#808080',
+    style: 'marketplace commercial',
+    sceneType: 'clean premium studio',
+    composition: 'centered product hero',
+    confidence: 0.3,
+    source: 'heuristic',
+  };
+  const understanding = metadata?.productUnderstanding || fallbackUnderstanding;
+  const plan = metadata?.composition || buildCompositionPlan({
+    category: understanding.category,
+    orientation: understanding.orientation,
+    canvasSize: CANVAS,
+  });
+  const lightingProfile = metadata?.lightingProfile || {
+    name: 'balanced ecommerce studio',
+    direction: 'front' as const,
+    temperature: 'neutral' as const,
+    brightness: 1.04,
+    contrast: 1.05,
+    shadowOpacity: 0.25,
+    shadowBlur: 30,
+  };
 
   console.log(`[AI] Downloading images for compositing...`);
   const [bgBuffer, productBuffer] = await Promise.all([
@@ -190,19 +237,28 @@ async function compositeProductOnBackground(
     .toBuffer();
 
   // Resize product — keep alpha (transparency)
-  const productResized = await sharp(productBuffer)
-    .resize(PRODUCT_SIZE, PRODUCT_SIZE, { fit: 'inside' })
-    .ensureAlpha()
-    .png()
-    .toBuffer();
-
-  const { width: pw = PRODUCT_SIZE, height: ph = PRODUCT_SIZE } = await sharp(productResized).metadata();
-  const left = Math.round((CANVAS - pw) / 2);
-  const top  = Math.round((CANVAS - ph) / 2);
+  const relitProduct = await relightProductImage({
+    productBuffer,
+    lighting: lightingProfile,
+    understanding,
+  });
+  const productLayer = await prepareProductLayer(relitProduct, plan as CompositionPlan);
+  const shadowLayer = await generateShadowLayer({
+    productLayer: productLayer.buffer,
+    productWidth: productLayer.width,
+    productHeight: productLayer.height,
+    productLeft: productLayer.left,
+    productTop: productLayer.top,
+    plan,
+    lighting: lightingProfile,
+  });
 
   // Composite and force fully opaque output (no checkerboard in browsers)
   const compositeBuffer = await sharp(bgResized)
-    .composite([{ input: productResized, left, top, blend: 'over' }])
+    .composite([
+      { input: shadowLayer.input, left: shadowLayer.left, top: shadowLayer.top, blend: 'over' },
+      { input: productLayer.buffer, left: productLayer.left, top: productLayer.top, blend: 'over' },
+    ])
     .removeAlpha()
     .webp({ quality: 92 })
     .toBuffer();
@@ -226,9 +282,10 @@ async function compositeProductOnBackground(
 async function compositeWithCustomSceneAsync(
   cutoutProduct: string | Buffer,
   customSceneUrl: string,
-  vendorId: string
+  vendorId: string,
+  metadata?: Pick<AiPhotographyMetadata, 'lightingProfile' | 'composition' | 'productUnderstanding'>
 ): Promise<string> {
-  return compositeProductOnBackground(cutoutProduct, customSceneUrl, vendorId);
+  return compositeProductOnBackground(cutoutProduct, customSceneUrl, vendorId, metadata);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -262,12 +319,30 @@ export async function enhanceProductImage(
   vendorId: string
 ): Promise<{ aiGalleryEntryId?: string; predictionId: string; enhancedUrl?: string }> {
 
-  const { productId, imageUrl, mode, styleId, customSceneUrl, productName } = request;
+  const {
+    productId,
+    imageUrl,
+    mode,
+    styleId,
+    customSceneUrl,
+    productName,
+    vendorModelReferenceUrl,
+    generationQuality = 'preview',
+    vendorPreferences,
+    lightingType,
+  } = request;
   const isPreview = !productId || productId === 'preview';
 
   // Step 1: Upload original product to Cloudinary for permanent URL
   console.log(`[AI] Uploading product image...`);
   const uploadedProductUrl = await uploadProductImage(imageUrl);
+  const originalBuffer = await fetchBuffer(uploadedProductUrl);
+  const productUnderstanding = await analyzeProductImage({
+    imageBuffer: originalBuffer,
+    imageUrl: uploadedProductUrl,
+    productName,
+  });
+  console.log(`[AI] Product understood as ${productUnderstanding.category}/${productUnderstanding.subcategory} (${productUnderstanding.source}).`);
 
   // Step 1b: Remove background LOCALLY using ONNX model — no external API
   let cutoutProduct: string | Buffer = uploadedProductUrl; // fallback = original URL
@@ -277,42 +352,105 @@ export async function enhanceProductImage(
     console.warn('[AI] Local BG removal failed, using original image:', err);
   }
 
+  await connectDB();
+  const style = styleId ? await AiStyle.findById(styleId) : await AiStyle.findOne({
+    isActive: true,
+    $or: [
+      { categoryCompatibility: productUnderstanding.category },
+      { categoryCompatibility: { $size: 0 } },
+      { categoryCompatibility: { $exists: false } },
+    ],
+  }).sort({ createdAt: 1 });
+
+  const scenePrompt = buildScenePrompt({
+    productName,
+    understanding: productUnderstanding,
+    style,
+    quality: generationQuality,
+    vendorPreferences,
+    lightingType,
+  });
+  const composition = buildCompositionPlan({
+    category: productUnderstanding.category,
+    orientation: productUnderstanding.orientation,
+    styleRules: style?.compositionRules as any,
+  });
+  const aiMetadata: AiPhotographyMetadata = {
+    category: productUnderstanding.category,
+    subcategory: productUnderstanding.subcategory,
+    material: productUnderstanding.material,
+    orientation: productUnderstanding.orientation,
+    dominantColor: productUnderstanding.dominantColor,
+    sceneType: scenePrompt.sceneType,
+    lightingProfile: scenePrompt.lightingProfile,
+    composition,
+    prompt: scenePrompt.prompt,
+    negativePrompt: scenePrompt.negativePrompt,
+    generationQuality,
+    productUnderstanding,
+    vendorModelReference: vendorModelReferenceUrl || null,
+    workflow: vendorModelReferenceUrl
+      ? 'virtual-try-on-reference'
+      : mode === 'custom-scene'
+        ? 'custom-scene-composite'
+        : 'product-scene-composite',
+  };
+
   // Step 2: Generate background with flux-schnell OR composite for custom-scene
   let predictionId: string;
 
   if (mode === 'custom-scene') {
-    if (!customSceneUrl) throw new Error('customSceneUrl is required for custom-scene mode');
+    const sceneUrl = customSceneUrl || vendorModelReferenceUrl;
+    if (!sceneUrl) throw new Error('customSceneUrl is required for custom-scene mode');
     console.log(`[AI] Compositing product on custom scene...`);
-    const enhancedUrl = await compositeWithCustomSceneAsync(cutoutProduct, customSceneUrl, vendorId);
+    const enhancedUrl = await compositeWithCustomSceneAsync(cutoutProduct, sceneUrl, vendorId, {
+      lightingProfile: aiMetadata.lightingProfile,
+      composition: aiMetadata.composition,
+      productUnderstanding,
+    });
     if (isPreview) return { predictionId: 'cloudinary-composite', enhancedUrl };
-    await connectDB();
     const prod = await Product.findById(productId);
     if (!prod) throw new Error('Product not found');
-    const entry = { originalUrl: uploadedProductUrl, enhancedUrl, status: 'done', predictionId: 'cloudinary-composite', styleId: styleId || '', createdAt: new Date() };
+    const entry = {
+      originalUrl: uploadedProductUrl,
+      enhancedUrl,
+      status: 'done',
+      predictionId: 'cloudinary-composite',
+      styleId: style?._id || null,
+      customBackgroundUrl: sceneUrl,
+      metadata: aiMetadata,
+      category: productUnderstanding.category,
+      sceneType: aiMetadata.sceneType,
+      lightingProfile: aiMetadata.lightingProfile,
+      vendorModelReference: vendorModelReferenceUrl || null,
+      createdAt: new Date(),
+    };
     prod.aiGallery = [...(prod.aiGallery || []), entry as any];
     await prod.save();
     return { aiGalleryEntryId: String((prod.aiGallery as any[]).length - 1), predictionId: 'cloudinary-composite', enhancedUrl };
   } else {
-    if (!styleId) throw new Error('styleId is required for style mode');
-    await connectDB();
-    const style = await AiStyle.findById(styleId);
-    if (!style) throw new Error('AI Style not found');
-    console.log(`[AI] Generating background for style "${style.name}" with flux-schnell...`);
-    predictionId = await generateBackgroundAsync(
-      style.promptTemplate,
-      productName || 'product'
-    );
+    if (styleId && !style) throw new Error('AI Style not found');
+    const cachedBackgroundUrl = getCachedBackground(scenePrompt.cacheKey);
+    if (cachedBackgroundUrl && isPreview) {
+      const enhancedUrl = await compositeProductOnBackground(cutoutProduct, cachedBackgroundUrl, vendorId, {
+        lightingProfile: aiMetadata.lightingProfile,
+        composition: aiMetadata.composition,
+        productUnderstanding,
+      });
+      return { predictionId: 'cached-background', enhancedUrl };
+    }
+    console.log(`[AI] Generating ${generationQuality} background for style "${scenePrompt.styleName}"...`);
+    predictionId = await generateBackgroundAsync(scenePrompt);
   }
 
   // Preview mode: poll Replicate synchronously, then composite and return URL
   if (isPreview) {
     console.log(`[AI] Preview mode — polling for result...`);
-    const enhancedUrl = await pollUntilDone(predictionId, cutoutProduct, vendorId);
+    const enhancedUrl = await pollUntilDone(predictionId, cutoutProduct, vendorId, aiMetadata, scenePrompt.cacheKey);
     return { predictionId, enhancedUrl };
   }
 
   // Real product: save pending entry in aiGallery
-  await connectDB();
   const product = await Product.findById(productId);
   if (!product) throw new Error('Product not found');
 
@@ -324,6 +462,11 @@ export async function enhanceProductImage(
     customBackgroundUrl: customSceneUrl || null,
     status: 'processing' as const,
     predictionId,
+    metadata: aiMetadata,
+    category: productUnderstanding.category,
+    sceneType: aiMetadata.sceneType,
+    lightingProfile: aiMetadata.lightingProfile,
+    vendorModelReference: vendorModelReferenceUrl || null,
     createdAt: new Date(),
   };
   product.aiGallery = product.aiGallery || [];
@@ -355,14 +498,21 @@ async function pollUntilDone(
   predictionId: string,
   cutoutProduct: string | Buffer,
   vendorId: string,
+  metadata?: AiPhotographyMetadata,
+  backgroundCacheKey?: string,
   maxAttempts = 40
 ): Promise<string> {
   for (let i = 0; i < maxAttempts; i++) {
     const prediction = await replicate.predictions.get(predictionId);
     if (prediction.status === 'succeeded') {
       const backgroundUrl = extractReplicateUrl(prediction.output);
+      if (backgroundCacheKey) setCachedBackground(backgroundCacheKey, backgroundUrl);
       console.log(`[AI] Background generated: ${backgroundUrl}`);
-      return await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId);
+      return await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId, metadata ? {
+        lightingProfile: metadata.lightingProfile,
+        composition: metadata.composition,
+        productUnderstanding: metadata.productUnderstanding,
+      } : undefined);
     }
     if (prediction.status === 'failed' || prediction.status === 'canceled') {
       throw new Error(`Replicate prediction ${prediction.status}`);
@@ -408,7 +558,12 @@ export async function checkEnhancementStatus(
       } catch {
         console.warn('[AI] BG removal in status checker failed, using original.');
       }
-      const cloudUrl = await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId);
+      const entryMetadata = entry.metadata as AiPhotographyMetadata | undefined;
+      const cloudUrl = await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId, entryMetadata ? {
+        lightingProfile: entryMetadata.lightingProfile,
+        composition: entryMetadata.composition,
+        productUnderstanding: entryMetadata.productUnderstanding,
+      } : undefined);
       entry.status = 'done';
       entry.enhancedUrl = cloudUrl;
       await product.save();

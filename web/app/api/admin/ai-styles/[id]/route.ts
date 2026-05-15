@@ -12,7 +12,7 @@ import { apiError, apiSuccess, generateSlug } from '@/lib/utils';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getUserFromRequest(request);
@@ -21,18 +21,37 @@ export async function PATCH(
     }
 
     await connectDB();
+    const { id } = await context.params;
 
     const body = await request.json();
-    const { name, promptTemplate, negativePrompt, thumbnailUrl, isActive } = body;
+    const {
+      name,
+      promptTemplate,
+      negativePrompt,
+      thumbnailUrl,
+      isActive,
+      lightingConfig,
+      sceneType,
+      compositionRules,
+      categoryCompatibility,
+      generationTier,
+    } = body;
 
     const updateData: any = {};
     if (name !== undefined) { updateData.name = name.trim(); updateData.slug = generateSlug(name); }
     if (promptTemplate !== undefined) updateData.promptTemplate = promptTemplate.trim();
     if (negativePrompt !== undefined) updateData.negativePrompt = negativePrompt.trim();
     if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+    if (lightingConfig !== undefined) updateData.lightingConfig = lightingConfig || {};
+    if (sceneType !== undefined) updateData.sceneType = sceneType || '';
+    if (compositionRules !== undefined) updateData.compositionRules = compositionRules || {};
+    if (categoryCompatibility !== undefined) {
+      updateData.categoryCompatibility = Array.isArray(categoryCompatibility) ? categoryCompatibility : [];
+    }
+    if (generationTier !== undefined) updateData.generationTier = generationTier === 'premium' ? 'premium' : 'preview';
     if (isActive !== undefined) updateData.isActive = isActive;
 
-    const style = await AiStyle.findByIdAndUpdate(params.id, updateData, { new: true });
+    const style = await AiStyle.findByIdAndUpdate(id, updateData, { new: true });
     if (!style) return NextResponse.json(apiError('Style not found'), { status: 404 });
 
     return NextResponse.json(apiSuccess({ style }, 'AI Style updated'));
@@ -43,7 +62,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getUserFromRequest(request);
@@ -52,10 +71,11 @@ export async function DELETE(
     }
 
     await connectDB();
+    const { id } = await context.params;
 
     // Soft delete — keeps the style data but hides it from vendors
     const style = await AiStyle.findByIdAndUpdate(
-      params.id,
+      id,
       { isActive: false },
       { new: true }
     );

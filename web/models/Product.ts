@@ -48,6 +48,11 @@ export interface IProduct extends Document {
     enhancedUrl: string;
     styleId?: mongoose.Types.ObjectId;
     customBackgroundUrl?: string;
+    category?: string;
+    metadata?: Record<string, any>;
+    sceneType?: string;
+    lightingProfile?: Record<string, any>;
+    vendorModelReference?: string;
     status: 'pending' | 'processing' | 'done' | 'failed';
     predictionId?: string;
     createdAt: Date;
@@ -171,6 +176,11 @@ const ProductSchema = new Schema<IProduct>(
         enhancedUrl: { type: String, default: '' },
         styleId: { type: Schema.Types.ObjectId, ref: 'AiStyle', default: null },
         customBackgroundUrl: { type: String, default: null },
+        category: { type: String, default: '' },
+        metadata: { type: Schema.Types.Mixed, default: {} },
+        sceneType: { type: String, default: '' },
+        lightingProfile: { type: Schema.Types.Mixed, default: {} },
+        vendorModelReference: { type: String, default: null },
         status: {
           type: String,
           enum: ['pending', 'processing', 'done', 'failed'],

@@ -5,6 +5,11 @@ export interface IAiStyle extends Document {
   slug: string;
   promptTemplate: string;
   negativePrompt?: string;
+  lightingConfig?: Record<string, any>;
+  sceneType?: string;
+  compositionRules?: Record<string, any>;
+  categoryCompatibility?: string[];
+  generationTier?: 'preview' | 'premium';
   thumbnailUrl?: string;
   isActive: boolean;
   createdAt: Date;
@@ -36,6 +41,28 @@ const AiStyleSchema = new Schema<IAiStyle>(
       default:
         'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry',
     },
+    lightingConfig: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    sceneType: {
+      type: String,
+      default: '',
+      maxlength: 160,
+    },
+    compositionRules: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    categoryCompatibility: {
+      type: [String],
+      default: [],
+    },
+    generationTier: {
+      type: String,
+      enum: ['preview', 'premium'],
+      default: 'preview',
+    },
     thumbnailUrl: {
       type: String,
       default: '',
@@ -50,8 +77,8 @@ const AiStyleSchema = new Schema<IAiStyle>(
   }
 );
 
-AiStyleSchema.index({ slug: 1 });
 AiStyleSchema.index({ isActive: 1 });
+AiStyleSchema.index({ categoryCompatibility: 1, isActive: 1 });
 
 const AiStyle: Model<IAiStyle> =
   mongoose.models.AiStyle || mongoose.model<IAiStyle>('AiStyle', AiStyleSchema);

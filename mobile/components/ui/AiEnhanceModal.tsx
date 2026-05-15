@@ -9,7 +9,7 @@ import Button from './Button';
 interface AiStyle {
   _id: string;
   name: string;
-  previewUrl: string;
+  thumbnailUrl?: string;
 }
 
 interface AiEnhanceModalProps {
@@ -234,7 +234,13 @@ export default function AiEnhanceModal({ visible, onClose, imageUrl, productId, 
                     style={[styles.styleCard, selectedStyleId === style._id && styles.activeStyleCard]}
                     onPress={() => setSelectedStyleId(style._id)}
                   >
-                    <Image source={{ uri: style.previewUrl }} style={styles.styleImage} />
+                    {style.thumbnailUrl ? (
+                      <Image source={{ uri: style.thumbnailUrl }} style={styles.styleImage} />
+                    ) : (
+                      <View style={[styles.styleImage, styles.styleImageFallback]}>
+                        <Feather name="aperture" size={28} color="#7C3AED" />
+                      </View>
+                    )}
                     <View style={styles.styleOverlay}>
                       <Text style={styles.styleName}>{style.name}</Text>
                     </View>
@@ -326,6 +332,7 @@ const styles = StyleSheet.create({
   styleCard: { width: 120, height: 160, borderRadius: 12, marginRight: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', position: 'relative' },
   activeStyleCard: { borderColor: '#4F46E5' },
   styleImage: { width: '100%', height: '100%' },
+  styleImageFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF2FF' },
   styleOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.4)' },
   styleName: { color: '#FFF', fontSize: 13, fontWeight: '600' },
   checkIcon: { position: 'absolute', top: 8, right: 8, backgroundColor: '#4F46E5', borderRadius: 12, padding: 2 },

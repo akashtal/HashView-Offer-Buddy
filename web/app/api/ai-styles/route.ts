@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const styles = await AiStyle.find({ isActive: true })
-      .select('name slug thumbnailUrl promptTemplate')
+      .select('name slug thumbnailUrl promptTemplate negativePrompt lightingConfig sceneType compositionRules categoryCompatibility generationTier')
       .sort({ createdAt: 1 })
       .lean();
 
