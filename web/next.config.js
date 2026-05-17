@@ -28,6 +28,9 @@ const nextConfig = {
   // Partial Pre-rendering (Cache Components) - React 19.2 + Next.js 16
   // cacheComponents: true,
 
+  // Native modules used by AI image pipeline (must not be bundled for serverless)
+  serverExternalPackages: ['sharp', '@imgly/background-removal-node'],
+
   // React 19.2 & Next.js 16 Features
   experimental: {
     // Server Actions configuration

@@ -33,8 +33,12 @@ export async function analyzeProductImage(params: {
   imageBuffer: Buffer;
   imageUrl?: string;
   productName?: string;
+  /** Skip vision APIs — use heuristics only (faster for serverless start). */
+  fastOnly?: boolean;
 }): Promise<ProductUnderstanding> {
   const heuristic = await heuristicProductAnalysis(params.imageBuffer, params.productName);
+
+  if (params.fastOnly) return heuristic;
 
   if (process.env.GOOGLE_GEMINI_API_KEY) {
     const geminiResult = await analyzeWithGemini(params.imageBuffer, heuristic);

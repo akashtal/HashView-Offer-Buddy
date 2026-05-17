@@ -3,6 +3,9 @@ import { getUserFromRequest } from '@/lib/auth';
 import { apiError, apiSuccess } from '@/lib/utils';
 import { checkEnhancementStatus } from '@/lib/services/ai-product.service';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);

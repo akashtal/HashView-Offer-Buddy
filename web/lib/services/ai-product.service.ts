@@ -19,6 +19,10 @@ import { buildCompositionPlan, prepareProductLayer } from '@/lib/services/ai-pho
 import { generateShadowLayer } from '@/lib/services/ai-photography/shadow.service';
 import { relightProductImage } from '@/lib/services/ai-photography/relighting.service';
 import { getCachedBackground, setCachedBackground } from '@/lib/services/ai-photography/background-cache.service';
+import {
+  getOrCreateProductCutout,
+  shouldDeferHeavyWorkOnStart,
+} from '@/lib/services/ai-photography/background-removal.service';
 import type { AiPhotographyMetadata, CompositionPlan, GenerationQuality, ProductUnderstanding, ScenePrompt } from '@/lib/services/ai-photography/types';
 
 // ── Cloudinary setup ──────────────────────────────────────────────
@@ -101,27 +105,6 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 4): Promis
     }
   }
   throw new Error('Max retries exceeded');
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Step 1b — Background removal via Replicate (851-labs/background-removal)
-// Returns a transparent PNG URL. Much cheaper than Cloudinary add-on.
-// This runs SYNCHRONOUSLY (polls until done) before background generation.
-// ─────────────────────────────────────────────────────────────────
-async function removeBackgroundLocal(imageUrl: string): Promise<Buffer> {
-  const { removeBackground } = await import('@imgly/background-removal-node');
-  console.log(`[AI] Removing background locally (ONNX)...`);
-
-  // @imgly/background-removal-node doesn't support AVIF.
-  // Download the image, convert to PNG via sharp (handles all formats), then pass as a Blob.
-  const rawBuffer = await fetchBuffer(imageUrl);
-  const pngBuffer = await sharp(rawBuffer).png().toBuffer();
-  const pngBlob = new Blob([new Uint8Array(pngBuffer)], { type: 'image/png' });
-
-  const resultBlob = await removeBackground(pngBlob);
-  const buffer = Buffer.from(await resultBlob.arrayBuffer());
-  console.log(`[AI] Background removed, transparent PNG ready.`);
-  return buffer;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -332,6 +315,7 @@ export async function enhanceProductImage(
     lightingType,
   } = request;
   const isPreview = !productId || productId === 'preview';
+  const deferHeavyWork = shouldDeferHeavyWorkOnStart() && !isPreview && mode !== 'custom-scene';
 
   // Step 1: Upload original product to Cloudinary for permanent URL
   console.log(`[AI] Uploading product image...`);
@@ -341,15 +325,24 @@ export async function enhanceProductImage(
     imageBuffer: originalBuffer,
     imageUrl: uploadedProductUrl,
     productName,
+    fastOnly: deferHeavyWork,
   });
   console.log(`[AI] Product understood as ${productUnderstanding.category}/${productUnderstanding.subcategory} (${productUnderstanding.source}).`);
 
-  // Step 1b: Remove background LOCALLY using ONNX model — no external API
-  let cutoutProduct: string | Buffer = uploadedProductUrl; // fallback = original URL
-  try {
-    cutoutProduct = await removeBackgroundLocal(uploadedProductUrl);
-  } catch (err) {
-    console.warn('[AI] Local BG removal failed, using original image:', err);
+  // Background removal is expensive on serverless — defer until composite (status poll) when possible
+  let cutoutProduct: string | Buffer = uploadedProductUrl;
+  let cutoutUrl: string | undefined;
+  if (!deferHeavyWork) {
+    try {
+      const cutout = await getOrCreateProductCutout({
+        imageUrl: uploadedProductUrl,
+        vendorId,
+      });
+      cutoutProduct = cutout.buffer;
+      cutoutUrl = cutout.cutoutUrl;
+    } catch (err) {
+      console.warn('[AI] Background removal failed, compositing may look wrong:', err);
+    }
   }
 
   await connectDB();
@@ -418,7 +411,7 @@ export async function enhanceProductImage(
       predictionId: 'cloudinary-composite',
       styleId: style?._id || null,
       customBackgroundUrl: sceneUrl,
-      metadata: aiMetadata,
+      metadata: { ...aiMetadata, cutoutUrl },
       category: productUnderstanding.category,
       sceneType: aiMetadata.sceneType,
       lightingProfile: aiMetadata.lightingProfile,
@@ -432,7 +425,13 @@ export async function enhanceProductImage(
     if (styleId && !style) throw new Error('AI Style not found');
     const cachedBackgroundUrl = getCachedBackground(scenePrompt.cacheKey);
     if (cachedBackgroundUrl && isPreview) {
-      const enhancedUrl = await compositeProductOnBackground(cutoutProduct, cachedBackgroundUrl, vendorId, {
+      const resolvedCutout = await resolveCutoutForComposite(
+        cutoutProduct,
+        uploadedProductUrl,
+        vendorId,
+        cutoutUrl
+      );
+      const enhancedUrl = await compositeProductOnBackground(resolvedCutout, cachedBackgroundUrl, vendorId, {
         lightingProfile: aiMetadata.lightingProfile,
         composition: aiMetadata.composition,
         productUnderstanding,
@@ -446,7 +445,14 @@ export async function enhanceProductImage(
   // Preview mode: poll Replicate synchronously, then composite and return URL
   if (isPreview) {
     console.log(`[AI] Preview mode — polling for result...`);
-    const enhancedUrl = await pollUntilDone(predictionId, cutoutProduct, vendorId, aiMetadata, scenePrompt.cacheKey);
+    const enhancedUrl = await pollUntilDone(
+      predictionId,
+      cutoutProduct,
+      vendorId,
+      aiMetadata,
+      scenePrompt.cacheKey,
+      uploadedProductUrl
+    );
     return { predictionId, enhancedUrl };
   }
 
@@ -456,13 +462,12 @@ export async function enhanceProductImage(
 
   const pendingEntry = {
     originalUrl: uploadedProductUrl,
-    // Buffers can't be stored in MongoDB; checkEnhancementStatus re-runs bg removal from originalUrl
     enhancedUrl: '',
     styleId: styleId || null,
     customBackgroundUrl: customSceneUrl || null,
     status: 'processing' as const,
     predictionId,
-    metadata: aiMetadata,
+    metadata: { ...aiMetadata, cutoutUrl: cutoutUrl || null },
     category: productUnderstanding.category,
     sceneType: aiMetadata.sceneType,
     lightingProfile: aiMetadata.lightingProfile,
@@ -494,12 +499,34 @@ function extractReplicateUrl(output: unknown): string {
 // ─────────────────────────────────────────────────────────────────
 // Poll Replicate until background generation done, then composite product on top
 // ─────────────────────────────────────────────────────────────────
+async function resolveCutoutForComposite(
+  cutoutProduct: string | Buffer,
+  originalUrl: string,
+  vendorId: string,
+  existingCutoutUrl?: string | null
+): Promise<string | Buffer> {
+  if (Buffer.isBuffer(cutoutProduct)) return cutoutProduct;
+  if (cutoutProduct !== originalUrl) return cutoutProduct;
+  try {
+    const cutout = await getOrCreateProductCutout({
+      imageUrl: originalUrl,
+      vendorId,
+      existingCutoutUrl,
+    });
+    return cutout.buffer;
+  } catch (err) {
+    console.warn('[AI] Could not create cutout for composite:', err);
+    return originalUrl;
+  }
+}
+
 async function pollUntilDone(
   predictionId: string,
   cutoutProduct: string | Buffer,
   vendorId: string,
   metadata?: AiPhotographyMetadata,
   backgroundCacheKey?: string,
+  originalUrl?: string,
   maxAttempts = 40
 ): Promise<string> {
   for (let i = 0; i < maxAttempts; i++) {
@@ -508,7 +535,13 @@ async function pollUntilDone(
       const backgroundUrl = extractReplicateUrl(prediction.output);
       if (backgroundCacheKey) setCachedBackground(backgroundCacheKey, backgroundUrl);
       console.log(`[AI] Background generated: ${backgroundUrl}`);
-      return await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId, metadata ? {
+      const resolvedCutout = await resolveCutoutForComposite(
+        cutoutProduct,
+        originalUrl || (typeof cutoutProduct === 'string' ? cutoutProduct : ''),
+        vendorId,
+        metadata?.cutoutUrl
+      );
+      return await compositeProductOnBackground(resolvedCutout, backgroundUrl, vendorId, metadata ? {
         lightingProfile: metadata.lightingProfile,
         composition: metadata.composition,
         productUnderstanding: metadata.productUnderstanding,
@@ -551,21 +584,31 @@ export async function checkEnhancementStatus(
     try {
       const backgroundUrl = extractReplicateUrl(prediction.output);
       console.log(`[AI] Background URL: ${backgroundUrl}`);
-      // Run local BG removal on the stored product URL before compositing
-      let cutoutProduct: string | Buffer = entry.originalUrl;
+      const entryMetadata = (entry.metadata || {}) as AiPhotographyMetadata & { cutoutUrl?: string };
+      let cutoutBuffer: Buffer;
+      let cutoutUrl = entryMetadata.cutoutUrl;
       try {
-        cutoutProduct = await removeBackgroundLocal(entry.originalUrl);
-      } catch {
-        console.warn('[AI] BG removal in status checker failed, using original.');
+        const cutout = await getOrCreateProductCutout({
+          imageUrl: entry.originalUrl,
+          vendorId,
+          existingCutoutUrl: cutoutUrl,
+        });
+        cutoutBuffer = cutout.buffer;
+        cutoutUrl = cutout.cutoutUrl;
+      } catch (err) {
+        console.warn('[AI] BG removal in status checker failed:', err);
+        throw err;
       }
-      const entryMetadata = entry.metadata as AiPhotographyMetadata | undefined;
-      const cloudUrl = await compositeProductOnBackground(cutoutProduct, backgroundUrl, vendorId, entryMetadata ? {
+      const cloudUrl = await compositeProductOnBackground(cutoutBuffer, backgroundUrl, vendorId, entryMetadata ? {
         lightingProfile: entryMetadata.lightingProfile,
         composition: entryMetadata.composition,
         productUnderstanding: entryMetadata.productUnderstanding,
       } : undefined);
       entry.status = 'done';
       entry.enhancedUrl = cloudUrl;
+      if (entry.metadata) {
+        (entry.metadata as AiPhotographyMetadata & { cutoutUrl?: string }).cutoutUrl = cutoutUrl;
+      }
       await product.save();
       return { status: 'done', enhancedUrl: cloudUrl };
     } catch (err) {

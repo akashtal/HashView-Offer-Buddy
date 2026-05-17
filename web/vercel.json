@@ -4,5 +4,13 @@
       "path": "/api/cron/check-vendor-activity",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/vendor/products/ai-enhance/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/vendor/products/ai-enhance/status/route.ts": {
+      "maxDuration": 300
+    }
+  }
 }

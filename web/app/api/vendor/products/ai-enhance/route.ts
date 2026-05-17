@@ -16,6 +16,9 @@ import { getUserFromRequest } from '@/lib/auth';
 import { apiError, apiSuccess } from '@/lib/utils';
 import { enhanceProductImage, EnhanceRequest } from '@/lib/services/ai-product.service';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
@@ -61,22 +64,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run the AI pipeline (asynchronous — returns predictionId immediately)
-    const result = await enhanceProductImage(
-      {
-        productId,
-        imageUrl,
-        mode,
-        styleId,
-        customSceneUrl,
-        productName,
-        vendorModelReferenceUrl,
-        generationQuality,
-        vendorPreferences,
-        lightingType,
-      },
-      user.userId
-    );
+    const requestPayload: EnhanceRequest = {
+      productId,
+      imageUrl,
+      mode,
+      styleId,
+      customSceneUrl,
+      productName,
+      vendorModelReferenceUrl,
+      generationQuality: generationQuality || (process.env.AI_DEFAULT_QUALITY as 'preview' | 'premium' | undefined) || 'preview',
+      vendorPreferences,
+      lightingType,
+    };
+
+    const result = await enhanceProductImage(requestPayload, user.userId);
 
     return NextResponse.json(
       apiSuccess(result, 'Image enhancement started. Poll the status endpoint.'),

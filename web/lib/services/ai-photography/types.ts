@@ -74,6 +74,7 @@ export interface AiPhotographyMetadata {
   productUnderstanding: ProductUnderstanding;
   vendorModelReference?: string | null;
   workflow: 'product-scene-composite' | 'custom-scene-composite' | 'virtual-try-on-reference';
+  cutoutUrl?: string | null;
 }
 
 export type AiStyleLike = Pick<

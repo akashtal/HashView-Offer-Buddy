@@ -114,6 +114,7 @@ export default function VendorAiEnhancePage() {
   const [showAfter, setShowAfter]         = useState(false);
   const [error, setError]                 = useState('');
   const [success, setSuccess]             = useState('');
+  const [generationQuality, setGenerationQuality] = useState<'preview' | 'premium'>('preview');
 
   const detectedCategory  = inferCategory(product);
   const recommendedStyles = styles.filter(s => isCompatible(s, detectedCategory) && detectedCategory !== 'generic');
@@ -204,6 +205,7 @@ export default function VendorAiEnhancePage() {
       
       if (activeTab === 'enhance') {
         payload.mode = mode;
+        payload.generationQuality = generationQuality;
         if (mode === 'style') payload.styleId = selectedStyleId;
         if (mode === 'custom-scene') payload.customSceneUrl = customSceneUrl;
       } else {
@@ -236,8 +238,8 @@ export default function VendorAiEnhancePage() {
 
       // IDM-VTON (A100 GPU) can take 4-7 minutes with cold start.
       // Use longer interval + more polls for try-on vs scene enhance.
-      const pollInterval = activeTab === 'tryon' ? 6000 : 4000;
-      const maxPolls     = activeTab === 'tryon' ? 80 : 50; // 80x6s=8min | 50x4s=3.3min
+      const pollInterval = activeTab === 'tryon' ? 6000 : generationQuality === 'premium' ? 5000 : 4000;
+      const maxPolls     = activeTab === 'tryon' ? 80 : generationQuality === 'premium' ? 72 : 50;
 
       for (let i = 0; i < maxPolls; i++) {
         await new Promise(r => setTimeout(r, pollInterval));
@@ -593,6 +595,36 @@ export default function VendorAiEnhancePage() {
                     </div>
                   )}
                 </div>
+
+                {activeTab === 'enhance' && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 space-y-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Output quality</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setGenerationQuality('preview')}
+                        className={`rounded-lg border-2 px-3 py-2 text-left text-xs transition-all
+                          ${generationQuality === 'preview'
+                            ? 'border-purple-600 bg-purple-50 text-purple-800'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}
+                      >
+                        <span className="font-semibold block">Fast preview</span>
+                        <span className="text-[10px] opacity-80">~30–60s · good for drafts</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGenerationQuality('premium')}
+                        className={`rounded-lg border-2 px-3 py-2 text-left text-xs transition-all
+                          ${generationQuality === 'premium'
+                            ? 'border-purple-600 bg-purple-50 text-purple-800'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}
+                      >
+                        <span className="font-semibold block">Premium HD</span>
+                        <span className="text-[10px] opacity-80">~1–3 min · sharper scenes</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Enhance CTA */}
                 <button
