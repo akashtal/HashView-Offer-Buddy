@@ -32,7 +32,7 @@ export async function startVirtualTryOn(
     fastOnly: true,
   });
 
-  const category = determineTryOnCategory(productUnderstanding);
+  const category = determineTryOnCategory(productUnderstanding, garmentDescription);
   console.log(`[AI Try-On] Category determined as: ${category}`);
 
   const { preparedGarmentUrl } = await prepareGarmentForTryOn({

@@ -65,13 +65,16 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 4): Promis
 // Determine Try-On Category based on Product Understanding
 // Maps to IDM-VTON categories: upper_body | lower_body | dresses
 // ─────────────────────────────────────────────────────────────────
-export function determineTryOnCategory(understanding: ProductUnderstanding | any): TryOnCategory {
-  const text = `${understanding?.category} ${understanding?.subcategory} ${understanding?.style}`.toLowerCase();
+export function determineTryOnCategory(
+  understanding: ProductUnderstanding | any,
+  garmentDescription = ''
+): TryOnCategory {
+  const text = `${garmentDescription} ${understanding?.category} ${understanding?.subcategory} ${understanding?.style}`.toLowerCase();
 
   if (
     text.includes('pant') || text.includes('jean') || text.includes('short') ||
     text.includes('skirt') || text.includes('trouser') || text.includes('bottom') ||
-    text.includes('legging')
+    text.includes('legging') || text.includes('wide-leg') || text.includes('wide leg')
   ) {
     return 'lower_body';
   }

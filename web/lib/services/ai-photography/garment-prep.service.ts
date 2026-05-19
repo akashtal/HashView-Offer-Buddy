@@ -1,6 +1,8 @@
 /**
  * Prepares vendor garment photos for virtual try-on (IDM-VTON).
- * Removes background and trims transparent padding for a tight garment plate.
+ * IDM-VTON works best with a normal garment photo on a clean 3:4 canvas.
+ * Do not remove the garment background by default; transparent tight crops can
+ * make lower-body products like jeans fail or deform.
  */
 
 import { v2 as cloudinary } from 'cloudinary';
@@ -19,7 +21,7 @@ async function uploadPreparedGarment(buffer: Buffer, vendorId: string): Promise<
       {
         folder: `Offerbuddy/vendors/${vendorId}/ai-garments`,
         resource_type: 'image',
-        format: 'png',
+        format: 'jpg',
       },
       (err, res) => {
         if (err) reject(err);
@@ -31,24 +33,49 @@ async function uploadPreparedGarment(buffer: Buffer, vendorId: string): Promise<
 }
 
 /**
- * Clean garment image for VTON: transparent background + tight crop.
+ * Clean garment image for VTON: 3:4 white canvas, original garment preserved.
  * Returns a Cloudinary URL suitable for IDM-VTON `garm_img`.
  */
 export async function prepareGarmentForTryOn(params: {
   imageUrl: string;
   vendorId: string;
 }): Promise<{ preparedGarmentUrl: string }> {
-  console.log('[AI Try-On] Preparing garment (background removal + trim)...');
+  console.log('[AI Try-On] Preparing garment for IDM-VTON...');
 
-  const cutoutBuffer = await removeProductBackground(params.imageUrl);
+  let sourceBuffer: Buffer;
 
-  let preparedBuffer = cutoutBuffer;
-  try {
-    preparedBuffer = await sharp(cutoutBuffer).trim().png().toBuffer();
-  } catch {
-    console.warn('[AI Try-On] Could not trim garment cutout; using full bounds.');
+  if (process.env.TRYON_REMOVE_GARMENT_BG === 'true') {
+    console.log('[AI Try-On] TRYON_REMOVE_GARMENT_BG=true; using transparent cutout.');
+    sourceBuffer = await removeProductBackground(params.imageUrl);
+  } else {
+    const res = await fetch(params.imageUrl);
+    if (!res.ok) throw new Error(`Failed to fetch garment image: ${res.status}`);
+    sourceBuffer = Buffer.from(await res.arrayBuffer());
   }
 
+  const garmentPlate = await sharp({
+    create: {
+      width: 768,
+      height: 1024,
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 },
+    },
+  })
+    .composite([
+      {
+        input: await sharp(sourceBuffer)
+          .rotate()
+          .resize(704, 960, { fit: 'inside', withoutEnlargement: true })
+          .flatten({ background: '#ffffff' })
+          .jpeg({ quality: 96 })
+          .toBuffer(),
+        gravity: 'center',
+      },
+    ])
+    .jpeg({ quality: 96 })
+    .toBuffer();
+
+  const preparedBuffer = garmentPlate;
   const preparedGarmentUrl = await uploadPreparedGarment(preparedBuffer, params.vendorId);
   console.log(`[AI Try-On] Prepared garment: ${preparedGarmentUrl}`);
 

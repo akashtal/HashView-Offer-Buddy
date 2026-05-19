@@ -320,6 +320,7 @@ export async function enhanceProductImage(
   // Step 1: Upload original product to Cloudinary for permanent URL
   console.log(`[AI] Uploading product image...`);
   const uploadedProductUrl = await uploadProductImage(imageUrl);
+  const backgroundRemovalSourceUrl = imageUrl || uploadedProductUrl;
   const originalBuffer = await fetchBuffer(uploadedProductUrl);
   const productUnderstanding = await analyzeProductImage({
     imageBuffer: originalBuffer,
@@ -335,7 +336,7 @@ export async function enhanceProductImage(
   if (!deferHeavyWork) {
     try {
       const cutout = await getOrCreateProductCutout({
-        imageUrl: uploadedProductUrl,
+        imageUrl: backgroundRemovalSourceUrl,
         vendorId,
       });
       cutoutProduct = cutout.buffer;
@@ -411,7 +412,7 @@ export async function enhanceProductImage(
       predictionId: 'cloudinary-composite',
       styleId: style?._id || null,
       customBackgroundUrl: sceneUrl,
-      metadata: { ...aiMetadata, cutoutUrl },
+      metadata: { ...aiMetadata, cutoutUrl, sourceImageUrl: backgroundRemovalSourceUrl },
       category: productUnderstanding.category,
       sceneType: aiMetadata.sceneType,
       lightingProfile: aiMetadata.lightingProfile,
@@ -427,7 +428,7 @@ export async function enhanceProductImage(
     if (cachedBackgroundUrl && isPreview) {
       const resolvedCutout = await resolveCutoutForComposite(
         cutoutProduct,
-        uploadedProductUrl,
+        backgroundRemovalSourceUrl,
         vendorId,
         cutoutUrl
       );
@@ -451,7 +452,7 @@ export async function enhanceProductImage(
       vendorId,
       aiMetadata,
       scenePrompt.cacheKey,
-      uploadedProductUrl
+      backgroundRemovalSourceUrl
     );
     return { predictionId, enhancedUrl };
   }
@@ -467,7 +468,7 @@ export async function enhanceProductImage(
     customBackgroundUrl: customSceneUrl || null,
     status: 'processing' as const,
     predictionId,
-    metadata: { ...aiMetadata, cutoutUrl: cutoutUrl || null },
+    metadata: { ...aiMetadata, cutoutUrl: cutoutUrl || null, sourceImageUrl: backgroundRemovalSourceUrl },
     category: productUnderstanding.category,
     sceneType: aiMetadata.sceneType,
     lightingProfile: aiMetadata.lightingProfile,
@@ -584,12 +585,12 @@ export async function checkEnhancementStatus(
     try {
       const backgroundUrl = extractReplicateUrl(prediction.output);
       console.log(`[AI] Background URL: ${backgroundUrl}`);
-      const entryMetadata = (entry.metadata || {}) as AiPhotographyMetadata & { cutoutUrl?: string };
+      const entryMetadata = (entry.metadata || {}) as AiPhotographyMetadata & { cutoutUrl?: string; sourceImageUrl?: string };
       let cutoutBuffer: Buffer;
       let cutoutUrl = entryMetadata.cutoutUrl;
       try {
         const cutout = await getOrCreateProductCutout({
-          imageUrl: entry.originalUrl,
+          imageUrl: entryMetadata.sourceImageUrl || entry.originalUrl,
           vendorId,
           existingCutoutUrl: cutoutUrl,
         });

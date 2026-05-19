@@ -21,14 +21,40 @@ const REPLICATE_BG_MODELS = process.env.REPLICATE_BG_MODELS
   ? process.env.REPLICATE_BG_MODELS.split(',').map((model) => model.trim()).filter(Boolean)
   : [
       process.env.REPLICATE_BG_MODEL ||
-      'lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1',
-      '851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc',
+      'codeplugtech/background_remover:37ff2aa89897c0de4a140a3d50969dc62b663ea467e1e2bde18008e3d3731b2b',
+     
     ];
 
 async function fetchBuffer(url: string): Promise<Buffer> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image: ${url} (${res.status})`);
   return Buffer.from(await res.arrayBuffer());
+}
+
+async function uploadReplicateCompatibleImage(imageUrl: string): Promise<string> {
+  const rawBuffer = await fetchBuffer(imageUrl);
+  const jpegBuffer = await sharp(rawBuffer)
+    .rotate()
+    .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+    .flatten({ background: '#ffffff' })
+    .jpeg({ quality: 96, mozjpeg: true })
+    .toBuffer();
+
+  const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      {
+        folder: 'Offerbuddy/ai-bg-inputs',
+        resource_type: 'image',
+        format: 'jpg',
+      },
+      (err, res) => {
+        if (err) reject(err);
+        else resolve(res as { secure_url: string });
+      }
+    ).end(jpegBuffer);
+  });
+
+  return result.secure_url;
 }
 
 function resolveBgRemovalProvider(): 'local' | 'replicate' | 'cloudinary' {
@@ -91,14 +117,29 @@ function normalizeImageUrlForReplicate(imageUrl: string): string {
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
-  // Extract the public_id portion and drop transformations, version, and extension
-  const m = imageUrl.match(/res\.cloudinary\.com\/[^\/]+\/image\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?(?:\?.*)?$/i);
-  if (!m) return imageUrl;
-  const publicId = m[1];
+  const uploadMarker = '/image/upload/';
+  const afterUpload = imageUrl.split(uploadMarker)[1]?.split('?')[0];
+  if (!afterUpload || !cloudName) return imageUrl;
+
+  const parts = afterUpload.split('/').filter(Boolean);
+  while (parts.length > 1 && isCloudinaryTransformationSegment(parts[0]) && !/^v\d+$/.test(parts[0])) {
+    parts.shift();
+  }
+  if (parts[0] && /^v\d+$/.test(parts[0])) parts.shift();
+
+  const publicPath = parts.join('/');
+  const publicId = publicPath.replace(/\.[a-z0-9]+$/i, '');
   if (!cloudName) return imageUrl;
 
-  // Build a clean PNG delivery URL (no transformations, full-quality PNG)
-  return `https://res.cloudinary.com/${cloudName}/image/upload/f_png/${publicId}`;
+  // Build a clean high-quality delivery URL with transformations stripped.
+  return `https://res.cloudinary.com/${cloudName}/image/upload/q_100/${publicId}`;
+}
+
+function isCloudinaryTransformationSegment(segment: string): boolean {
+  return (
+    segment.includes(',') ||
+    /^(a_|ar_|b_|bo_|c_|co_|d_|e_|f_|fl_|g_|h_|l_|o_|q_|r_|t_|u_|w_|x_|y_|z_)/.test(segment)
+  );
 }
 
 async function retryReplicate<T>(fn: () => Promise<T>, maxRetries = 4): Promise<T> {
@@ -135,7 +176,9 @@ async function removeBackgroundViaReplicate(imageUrl: string): Promise<Buffer> {
     throw new Error('REPLICATE_API_TOKEN is required for background removal');
   }
 
-  const inputImage = normalizeImageUrlForReplicate(imageUrl);
+  const normalizedImage = normalizeImageUrlForReplicate(imageUrl);
+  const inputImage = await uploadReplicateCompatibleImage(normalizedImage);
+  console.log(`[AI BG] Replicate-compatible input: ${inputImage}`);
   let lastError: unknown;
 
   for (let index = 0; index < REPLICATE_BG_MODELS.length; index++) {
@@ -148,9 +191,6 @@ async function removeBackgroundViaReplicate(imageUrl: string): Promise<Buffer> {
         {
           input: {
             image: inputImage,
-            format: 'png',
-            background_type: 'rgba',
-            threshold: 0,
           },
         }
       ));
