@@ -2,6 +2,7 @@ import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 import AiModel from '@/models/AiModel';
 import { analyzeProductImage } from '@/lib/services/ai-photography/product-understanding.service';
+import { prepareGarmentForTryOn } from '@/lib/services/ai-photography/garment-prep.service';
 import { generateTryOnAsync, determineTryOnCategory, uploadTryOnImage, extractReplicateUrl, TryOnRequest, TryOnResult } from '@/lib/services/ai-photography/virtual-tryon.service';
 import Replicate from 'replicate';
 
@@ -26,19 +27,32 @@ export async function startVirtualTryOn(
   const originalBuffer = await fetchBuffer(imageUrl);
   const productUnderstanding = await analyzeProductImage({
     imageBuffer: originalBuffer,
-    imageUrl: imageUrl,
+    imageUrl,
     productName: garmentDescription,
+    fastOnly: true,
   });
 
   const category = determineTryOnCategory(productUnderstanding);
   console.log(`[AI Try-On] Category determined as: ${category}`);
 
-  // Generate prediction
+  const { preparedGarmentUrl } = await prepareGarmentForTryOn({
+    imageUrl,
+    vendorId,
+  });
+
+  const garmentDes =
+    garmentDescription?.trim() ||
+    [productUnderstanding.subcategory, productUnderstanding.material, productUnderstanding.dominantColor]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    'garment';
+
   const predictionId = await generateTryOnAsync(
     modelImageUrl,
-    imageUrl,
+    preparedGarmentUrl,
     category,
-    garmentDescription || `${productUnderstanding.dominantColor || ''} ${productUnderstanding.subcategory || ''}`
+    garmentDes
   );
 
   await connectDB();
@@ -57,7 +71,9 @@ export async function startVirtualTryOn(
       workflow: 'virtual-try-on-reference',
       productUnderstanding,
       vendorModelReference: modelImageUrl,
-      tryOnCategory: category
+      preparedGarmentUrl,
+      tryOnCategory: category,
+      garmentDescription: garmentDes,
     },
     category: productUnderstanding.category,
     sceneType: 'virtual-try-on',

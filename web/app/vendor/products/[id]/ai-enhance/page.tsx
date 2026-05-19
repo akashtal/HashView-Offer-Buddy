@@ -53,17 +53,27 @@ const PROCESSING_STEPS = [
 
 const TRYON_PROCESSING_STEPS = [
   'Analyzing garment…',
-  'Preparing AI Model…',
+  'Removing background from product…',
+  'Preparing clean garment plate…',
   'Mapping garment to model…',
-  'Running VTON diffusion…',
-  'Enhancing details…',
-  'Finalizing image…',
+  'Running virtual try-on…',
+  'Finalizing studio image…',
 ];
+
+const TRYON_GARMENT_TIPS = {
+  good: ['Front-facing flat lay or ghost mannequin', 'Plain white or light background', 'Full garment visible in frame'],
+  avoid: ['Hanger on textured wall', 'Cropped or side-only views', 'Busy backgrounds and heavy shadows'],
+};
+
+const TRYON_MODEL_TIPS = {
+  good: ['Studio photo, plain grey or white backdrop', 'Upper body visible (waist-up)', 'Neutral pose, facing camera'],
+  avoid: ['Busy outdoor backgrounds', 'Extreme angles or cropped head', 'Other people in frame'],
+};
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   jewelry:     ['ring', 'jewelry', 'jewellery', 'diamond', 'necklace', 'bracelet', 'earring', 'bangle'],
   watch:       ['watch', 'wristwatch', 'chronograph'],
-  fashion:     ['jeans', 'pant', 'shirt', 'dress', 'saree', 'sari', 'kurta', 'clothing', 'top', 'jacket'],
+  fashion:     ['jeans', 'pant', 'shirt', 'dress', 'saree', 'sari', 'kurta', 'clothing', 'top', 'jacket', 'blouse', 't-shirt', 'tshirt', 'tee', 'hoodie', 'sweater', 'coat', 'garment', 'apparel', 'wear', 'kurti', 'tunic'],
   footwear:    ['shoe', 'sneaker', 'sandal', 'boot', 'trainer'],
   electronics: ['phone', 'laptop', 'earbud', 'headphone', 'speaker', 'camera', 'tablet'],
   furniture:   ['chair', 'sofa', 'table', 'bed', 'desk', 'cabinet'],
@@ -83,6 +93,20 @@ function inferCategory(product: any): string {
 
 function isCompatible(style: AiStyle, category: string) {
   return !style.categoryCompatibility?.length || style.categoryCompatibility.includes(category);
+}
+
+function isTryOnEligible(product: any): boolean {
+  if (!product) return false;
+  if (inferCategory(product) === 'fashion') return true;
+  const text = [product?.title, product?.description, product?.category?.name, ...(product?.tags || [])]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const clothingHints = [
+    'shirt', 'top', 'blouse', 't-shirt', 'tee', 'kurta', 'kurti', 'dress', 'saree', 'sari',
+    'jacket', 'hoodie', 'sweater', 'garment', 'apparel', 'tunic', 'polo',
+  ];
+  return clothingHints.some((word) => text.includes(word));
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -120,8 +144,7 @@ export default function VendorAiEnhancePage() {
   const recommendedStyles = styles.filter(s => isCompatible(s, detectedCategory) && detectedCategory !== 'generic');
   const otherStyles       = styles.filter(s => !isCompatible(s, detectedCategory) || detectedCategory === 'generic');
 
-  // Determine if product is fashion (eligible for try-on)
-  const isFashion = detectedCategory === 'fashion';
+  const isTryOnProduct = isTryOnEligible(product);
 
   // ── Load product ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -133,6 +156,7 @@ export default function VendorAiEnhancePage() {
         const p    = data.data?.product;
         setProduct(p);
         if (p?.images?.[0]) setSelectedImage(p.images[0]);
+        if (isTryOnEligible(p)) setActiveTab('tryon');
       } catch { setError('Failed to load product'); }
       finally  { setLoadingProduct(false); }
     })();
@@ -387,29 +411,43 @@ export default function VendorAiEnhancePage() {
               <FiZap className="text-purple-600" /> AI Product Studio
             </h1>
             <p className="text-gray-500 text-sm mt-0.5">
-              Transform your photo into a professional ecommerce image
+              {isTryOnProduct
+                ? 'Put your garment on a male or female model — best for shirts, tops & dresses'
+                : 'Transform your photo into a professional ecommerce image'}
               {product?.title && <> — <span className="font-medium text-gray-700">{product.title}</span></>}
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b border-gray-200 pb-px">
-          <button
-            onClick={() => { setActiveTab('enhance'); reset(); }}
-            className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors ${activeTab === 'enhance' ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
-          >
-            <span className="flex items-center gap-2"><FiLayers /> Scene Enhancement</span>
-          </button>
-          {isFashion && (
+        <div className="flex flex-wrap gap-4 mb-6 border-b border-gray-200 pb-px">
+          {isTryOnProduct && (
             <button
               onClick={() => { setActiveTab('tryon'); reset(); }}
               className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors ${activeTab === 'tryon' ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
             >
               <span className="flex items-center gap-2"><FiUser /> Virtual Try-On</span>
+              <span className="ml-1 text-[10px] font-bold text-emerald-600">Recommended</span>
             </button>
           )}
+          <button
+            onClick={() => { setActiveTab('enhance'); reset(); }}
+            className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors ${activeTab === 'enhance' ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+          >
+            <span className="flex items-center gap-2"><FiLayers /> Scene Enhancement</span>
+            {isTryOnProduct && <span className="ml-1 text-[10px] text-gray-400 font-normal">(props & studio)</span>}
+          </button>
         </div>
+
+        {isTryOnProduct && activeTab === 'enhance' && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Clothing detected.</strong> For shirts, tops & dresses on a model, use{' '}
+            <button type="button" onClick={() => { setActiveTab('tryon'); reset(); }} className="font-bold text-purple-700 underline">
+              Virtual Try-On
+            </button>{' '}
+            instead of Scene Enhancement.
+          </div>
+        )}
 
         {/* Category badge */}
         {detectedCategory !== 'generic' && activeTab === 'enhance' && (
@@ -452,8 +490,8 @@ export default function VendorAiEnhancePage() {
                       {(activeTab === 'tryon' ? TRYON_PROCESSING_STEPS : PROCESSING_STEPS)[processingStep]}
                     </p>
                     {activeTab === 'tryon' && (
-                      <p className="text-[10px] text-purple-400 font-medium text-center px-4 max-w-[200px] leading-tight">
-                        Virtual Try-On models are highly complex and can take 2-5 minutes to complete. Please be patient.
+                      <p className="text-[10px] text-purple-400 font-medium text-center px-4 max-w-[240px] leading-tight">
+                        We clean your product background first, then run try-on. This usually takes 3–6 minutes. Please wait.
                       </p>
                     )}
                     <div className="flex gap-1 mt-4">
@@ -490,7 +528,9 @@ export default function VendorAiEnhancePage() {
             {/* Multi-image selector */}
             {product?.images?.length > 1 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Select image to enhance</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {activeTab === 'tryon' ? 'Select garment image' : 'Select image to enhance'}
+                </p>
                 <div className="flex gap-2 flex-wrap">
                   {product.images.map((url: string, i: number) => (
                     <button
@@ -524,6 +564,36 @@ export default function VendorAiEnhancePage() {
 
             {!enhancedUrl ? (
               <>
+                {activeTab === 'tryon' && (
+                  <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-3 space-y-3 text-xs">
+                    <p className="font-bold text-purple-800 flex items-center gap-1.5">
+                      <FiInfo className="w-3.5 h-3.5" /> Tips for best try-on results
+                    </p>
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-1">Product photo</p>
+                      <ul className="space-y-0.5 text-gray-600">
+                        {TRYON_GARMENT_TIPS.good.map((t) => (
+                          <li key={t} className="flex gap-1.5"><span className="text-emerald-600">✓</span>{t}</li>
+                        ))}
+                        {TRYON_GARMENT_TIPS.avoid.map((t) => (
+                          <li key={t} className="flex gap-1.5"><span className="text-red-500">✗</span>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-1">Model photo</p>
+                      <ul className="space-y-0.5 text-gray-600">
+                        {TRYON_MODEL_TIPS.good.map((t) => (
+                          <li key={t} className="flex gap-1.5"><span className="text-emerald-600">✓</span>{t}</li>
+                        ))}
+                        {TRYON_MODEL_TIPS.avoid.map((t) => (
+                          <li key={t} className="flex gap-1.5"><span className="text-red-500">✗</span>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
                 {/* Custom scene / model upload */}
                 <div>
                   <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">

@@ -9,6 +9,9 @@ import { apiError, apiSuccess } from '@/lib/utils';
 import { startVirtualTryOn } from '@/lib/services/ai-tryon.service';
 import type { TryOnRequest } from '@/lib/services/ai-photography/virtual-tryon.service';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);

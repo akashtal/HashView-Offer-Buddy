@@ -11,6 +11,12 @@
     },
     "app/api/vendor/products/ai-enhance/status/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/vendor/products/ai-tryon/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/vendor/products/ai-tryon/status/route.ts": {
+      "maxDuration": 300
     }
   }
 }

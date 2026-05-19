@@ -17,8 +17,13 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
-const REPLICATE_BG_MODEL =
-  process.env.REPLICATE_BG_MODEL || '851-labs/background-remover';
+const REPLICATE_BG_MODELS = process.env.REPLICATE_BG_MODELS
+  ? process.env.REPLICATE_BG_MODELS.split(',').map((model) => model.trim()).filter(Boolean)
+  : [
+      process.env.REPLICATE_BG_MODEL ||
+      'lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1',
+      '851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc',
+    ];
 
 async function fetchBuffer(url: string): Promise<Buffer> {
   const res = await fetch(url);
@@ -26,10 +31,11 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-function resolveBgRemovalProvider(): 'local' | 'replicate' {
+function resolveBgRemovalProvider(): 'local' | 'replicate' | 'cloudinary' {
   const explicit = process.env.AI_BG_REMOVAL?.toLowerCase();
   if (explicit === 'replicate') return 'replicate';
   if (explicit === 'local') return 'local';
+  if (explicit === 'cloudinary') return 'cloudinary';
   if (process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     return 'replicate';
   }
@@ -45,6 +51,30 @@ async function removeBackgroundLocal(imageUrl: string): Promise<Buffer> {
   return Buffer.from(await resultBlob.arrayBuffer());
 }
 
+async function removeBackgroundViaCloudinary(imageUrl: string): Promise<Buffer> {
+  console.log('[AI BG] Removing background via Cloudinary AI...');
+
+  const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+    cloudinary.uploader.upload(
+      imageUrl,
+      {
+        folder: 'Offerbuddy/ai-bg-remove',
+        resource_type: 'image',
+        format: 'png',
+        transformation: [
+          { background_removal: 'cloudinary_ai', format: 'png' },
+        ],
+      },
+      (err, res) => {
+        if (err) reject(err);
+        else resolve(res as { secure_url: string });
+      }
+    );
+  });
+
+  return fetchBuffer(result.secure_url);
+}
+
 function extractReplicateUrl(output: unknown): string {
   if (!output) throw new Error('Replicate returned empty output');
   const item = Array.isArray(output) ? output[0] : output;
@@ -55,50 +85,111 @@ function extractReplicateUrl(output: unknown): string {
   throw new Error(`Unexpected Replicate output format: ${JSON.stringify(item)}`);
 }
 
+function normalizeImageUrlForReplicate(imageUrl: string): string {
+  if (!imageUrl.includes('res.cloudinary.com') || !imageUrl.includes('/image/upload/')) {
+    return imageUrl;
+  }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+  // Extract the public_id portion and drop transformations, version, and extension
+  const m = imageUrl.match(/res\.cloudinary\.com\/[^\/]+\/image\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?(?:\?.*)?$/i);
+  if (!m) return imageUrl;
+  const publicId = m[1];
+  if (!cloudName) return imageUrl;
+
+  // Build a clean PNG delivery URL (no transformations, full-quality PNG)
+  return `https://res.cloudinary.com/${cloudName}/image/upload/f_png/${publicId}`;
+}
+
+async function retryReplicate<T>(fn: () => Promise<T>, maxRetries = 4): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const status = err?.response?.status || err?.status;
+      const isRateLimit = status === 429 || (err?.message && err.message.includes('429'));
+      const isNotFound = status === 404 || (err?.message && err.message.includes('404'));
+
+      if (isNotFound) {
+        throw new Error(
+          `Replicate background removal model not found: ${REPLICATE_BG_MODELS}. ` +
+          `Set REPLICATE_BG_MODEL to a valid slug or use AI_BG_REMOVAL=local.`
+        );
+      }
+
+      if (isRateLimit && attempt < maxRetries) {
+        const delayMs = (attempt + 1) * 8000;
+        console.warn(`[AI BG] Replicate rate limit (429). Retrying in ${delayMs / 1000}s... (${attempt + 1}/${maxRetries})`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      throw err;
+    }
+  }
+  return fn();
+}
+
 async function removeBackgroundViaReplicate(imageUrl: string): Promise<Buffer> {
   if (!process.env.REPLICATE_API_TOKEN) {
     throw new Error('REPLICATE_API_TOKEN is required for background removal');
   }
 
-  console.log(`[AI BG] Removing background via Replicate (${REPLICATE_BG_MODEL})...`);
-  const prediction = await replicate.predictions.create({
-    model: REPLICATE_BG_MODEL,
-    input: {
-      image: imageUrl,
-      format: 'png',
-      background_type: 'rgba',
-      threshold: 0,
-    },
-  });
+  const inputImage = normalizeImageUrlForReplicate(imageUrl);
+  let lastError: unknown;
 
-  const maxAttempts = 45;
-  for (let i = 0; i < maxAttempts; i++) {
-    const current = await replicate.predictions.get(prediction.id);
-    if (current.status === 'succeeded') {
-      const cutoutUrl = extractReplicateUrl(current.output);
+  for (let index = 0; index < REPLICATE_BG_MODELS.length; index++) {
+    const model = REPLICATE_BG_MODELS[index];
+    console.log(`[AI BG] Trying Replicate bg remover model (${index + 1}/${REPLICATE_BG_MODELS.length}): ${model}`);
+
+    try {
+      const output = await retryReplicate(() => replicate.run(
+        model as `${string}/${string}` | `${string}/${string}:${string}`,
+        {
+          input: {
+            image: inputImage,
+            format: 'png',
+            background_type: 'rgba',
+            threshold: 0,
+          },
+        }
+      ));
+
+      const cutoutUrl = extractReplicateUrl(output);
       return fetchBuffer(cutoutUrl);
+    } catch (err: any) {
+      lastError = err;
+      const message = err?.message || String(err);
+      console.warn(`[AI BG] Replicate model ${model} failed: ${message}`);
+
+      if (index === REPLICATE_BG_MODELS.length - 1) {
+        throw err;
+      }
+
+      console.log('[AI BG] Falling back to next Replicate model...');
     }
-    if (current.status === 'failed' || current.status === 'canceled') {
-      throw new Error(`Background removal ${current.status}: ${current.error || 'unknown'}`);
-    }
-    await new Promise((r) => setTimeout(r, 1500));
   }
-  throw new Error('Background removal timed out');
+
+  throw lastError instanceof Error ? lastError : new Error('Replicate background removal failed');
 }
 
 /** Remove product background; uses Replicate on Vercel unless AI_BG_REMOVAL=local. */
 export async function removeProductBackground(imageUrl: string): Promise<Buffer> {
   const provider = resolveBgRemovalProvider();
 
+  if (provider === 'cloudinary') {
+    return removeBackgroundViaCloudinary(imageUrl);
+  }
+
   if (provider === 'replicate') {
-    return removeBackgroundViaReplicate(imageUrl);
+    return await removeBackgroundViaReplicate(imageUrl);
   }
 
   try {
     return await removeBackgroundLocal(imageUrl);
   } catch (err) {
     console.warn('[AI BG] Local removal failed, falling back to Replicate:', err);
-    return removeBackgroundViaReplicate(imageUrl);
+    return await removeBackgroundViaReplicate(imageUrl);
   }
 }
 
@@ -123,6 +214,15 @@ export async function uploadProductCutout(
   return result.secure_url;
 }
 
+async function trimTransparentEdges(buffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(buffer).trim().png().toBuffer();
+  } catch (err) {
+    console.warn('[AI BG] Could not trim background removal output:', err);
+    return buffer;
+  }
+}
+
 export async function getOrCreateProductCutout(params: {
   imageUrl: string;
   vendorId: string;
@@ -135,7 +235,8 @@ export async function getOrCreateProductCutout(params: {
     };
   }
 
-  const buffer = await removeProductBackground(params.imageUrl);
+  const rawBuffer = await removeProductBackground(params.imageUrl);
+  const buffer = await trimTransparentEdges(rawBuffer);
   const cutoutUrl = await uploadProductCutout(buffer, params.vendorId);
   return { buffer, cutoutUrl };
 }
