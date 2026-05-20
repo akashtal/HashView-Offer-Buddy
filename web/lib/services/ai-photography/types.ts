@@ -26,7 +26,7 @@ export interface ProductUnderstanding {
   sceneType: string;
   composition: string;
   confidence: number;
-  source: 'gemini-vision' | 'openai-vision' | 'heuristic';
+  source: 'heuristic';
 }
 
 export interface LightingProfile {

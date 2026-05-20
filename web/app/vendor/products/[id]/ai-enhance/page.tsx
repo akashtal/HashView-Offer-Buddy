@@ -22,12 +22,17 @@ interface AiModel {
   _id: string;
   name: string;
   gender: string;
+  bodySegment?: TryOnBodySegment;
+  garmentCategories?: TryOnBodySegment[];
   imageUrl: string;
   thumbnailUrl?: string;
+  description?: string;
+  sortOrder?: number;
 }
 
 type Mode = 'style' | 'custom-scene' | 'tryon-model' | 'tryon-custom' | null;
 type Tab = 'enhance' | 'tryon';
+type TryOnBodySegment = 'upper_body' | 'lower_body' | 'dresses' | 'full_body';
 
 // ─── Style metadata (emoji + description) shown in the UI ────────────────────
 const STYLE_META: Record<string, { emoji: string; desc: string; bestFor: string }> = {
@@ -66,8 +71,8 @@ const TRYON_GARMENT_TIPS = {
 };
 
 const TRYON_MODEL_TIPS = {
-  good: ['Studio photo, plain grey or white backdrop', 'Upper body visible (waist-up)', 'Neutral pose, facing camera'],
-  avoid: ['Busy outdoor backgrounds', 'Extreme angles or cropped head', 'Other people in frame'],
+  good: ['Choose upper-body models for shirts/tops', 'Choose lower-body models for jeans/pants', 'Choose full-body models for dresses, sarees, and full outfits'],
+  avoid: ['Close-up face-only portraits', 'Busy outdoor backgrounds', 'Extreme angles or cropped body'],
 };
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -104,9 +109,41 @@ function isTryOnEligible(product: any): boolean {
     .toLowerCase();
   const clothingHints = [
     'shirt', 'top', 'blouse', 't-shirt', 'tee', 'kurta', 'kurti', 'dress', 'saree', 'sari',
-    'jacket', 'hoodie', 'sweater', 'garment', 'apparel', 'tunic', 'polo',
+    'jacket', 'hoodie', 'sweater', 'garment', 'apparel', 'tunic', 'polo', 'jeans', 'pant',
+    'pants', 'trouser', 'trousers', 'jogger', 'joggers', 'shorts', 'skirt', 'legging',
+    'leggings', 'palazzo',
   ];
   return clothingHints.some((word) => text.includes(word));
+}
+
+function inferTryOnBodySegment(product: any): TryOnBodySegment {
+  const text = [product?.title, product?.description, product?.category?.name, ...(product?.tags || [])]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const dressKeywords = ['dress', 'gown', 'saree', 'sari', 'lehenga', 'jumpsuit', 'romper', 'co-ord', 'coord', 'set'];
+  const lowerKeywords = ['jeans', 'pant', 'pants', 'trouser', 'trousers', 'jogger', 'joggers', 'shorts', 'skirt', 'legging', 'leggings', 'palazzo', 'bottom'];
+
+  if (dressKeywords.some((word) => text.includes(word))) return 'dresses';
+  if (lowerKeywords.some((word) => text.includes(word))) return 'lower_body';
+  return 'upper_body';
+}
+
+function bodySegmentLabel(segment?: TryOnBodySegment) {
+  switch (segment) {
+    case 'upper_body': return 'Upper Body';
+    case 'lower_body': return 'Lower Body';
+    case 'dresses': return 'Dress / Outfit';
+    case 'full_body': return 'Full Body';
+    default: return 'Fashion Model';
+  }
+}
+
+function isModelCompatible(model: AiModel, segment: TryOnBodySegment) {
+  if (model.bodySegment === 'full_body') return true;
+  if (model.bodySegment === segment) return true;
+  return model.garmentCategories?.includes(segment) || false;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -143,6 +180,9 @@ export default function VendorAiEnhancePage() {
   const detectedCategory  = inferCategory(product);
   const recommendedStyles = styles.filter(s => isCompatible(s, detectedCategory) && detectedCategory !== 'generic');
   const otherStyles       = styles.filter(s => !isCompatible(s, detectedCategory) || detectedCategory === 'generic');
+  const tryOnBodySegment  = inferTryOnBodySegment(product);
+  const recommendedModels = models.filter(m => isModelCompatible(m, tryOnBodySegment));
+  const otherModels       = models.filter(m => !isModelCompatible(m, tryOnBodySegment));
 
   const isTryOnProduct = isTryOnEligible(product);
 
@@ -353,7 +393,7 @@ export default function VendorAiEnhancePage() {
     );
   };
 
-  const renderModelCard = (m: AiModel) => {
+  const renderModelCard = (m: AiModel, recommended = false) => {
     const isSelected = selectedModelId === m._id;
     return (
       <button
@@ -373,10 +413,22 @@ export default function VendorAiEnhancePage() {
             }
           </div>
           <div className="min-w-0 flex-1">
-            <span className={`text-sm font-semibold ${isSelected ? 'text-purple-700' : 'text-gray-800'}`}>
-              {m.name}
-            </span>
-            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight truncate capitalize">{m.gender} Model</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-sm font-semibold ${isSelected ? 'text-purple-700' : 'text-gray-800'}`}>
+                {m.name}
+              </span>
+              {recommended && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  Recommended
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5 leading-tight truncate capitalize">
+              {m.gender} - {bodySegmentLabel(m.bodySegment)}
+            </p>
+            {m.description && (
+              <p className="text-[10px] text-gray-500 mt-1 leading-tight line-clamp-2">{m.description}</p>
+            )}
           </div>
           {isSelected && <FiCheck className="ml-auto text-purple-600 w-4 h-4 flex-shrink-0" />}
         </div>
@@ -643,7 +695,22 @@ export default function VendorAiEnhancePage() {
                   ) : (
                     <div className="space-y-2 max-h-[420px] overflow-y-auto pr-0.5">
                       {activeTab === 'tryon' ? (
-                        models.map(m => renderModelCard(m))
+                        <>
+                          {recommendedModels.length > 0 && (
+                            <>
+                              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide px-1 pt-1">
+                                Best for {bodySegmentLabel(tryOnBodySegment)}
+                              </p>
+                              {recommendedModels.map(m => renderModelCard(m, true))}
+                              {otherModels.length > 0 && (
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide px-1 pt-2">
+                                  All model presets
+                                </p>
+                              )}
+                            </>
+                          )}
+                          {(recommendedModels.length > 0 ? otherModels : models).map(m => renderModelCard(m, false))}
+                        </>
                       ) : (
                         <>
                           {recommendedStyles.length > 0 && (

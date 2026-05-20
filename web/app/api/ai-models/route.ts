@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     await connectDB();
-    const models = await AiModel.find({ isActive: true }).sort({ createdAt: 1 });
+    const models = await AiModel.find({ isActive: true })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .lean();
     
     return NextResponse.json(apiSuccess({ models }));
   } catch (error: any) {
