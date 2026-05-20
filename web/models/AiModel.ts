@@ -14,6 +14,7 @@ export interface IAiModel extends Document {
   updatedAt: Date;
 }
 
+
 const AiModelSchema = new Schema<IAiModel>(
   {
     name: {
