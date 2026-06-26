@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import axios from 'axios';
 import CategoryCarousel from '@/components/SwiggyComponents/CategoryCarousel';
 import RestaurantCard from '@/components/SwiggyComponents/RestaurantCard';
@@ -32,21 +33,22 @@ export default function ClientHomePage() {
     const pageRef = useRef(page);
     pageRef.current = page;
 
-    const fetchInitialData = useCallback(async () => {
+    const fetchInitialData = useCallback(async (signal?: AbortSignal) => {
         try {
             // Fetch categories AND vendors in parallel, only once here
             const [catRes, vendRes] = await Promise.all([
-                axios.get('/api/categories?parentOnly=true'),
-                axios.get('/api/vendors?limit=10'),
+                axios.get('/api/categories?parentOnly=true', { signal }),
+                axios.get('/api/vendors?limit=10', { signal }),
             ]);
             setCategories(catRes.data?.data?.categories || []);
             setVendors(vendRes.data?.data?.vendors || []);
         } catch (error) {
+            if (axios.isCancel(error)) return;
             console.error('Failed to fetch initial data:', error);
         }
     }, []);
 
-    const fetchProducts = useCallback(async (isLoadMore = false, isRefresh = false) => {
+    const fetchProducts = useCallback(async (isLoadMore = false, isRefresh = false, signal?: AbortSignal) => {
         try {
             if (!isLoadMore && !isRefresh) setIsLoading(true);
 
@@ -70,7 +72,7 @@ export default function ClientHomePage() {
             if (filters.minPrice) params.minPrice = filters.minPrice;
             if (filters.maxPrice) params.maxPrice = filters.maxPrice;
 
-            const response = await axios.get('/api/products', { params });
+            const response = await axios.get('/api/products', { params, signal });
             const newProducts = response.data.data.products || [];
 
             if (isLoadMore) {
@@ -83,6 +85,7 @@ export default function ClientHomePage() {
             setPage(currentPage);
             setHasMore(response.data.data.pagination?.hasMore ?? false);
         } catch (error) {
+            if (axios.isCancel(error)) return;
             console.error('Failed to load products:', error);
             if (!isLoadMore) setProducts([]);
             setHasMore(false);
@@ -95,11 +98,15 @@ export default function ClientHomePage() {
 
     // Mount: load categories + vendors + products in parallel (2 calls, not 4)
     useEffect(() => {
-        fetchInitialData();
+        const controller = new AbortController();
+        fetchInitialData(controller.signal);
+        return () => controller.abort();
     }, [fetchInitialData]);
 
     useEffect(() => {
-        fetchProducts();
+        const controller = new AbortController();
+        fetchProducts(false, false, controller.signal);
+        return () => controller.abort();
     }, [fetchProducts]);
 
     const handleRefresh = useCallback(() => {
@@ -127,7 +134,7 @@ export default function ClientHomePage() {
         category: selectedCategory || filters.category
     };
 
-    // Memoized renderItem — prevents FlatList from re-rendering all cells on every state change
+    // Memoized renderItem — prevents FlashList from re-rendering all cells on every state change
     const renderItem = useCallback(({ item }: { item: any }) => (
         <View style={styles.gridItem}>
             <RestaurantCard
@@ -211,21 +218,15 @@ export default function ClientHomePage() {
                     <ActivityIndicator size="large" color="#FDB913" />
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={products}
                     keyExtractor={(item) => item._id}
                     numColumns={2}
-                    columnWrapperStyle={styles.columnWrapper}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={{ paddingBottom: 80, paddingHorizontal: 12 }}
                     ListHeaderComponent={renderHeader}
                     ListFooterComponent={renderFooter}
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.5}
-                    // Performance tuning
-                    maxToRenderPerBatch={8}
-                    initialNumToRender={8}
-                    windowSize={5}
-                    removeClippedSubviews={true}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#FDB913']} />
                     }
@@ -255,8 +256,8 @@ const styles = StyleSheet.create({
     itemCount: { fontSize: 12, color: '#888', fontWeight: '500', marginBottom: 2 },
 
     listContent: { paddingBottom: 40 },
-    columnWrapper: { justifyContent: 'space-between', paddingHorizontal: 16 },
-    gridItem: { width: '48%' },
+    columnWrapper: { justifyContent: 'space-between', paddingHorizontal: 12 },
+    gridItem: { flex: 1, margin: 4 },
 
     footerSpacer: { height: 20 },
     footerLoading: { paddingVertical: 20, alignItems: 'center' },

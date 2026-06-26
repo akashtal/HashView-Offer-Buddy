@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
 import { Modal } from 'react-native';
 
+import { Image } from 'expo-image';
 export default function VendorProductCreateScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -119,7 +120,7 @@ export default function VendorProductCreateScreen() {
                     slug,
                     ...(newCategoryImage ? { image: newCategoryImage } : {}),
                 },
-                { headers: { Authorization: `Bearer ${token}` } }
+                {}
             );
             const newCat = response.data.data.category;
             setCategories(prev => [...prev, newCat]);
@@ -163,7 +164,7 @@ export default function VendorProductCreateScreen() {
         const res = await axios.post('/api/upload', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...({}),
             },
         });
         return res.data.data.url as string;
@@ -306,7 +307,7 @@ export default function VendorProductCreateScreen() {
                                 </TouchableOpacity>
                                 {showCategoryPicker && (
                                     <View style={styles.pickerList}>
-                                        {categories.map(cat => (
+                                        {categories?.map(cat => (
                                             <TouchableOpacity
                                                 key={cat._id}
                                                 style={styles.pickerItem}
@@ -343,7 +344,7 @@ export default function VendorProductCreateScreen() {
                                         >
                                             <Text style={styles.pickerItemText}>None</Text>
                                         </TouchableOpacity>
-                                        {subcategories.map(cat => (
+                                        {subcategories?.map(cat => (
                                             <TouchableOpacity
                                                 key={cat._id}
                                                 style={styles.pickerItem}
@@ -443,7 +444,7 @@ export default function VendorProductCreateScreen() {
                         </CardHeader>
                         <CardBody>
                             <View style={styles.imageGrid}>
-                                {images.map((url, index) => (
+                                {images?.map((url, index) => (
                                     <View key={index} style={styles.imgWrapper}>
                                         <Image source={{ uri: url }} style={styles.prodImg} />
                                         <TouchableOpacity style={styles.removeImgBtn} onPress={() => removeImage(index)}>

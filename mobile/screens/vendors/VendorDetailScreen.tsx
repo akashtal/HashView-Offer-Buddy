@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    View, Text, Image, TouchableOpacity, ScrollView, FlatList,
-    TextInput, ActivityIndicator, StyleSheet, Linking, Modal, Dimensions
+    View, Text, TouchableOpacity, ScrollView,
+    TextInput, ActivityIndicator, StyleSheet, Linking, Modal, Dimensions, Platform
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter, Redirect } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import axios from 'axios';
@@ -15,6 +16,7 @@ import FilterChips from '@/components/ui/FilterChips';
 import Toast from 'react-native-toast-message';
 import { useAuthStore } from '@/store/authStore';
 
+import { Image } from 'expo-image';
 const { width } = Dimensions.get('window');
 
 export default function VendorDetailScreen() {
@@ -356,7 +358,7 @@ export default function VendorDetailScreen() {
                             <Image
                                 source={{ uri: vendor.shopLogo || 'https://via.placeholder.com/150' }}
                                 style={styles.logoImage}
-                                resizeMode="contain"
+                                contentFit="contain"
                             />
                         </View>
                         <View style={styles.vendorInfoBox}>
@@ -458,14 +460,14 @@ export default function VendorDetailScreen() {
                                     <View style={styles.activeSearchChip}>
                                         <Text style={styles.activeSearchLabel}>Searching:</Text>
                                         <TouchableOpacity onPress={clearSearch} style={styles.searchRemoverBtn}>
-                                            <Text style={styles.searchRemoverText}>"{searchQuery}"</Text>
+                                            <Text style={styles.searchRemoverText}>&quot;{searchQuery}&quot;</Text>
                                             <Feather name="x" size={12} color="#6B7280" />
                                         </TouchableOpacity>
                                     </View>
                                 ) : null}
                             </View>
 
-                            {/* Products — FlatList for virtualization (only renders visible items) */}
+                            {/* Products — FlashList for virtualization (only renders visible items) */}
                             {products.length === 0 && !isProductsLoading ? (
                                 <View style={styles.noProductsBox}>
                                     <Feather name="search" size={40} color="#D1D5DB" />
@@ -480,13 +482,13 @@ export default function VendorDetailScreen() {
                                     )}
                                 </View>
                             ) : (
-                                <View>
-                                    <FlatList
+                                <View style={{ minHeight: 600 }}>
+                                    <FlashList
                                         data={products}
                                         keyExtractor={(p: any) => p._id}
                                         numColumns={2}
                                         scrollEnabled={false}
-                                        columnWrapperStyle={styles.productsGrid}
+                                        contentContainerStyle={{ paddingHorizontal: 4 }}
                                         renderItem={({ item: product }: { item: any }) => (
                                             <View style={styles.productCell}>
                                                 <ProductCard
@@ -543,7 +545,7 @@ export default function VendorDetailScreen() {
                             {vendor.businessHours && vendor.businessHours.length > 0 && (
                                 <View style={{ marginTop: 24 }}>
                                     <Text style={styles.sectionTitle}>Opening Hours</Text>
-                                    {vendor.businessHours.map((h: any, i: number) => (
+                                    {vendor.businessHours?.map((h: any, i: number) => (
                                         <View key={i} style={styles.hoursRow}>
                                             <Text style={styles.hoursDay}>{h.day}</Text>
                                             <Text style={styles.hoursTime}>
@@ -897,7 +899,7 @@ const styles = StyleSheet.create({
     clearFiltersLink: { color: '#FDB913', fontSize: 14, fontWeight: 'bold', marginTop: 12, textDecorationLine: 'underline' },
 
     productsGrid: { justifyContent: 'space-between' },
-    productCell: { width: '48%', marginBottom: 16 },
+    productCell: { flex: 1, margin: 4, marginBottom: 8 },
     loadingRow: { flexDirection: 'row', justifyContent: 'space-between' },
     shimmer: { height: 240, backgroundColor: '#E5E7EB', borderRadius: 8 },
     loadMoreBtn: { alignItems: 'center', paddingVertical: 12, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 24, marginVertical: 16, backgroundColor: '#FFF' },

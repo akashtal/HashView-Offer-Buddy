@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { Image } from 'expo-image';
 interface SupplierCardProps {
     id: string;
     shopName: string;
@@ -42,7 +43,7 @@ export default function SupplierCard({
             <View style={styles.header}>
                 <View style={styles.logoRow}>
                     {logo ? (
-                        <Image source={{ uri: logo }} style={styles.logo} resizeMode="cover" />
+                        <Image source={{ uri: logo }} style={styles.logo} contentFit="cover" />
                     ) : (
                         <View style={styles.logoFallback}>
                             <Text style={styles.logoFallbackText}>{shopName[0] || 'S'}</Text>

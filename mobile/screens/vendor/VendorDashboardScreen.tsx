@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -10,6 +10,7 @@ import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import axios from 'axios';
 
+import { Image } from 'expo-image';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
 
 // Formatting util map
@@ -59,7 +60,7 @@ export default function VendorDashboardScreen() {
             axios.post(
                 `${API_URL}/api/vendors/me/heartbeat`,
                 {},
-                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                { headers: {} }
             )
             .then((res) => {
                 if (res.data?.data?.isLocked !== undefined) {
@@ -83,7 +84,7 @@ export default function VendorDashboardScreen() {
             const res = await axios.post(
                 `${API_URL}/api/vendors/me/unlock`,
                 {},
-                { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                { headers: {} }
             );
             if (res.data?.success) {
                 setIsLocked(false);
@@ -242,7 +243,7 @@ export default function VendorDashboardScreen() {
                 {!myVendorProfile.isApproved && (
                     <View style={styles.warningBox}>
                         <Text style={styles.warningTxt}>
-                            ⚠️ Your vendor account is pending approval. You can add products, but they won't be visible to users until your account is approved by an admin.
+                            ⚠️ Your vendor account is pending approval. You can add products, but they won&apos;t be visible to users until your account is approved by an admin.
                         </Text>
                     </View>
                 )}

@@ -1,11 +1,13 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 
+import { Image } from 'expo-image';
 export default function VendorProductsScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuthStore();
@@ -198,7 +200,7 @@ export default function VendorProductsScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={products}
                     keyExtractor={item => item._id}
                     renderItem={renderItem}

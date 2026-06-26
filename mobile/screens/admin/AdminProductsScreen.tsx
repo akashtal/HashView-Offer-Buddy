@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 import { formatRelativeTime } from '@/utils/utils';
 
+import { Image } from 'expo-image';
 export default function AdminProductsScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuthStore();
@@ -163,7 +165,7 @@ export default function AdminProductsScreen() {
                 </Text>
             </View>
 
-            <FlatList
+            <FlashList
                 data={filteredProducts}
                 keyExtractor={item => item._id}
                 renderItem={renderItem}

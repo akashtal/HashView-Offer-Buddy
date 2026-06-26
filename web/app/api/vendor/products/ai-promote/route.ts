@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(apiError('productId and enhancedUrl are required'), { status: 400 });
     }
 
-    await promoteAiImage(productId, enhancedUrl);
+    const images = await promoteAiImage(productId, enhancedUrl);
 
-    return NextResponse.json(apiSuccess({}, 'Image promoted to product gallery'));
+    return NextResponse.json(apiSuccess({ images }, 'Image promoted to product gallery'));
   } catch (error: any) {
     return NextResponse.json(apiError('Promotion failed: ' + error.message), { status: 500 });
   }

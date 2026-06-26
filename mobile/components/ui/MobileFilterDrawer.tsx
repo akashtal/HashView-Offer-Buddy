@@ -163,7 +163,7 @@ export default function MobileFilterDrawer({
                                             <Text style={[styles.catLabel, !localFilters.category && styles.catLabelActive]}>All Categories</Text>
                                             {!localFilters.category && <Feather name="check" size={18} color="#000" />}
                                         </TouchableOpacity>
-                                        {categories.map(cat => (
+                                        {categories?.map(cat => (
                                             <TouchableOpacity 
                                                 key={cat._id}
                                                 style={[styles.catRow, localFilters.category === cat._id && styles.catRowActive]}

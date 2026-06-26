@@ -61,6 +61,9 @@ export default function Button({
             onPress={onPress}
             disabled={disabled || isLoading}
             activeOpacity={0.8}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: disabled || isLoading, busy: isLoading }}
             style={[
                 styles.btn,
                 {

@@ -1,675 +1,172 @@
-/**
- * AI Product Enhancement Screen
- *
- * Vendors come here after uploading a product image. They can:
- *  1. Select a predefined AI Style ("Amazon Clean", "Luxury Gold", etc.)
- *  2. Upload their own model/scene photo for custom compositing
- *  3. Trigger AI enhancement and see a before/after result
- *  4. Promote the enhanced image to the product gallery or skip
- */
-
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Dimensions,
-} from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { Image } from 'expo-image';
+type Tab = 'enhance' | 'tryon';
+type Mode = 'style' | 'custom-scene' | 'tryon-model' | 'tryon-custom' | null;
+type Segment = 'upper_body' | 'lower_body' | 'dresses' | 'full_body';
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
-interface AiStyle {
-  _id: string;
-  name: string;
-  slug: string;
-  thumbnailUrl?: string;
-}
+type AiStyle = { _id: string; name: string; slug: string; description?: string; bestFor?: string; thumbnailUrl?: string; categoryCompatibility?: string[]; sceneType?: string };
+type AiModel = { _id: string; name: string; gender: string; bodySegment?: Segment; garmentCategories?: Segment[]; imageUrl: string; thumbnailUrl?: string; description?: string };
 
-type Mode = 'style' | 'custom-scene' | null;
+const PURPLE = '#9333EA';
+const DARK = '#6D28D9';
+const SOFT = '#FAF5FF';
+const GREEN = '#059669';
+const sceneSteps = ['Uploading product', 'Understanding category', 'Removing background', 'Generating scene', 'Compositing product', 'Uploading final image'];
+const tryonSteps = ['Analyzing garment', 'Preparing garment', 'Matching category', 'Mapping to model', 'Running try-on', 'Finalizing image'];
 
-// ─────────────────────────────────────────────────────────────
-// Processing animation messages
-// ─────────────────────────────────────────────────────────────
-const PROCESSING_STEPS = [
-  '🔍 Analysing your image…',
-  '✂️  Removing background…',
-  '🎨 Applying AI magic…',
-  '✨ Generating styled photo…',
-  '☁️  Uploading result…',
-];
+const styleMeta: Record<string, { icon: keyof typeof Feather.glyphMap; desc: string; best: string }> = {
+  'amazon-clean': { icon: 'shopping-cart', desc: 'Classic white marketplace background', best: 'All products' },
+  'luxury-gold': { icon: 'star', desc: 'Black marble and gold accents, premium feel', best: 'Jewelry, Watch, Perfume' },
+  'instagram-viral': { icon: 'camera', desc: 'Bright pastels with botanical props', best: 'Fashion, Cosmetics, Bags' },
+  'nike-style': { icon: 'activity', desc: 'Dark athletic studio, dramatic shadows', best: 'Footwear, Sportswear' },
+  'nature-organic': { icon: 'sun', desc: 'Earthy wood and green botanical mood', best: 'Cosmetics, Furniture' },
+  'fashion-model': { icon: 'user', desc: 'Clean studio sweep for clothing and sarees', best: 'Fashion, Saree, Bags' },
+  'jewelry-premium': { icon: 'aperture', desc: 'Black velvet macro with sparkle highlights', best: 'Jewelry, Watch' },
+  'tech-commercial': { icon: 'monitor', desc: 'Minimal futuristic Apple-style studio', best: 'Electronics, Gadgets' },
+  'furniture-room': { icon: 'home', desc: 'Modern interior room with daylight', best: 'Furniture, Home Decor' },
+};
 
-// ─────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────
+const cats: Record<string, string[]> = {
+  jewelry: ['ring', 'jewelry', 'jewellery', 'diamond', 'necklace', 'bracelet', 'earring'],
+  watch: ['watch', 'wristwatch', 'chronograph'],
+  fashion: ['jeans', 'pant', 'shirt', 'dress', 'saree', 'sari', 'kurta', 'clothing', 'top', 'jacket', 'blouse', 't-shirt', 'tshirt', 'tee', 'hoodie', 'sweater', 'coat', 'garment', 'apparel', 'trouser', 'skirt'],
+  footwear: ['shoe', 'sneaker', 'sandal', 'boot'], electronics: ['phone', 'laptop', 'earbud', 'headphone', 'speaker', 'camera', 'tablet'],
+  furniture: ['chair', 'sofa', 'table', 'bed', 'desk'], perfume: ['perfume', 'fragrance', 'cologne'], cosmetics: ['makeup', 'lipstick', 'serum', 'cream'], bags: ['bag', 'purse', 'wallet', 'backpack', 'handbag'],
+};
+
+const textOf = (p: any, fallback: string) => [p?.title || fallback, p?.description, p?.category?.name, p?.subcategory?.name, ...(p?.tags || [])].filter(Boolean).join(' ').toLowerCase();
+const inferCategory = (p: any, fallback: string) => { const txt = textOf(p, fallback); for (const [cat, words] of Object.entries(cats)) if (words.some(w => txt.includes(w))) return cat; return 'generic'; };
+const isFashion = (p: any, fallback: string) => inferCategory(p, fallback) === 'fashion' || cats.fashion.some(w => textOf(p, fallback).includes(w));
+const inferSegment = (p: any, fallback: string): Segment => { const txt = textOf(p, fallback); if (['dress', 'gown', 'saree', 'sari', 'lehenga', 'jumpsuit', 'set'].some(w => txt.includes(w))) return 'dresses'; if (['jeans', 'pant', 'pants', 'trouser', 'shorts', 'skirt', 'legging', 'palazzo', 'bottom'].some(w => txt.includes(w))) return 'lower_body'; return 'upper_body'; };
+const segmentLabel = (s?: Segment) => s === 'upper_body' ? 'Upper Body' : s === 'lower_body' ? 'Lower Body' : s === 'dresses' ? 'Dress / Outfit' : s === 'full_body' ? 'Full Body' : 'Fashion Model';
+const styleOk = (s: AiStyle, cat: string) => !s.categoryCompatibility?.length || s.categoryCompatibility.includes(cat);
+const modelOk = (m: AiModel, seg: Segment) => m.bodySegment === 'full_body' || m.bodySegment === seg || !!m.garmentCategories?.includes(seg);
+
 export default function VendorAiEnhanceScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const { token } = useAuthStore();
+  const router = useRouter(); const params = useLocalSearchParams(); const token = useAuthStore(s => s.token);
+  const productId = params.productId as string; const imageUrl = params.imageUrl as string; const productName = (params.productName as string) || 'product'; const isPreview = !productId || productId === 'preview';
+  const [product, setProduct] = useState<any>(null); const [selectedImage, setSelectedImage] = useState(imageUrl || ''); const [loading, setLoading] = useState(!isPreview);
+  const [stylesData, setStylesData] = useState<AiStyle[]>([]); const [models, setModels] = useState<AiModel[]>([]); const [assetsLoading, setAssetsLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>('enhance'); const [mode, setMode] = useState<Mode>(null); const [styleId, setStyleId] = useState<string | null>(null); const [modelId, setModelId] = useState<string | null>(null);
+  const [customScene, setCustomScene] = useState<string | null>(null); const [customModel, setCustomModel] = useState<string | null>(null); const [uploading, setUploading] = useState(false);
+  const [quality, setQuality] = useState<'preview' | 'premium'>('preview'); const [processing, setProcessing] = useState(false); const [step, setStep] = useState(0); const [enhanced, setEnhanced] = useState<string | null>(null); const [showAfter, setShowAfter] = useState(false);
+  const pulse = useRef(new Animated.Value(1)).current;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Passed in from the product create/edit screen
-  const productId = params.productId as string;
-  const imageUrl = params.imageUrl as string;
-  const productName = (params.productName as string) || 'product';
-  const isPreview = !productId || productId === 'preview'; // no saved product yet
-
-  // State
-  const [aiStyles, setAiStyles] = useState<AiStyle[]>([]);
-  const [loadingStyles, setLoadingStyles] = useState(true);
-  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>(null);
-
-  const [customSceneUrl, setCustomSceneUrl] = useState<string | null>(null);
-  const [uploadingScene, setUploadingScene] = useState(false);
-
-  const [processing, setProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState(0);
-  const [enhancedUrl, setEnhancedUrl] = useState<string | null>(null);
-
-  const [showAfter, setShowAfter] = useState(false);  // before/after toggle
-
-  // Animation
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const processingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // ── Load AI Styles ──────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      try {
-        // Use public /api/ai-styles — no admin auth required
-        const res = await axios.get('/api/ai-styles', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAiStyles(res.data.data.styles || []);
-      } catch (e) {
-        console.error('Failed to load AI styles', e);
-      } finally {
-        setLoadingStyles(false);
-      }
-    })();
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
-  // ── Pulse animation while processing ───────────────────────
-  useEffect(() => {
-    if (processing) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.05, duration: 700, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 0.97, duration: 700, useNativeDriver: true }),
-        ])
-      ).start();
-      processingInterval.current = setInterval(() => {
-        setProcessingStep(s => (s + 1) % PROCESSING_STEPS.length);
-      }, 3500);
-    } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
-      if (processingInterval.current) clearInterval(processingInterval.current);
-    }
-    return () => { if (processingInterval.current) clearInterval(processingInterval.current); };
-  }, [processing]);
+  const detectProduct = product || { title: productName, images: imageUrl ? [imageUrl] : [] }; const category = inferCategory(detectProduct, productName); const fashion = isFashion(detectProduct, productName); const segment = inferSegment(detectProduct, productName);
+  const recommendedStyles = useMemo(() => stylesData.filter(s => category !== 'generic' && styleOk(s, category)), [stylesData, category]);
+  const otherStyles = useMemo(() => stylesData.filter(s => category === 'generic' || !styleOk(s, category)), [stylesData, category]);
+  const recommendedModels = useMemo(() => models.filter(m => modelOk(m, segment)), [models, segment]); const otherModels = useMemo(() => models.filter(m => !modelOk(m, segment)), [models, segment]);
 
-  // ── Select predefined style ─────────────────────────────────
-  const selectStyle = (id: string) => {
-    setSelectedStyleId(id);
-    setMode('style');
-    setCustomSceneUrl(null);
-  };
+  useEffect(() => { if (isPreview) { setLoading(false); return; } (async () => { try { const res = await axios.get(`/api/products/${productId}`, { headers: {} }); const p = res.data.data?.product; setProduct(p); setSelectedImage(imageUrl || p?.images?.[0] || ''); if (isFashion(p, productName)) setTab('tryon'); } catch { Alert.alert('Product Error', 'Could not load product details.'); } finally { setLoading(false); } })(); }, [imageUrl, isPreview, productId, productName, token]);
+  useEffect(() => { (async () => { try { const [sr, mr] = await Promise.all([axios.get('/api/ai-styles'), axios.get('/api/ai-models')]); setStylesData(sr.data.data?.styles || []); setModels(mr.data.data?.models || []); } catch { Alert.alert('AI Studio Error', 'Could not load AI styles and models.'); } finally { setAssetsLoading(false); } })(); }, []);
+  useEffect(() => { if (!processing) { pulse.stopAnimation(); pulse.setValue(1); return; } Animated.loop(Animated.sequence([Animated.timing(pulse, { toValue: 1.04, duration: 700, useNativeDriver: true }), Animated.timing(pulse, { toValue: 0.98, duration: 700, useNativeDriver: true })])).start(); const steps = tab === 'tryon' ? tryonSteps : sceneSteps; const id = setInterval(() => setStep(s => (s + 1) % steps.length), 3000); return () => clearInterval(id); }, [processing, pulse, tab]);
 
-  // ── Select custom scene mode ────────────────────────────────
-  const selectCustomScene = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo library access to upload a scene.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.85,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
+  const reset = (next?: Tab) => { setEnhanced(null); setShowAfter(false); setMode(null); setStyleId(null); setModelId(null); setCustomScene(null); setCustomModel(null); setProcessing(false); setStep(0); if (next) setTab(next); };
+  const uploadMedia = async (target: 'scene' | 'model') => { const perm = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (perm.status !== 'granted') return Alert.alert('Permission needed', 'Allow photo library access.'); const pick = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.85 }); if (pick.canceled || !pick.assets?.[0]) return; setUploading(true); try { const a = pick.assets[0]; const fd = new FormData(); fd.append('file', { uri: a.uri, type: a.mimeType || 'image/jpeg', name: a.fileName || `${target}.jpg` } as any); const res = await axios.post('/api/upload', fd, { headers: { 'Content-Type': 'multipart/form-data', ...({}) } }); const url = res.data.data.url as string; if (target === 'scene') { setCustomScene(url); setStyleId(null); setMode('custom-scene'); } else { setCustomModel(url); setModelId(null); setMode('tryon-custom'); } } catch (e: any) { Alert.alert('Upload failed', e.response?.data?.error || e.message || 'Could not upload image.'); } finally { setUploading(false); } };
 
-    setUploadingScene(true);
-    try {
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append('file', {
-        uri: asset.uri,
-        type: asset.mimeType || 'image/jpeg',
-        name: asset.fileName || 'scene.jpg',
-      } as any);
+  const runAI = async () => { 
+    if (!selectedImage) return Alert.alert('Image required', 'Please select a product image.'); 
+    if (!mode) return Alert.alert('Selection required', tab === 'tryon' ? 'Choose a model first.' : 'Choose a style first.'); 
+    if (tab === 'tryon' && isPreview) return Alert.alert('Save product first', 'Virtual Try-On needs a saved product gallery.'); 
+    
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
 
-      const res = await axios.post('/api/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const url = res.data.data.url as string;
-      setCustomSceneUrl(url);
-      setMode('custom-scene');
-      setSelectedStyleId(null);
-    } catch (err: any) {
-      Alert.alert('Upload failed', err.message || 'Could not upload scene image');
-    } finally {
-      setUploadingScene(false);
-    }
-  };
+    setProcessing(true); 
+    setStep(0); 
+    setEnhanced(null); 
+    setShowAfter(false); 
+    
+    try { 
+      let endpoint = '/api/vendor/products/ai-enhance'; 
+      let payload: any = { productId: isPreview ? 'preview' : productId, imageUrl: selectedImage, productName }; 
+      
+      if (tab === 'enhance') {
+        payload = { ...payload, mode, generationQuality: quality, styleId: mode === 'style' ? styleId : undefined, customSceneUrl: mode === 'custom-scene' ? customScene : undefined }; 
+      } else { 
+        endpoint = '/api/vendor/products/ai-tryon'; 
+        const modelImageUrl = mode === 'tryon-model' ? models.find(m => m._id === modelId)?.imageUrl : customModel; 
+        if (!modelImageUrl) throw new Error('Please choose or upload a model image.'); 
+        payload = { productId, imageUrl: selectedImage, modelImageUrl, garmentDescription: product?.title || productName || 'fashion garment' }; 
+      } 
+      
+      const res = await axios.post(endpoint, payload, { signal, headers: {}, timeout: 180000 }); 
+      const immediate = res.data.data?.enhancedUrl; 
+      const entryId = res.data.data?.aiGalleryEntryId; 
+      
+      if (immediate) { setEnhanced(immediate); setShowAfter(true); return; } 
+      if (!entryId) throw new Error('No AI job returned from server.'); 
+      
+      const statusEndpoint = tab === 'tryon' ? '/api/vendor/products/ai-tryon/status' : '/api/vendor/products/ai-enhance/status'; 
+      const wait = tab === 'tryon' ? 6000 : quality === 'premium' ? 5000 : 4000; 
+      const max = tab === 'tryon' ? 80 : quality === 'premium' ? 72 : 50; 
+      
+      for (let i = 0; i < max; i++) { 
+        if (signal.aborted) return;
+        await new Promise(r => setTimeout(r, wait)); 
+        if (signal.aborted) return;
 
-  // ── Trigger AI Enhancement ──────────────────────────────────
-  const handleEnhance = async () => {
-    if (!mode) {
-      Alert.alert('Select a style', 'Please choose an AI style or upload a custom scene first.');
-      return;
-    }
-
-    setProcessing(true);
-    setProcessingStep(0);
-    setEnhancedUrl(null);
-
-    try {
-      const payload: any = {
-        // If no real productId, use a temp placeholder — backend handles it
-        productId: isPreview ? 'preview' : productId,
-        imageUrl,
-        mode,
-        productName,
-      };
-      if (mode === 'style') payload.styleId = selectedStyleId;
-      if (mode === 'custom-scene') payload.customSceneUrl = customSceneUrl;
-
-      const res = await axios.post('/api/vendor/products/ai-enhance', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 120_000,
-      });
-
-      const immediateUrl = res.data.data.enhancedUrl;
-      if (immediateUrl) {
-        setEnhancedUrl(immediateUrl);
-        setShowAfter(true);
+        const sr = await axios.get(`${statusEndpoint}?productId=${productId}&entryId=${entryId}`, { signal, headers: {} }); 
+        const st = sr.data.data?.status; 
+        const done = sr.data.data?.enhancedUrl; 
+        
+        if (st === 'done' && done) { setEnhanced(done); setShowAfter(true); return; } 
+        if (st === 'failed') throw new Error('AI generation failed. Please try another style or model.'); 
+      } 
+      throw new Error('AI processing timed out. The job may still finish in the product gallery.'); 
+    } catch (e: any) { 
+      if (axios.isCancel(e) || signal.aborted) {
+        console.log('AI polling aborted due to unmount');
         return;
       }
-
-      const entryId = res.data.data.aiGalleryEntryId;
-      if (!entryId) throw new Error('No enhancement job returned from server');
-
-      const maxPolls = 50;
-      for (let i = 0; i < maxPolls; i++) {
-        await new Promise(resolve => setTimeout(resolve, 4000));
-        const statusRes = await axios.get(
-          `/api/vendor/products/ai-enhance/status?productId=${productId}&entryId=${entryId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const { status, enhancedUrl: doneUrl } = statusRes.data.data;
-        if (status === 'done' && doneUrl) {
-          setEnhancedUrl(doneUrl);
-          setShowAfter(true);
-          return;
-        }
-        if (status === 'failed') throw new Error('AI generation failed. Please try another style.');
+      Alert.alert('AI generation failed', e.response?.data?.error || e.message || 'Please try again.'); 
+    } finally { 
+      if (!signal.aborted) {
+        setProcessing(false); 
       }
-
-      throw new Error('AI processing timed out. Please try again.');
-    } catch (err: any) {
-      Alert.alert(
-        'Enhancement failed',
-        err.response?.data?.error || err.message || 'AI processing failed. Please try again.'
-      );
-    } finally {
-      setProcessing(false);
-    }
+    } 
   };
+  const saveImage = async () => { if (!enhanced) return; if (isPreview) return Alert.alert('Image ready', 'This enhanced image will be added to your product draft.', [{ text: 'Use Image', onPress: () => router.replace({ pathname: '/vendor/products/new', params: { aiEnhancedUrl: enhanced } } as any) }]); try { await axios.post('/api/vendor/products/ai-promote', { productId, enhancedUrl: enhanced }, { headers: {} }); Alert.alert('Saved', 'AI image saved as the primary product image.', [{ text: 'Back', onPress: () => router.replace({ pathname: '/vendor/products/[id]/edit', params: { id: productId } } as any) }]); } catch (e: any) { Alert.alert('Save failed', e.response?.data?.error || e.message || 'Could not save image.'); } };
 
-  // ── Promote to primary images / return to create screen ─────
-  const handlePromote = async () => {
-    if (!enhancedUrl) return;
+  const images = product?.images?.length ? product.images : selectedImage ? [selectedImage] : []; const steps = tab === 'tryon' ? tryonSteps : sceneSteps; const canGenerate = !!mode && !!selectedImage && !processing;
+  if (loading) return <SafeAreaView style={st.safe}><View style={st.center}><ActivityIndicator color={PURPLE} /><Text style={st.muted}>Loading AI Product Studio...</Text></View></SafeAreaView>;
 
-    if (isPreview) {
-      // No saved product yet — go back to create screen with the enhanced URL
-      // The create screen will add this as an additional image
-      Alert.alert('✅ Done!', 'AI-enhanced image ready! It will be added to your product images.', [
-        {
-          text: 'Use This Image',
-          onPress: () =>
-            router.replace({
-              pathname: '/vendor/products/create',
-              params: { aiEnhancedUrl: enhancedUrl },
-            } as any),
-        },
-      ]);
-      return;
-    }
-
-    try {
-      await axios.post(
-        '/api/vendor/products/ai-promote',
-        { productId, enhancedUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      Alert.alert('✅ Done!', 'AI image added to your product gallery!', [
-        { text: 'Go to Dashboard', onPress: () => router.push('/vendor/dashboard') },
-      ]);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save image');
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────
-  return (
-    <SafeAreaView style={styles.safeArea}>
-
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color="#111827" />
-        </TouchableOpacity>
-        <View>
-          <Text style={styles.headerTitle}>✨ AI Enhancement</Text>
-          <Text style={styles.headerSub}>Transform your product photo</Text>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* ── Before/After Preview ── */}
-        <View style={styles.previewCard}>
-          <View style={styles.previewToggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, !showAfter && styles.toggleBtnActive]}
-              onPress={() => setShowAfter(false)}
-            >
-              <Text style={[styles.toggleBtnText, !showAfter && styles.toggleBtnTextActive]}>Before</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, showAfter && styles.toggleBtnActive]}
-              onPress={() => enhancedUrl && setShowAfter(true)}
-              disabled={!enhancedUrl}
-            >
-              <Text style={[styles.toggleBtnText, showAfter && styles.toggleBtnTextActive]}>After</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.imagePreviewWrap}>
-            {processing ? (
-              <Animated.View style={[styles.processingOverlay, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={styles.processingInner}>
-                  <ActivityIndicator size="large" color="#7C3AED" />
-                  <Text style={styles.processingTitle}>AI is working…</Text>
-                  <Text style={styles.processingStep}>{PROCESSING_STEPS[processingStep]}</Text>
-                </View>
-              </Animated.View>
-            ) : (
-              <Image
-                source={{ uri: (showAfter && enhancedUrl) ? enhancedUrl : imageUrl }}
-                style={styles.previewImage}
-                resizeMode="cover"
-              />
-            )}
-
-            {!processing && showAfter && enhancedUrl && (
-              <View style={styles.afterBadge}>
-                <Text style={styles.afterBadgeText}>✨ AI Enhanced</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* ── Style Selection ── */}
-        {!enhancedUrl && (
-          <>
-            <Text style={styles.sectionTitle}>Choose Your AI Style</Text>
-            <Text style={styles.sectionSub}>Pick a look for your product</Text>
-
-            {loadingStyles ? (
-              <ActivityIndicator color="#7C3AED" style={{ marginVertical: 20 }} />
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stylesRow}>
-
-                {/* Custom Scene Option */}
-                <TouchableOpacity
-                  style={[
-                    styles.styleCard,
-                    mode === 'custom-scene' && styles.styleCardSelected,
-                    styles.customStyleCard,
-                  ]}
-                  onPress={selectCustomScene}
-                  disabled={uploadingScene}
-                >
-                  {uploadingScene ? (
-                    <ActivityIndicator color="#7C3AED" />
-                  ) : customSceneUrl ? (
-                    <Image source={{ uri: customSceneUrl }} style={styles.customSceneThumbnail} />
-                  ) : (
-                    <View style={styles.customScenePlaceholder}>
-                      <Feather name="user" size={28} color="#7C3AED" />
-                    </View>
-                  )}
-                  <Text style={[styles.styleCardName, mode === 'custom-scene' && styles.styleCardNameSelected]}>
-                    {customSceneUrl ? 'Custom Scene' : '+ My Model'}
-                  </Text>
-                  {mode === 'custom-scene' && (
-                    <View style={styles.selectedBadge}>
-                      <Feather name="check" size={10} color="#FFF" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                {/* Predefined Styles */}
-                {aiStyles.map(s => (
-                  <TouchableOpacity
-                    key={s._id}
-                    style={[styles.styleCard, selectedStyleId === s._id && styles.styleCardSelected]}
-                    onPress={() => selectStyle(s._id)}
-                  >
-                    {s.thumbnailUrl ? (
-                      <Image source={{ uri: s.thumbnailUrl }} style={styles.styleThumbnail} />
-                    ) : (
-                      <View style={styles.styleThumbnailPlaceholder}>
-                        <Text style={styles.stylePlaceholderEmoji}>
-                          {s.slug === 'amazon-clean' ? '🛒' :
-                           s.slug === 'luxury-gold' ? '✨' :
-                           s.slug === 'instagram-viral' ? '📸' :
-                           s.slug === 'nike-style' ? '💪' :
-                           s.slug === 'nature-organic' ? '🌿' : '🎨'}
-                        </Text>
-                      </View>
-                    )}
-                    <Text style={[styles.styleCardName, selectedStyleId === s._id && styles.styleCardNameSelected]}>
-                      {s.name}
-                    </Text>
-                    {selectedStyleId === s._id && (
-                      <View style={styles.selectedBadge}>
-                        <Feather name="check" size={10} color="#FFF" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            {/* Info Card */}
-            <View style={styles.infoCard}>
-              <Feather name="info" size={14} color="#7C3AED" />
-              <Text style={styles.infoText}>
-                <Text style={{ fontWeight: '600' }}>Tip: </Text>
-                Tap "+ My Model" to use your own model photo or any background you want. The AI will naturally composite your product into that scene.
-              </Text>
-            </View>
-
-            {/* Enhance Button */}
-            <TouchableOpacity
-              style={[styles.enhanceBtn, (!mode || processing) && styles.enhanceBtnDisabled]}
-              onPress={handleEnhance}
-              disabled={!mode || processing}
-            >
-              {processing ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <>
-                  <Feather name="zap" size={18} color="#FFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.enhanceBtnText}>
-                    {mode === 'custom-scene'
-                      ? 'Place in Custom Scene'
-                      : mode === 'style'
-                      ? `Apply ${aiStyles.find(s => s._id === selectedStyleId)?.name || 'Style'}`
-                      : 'Select a Style First'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* ── Result Actions ── */}
-        {enhancedUrl && !processing && (
-          <View style={styles.resultActions}>
-            <View style={styles.resultSuccessBox}>
-              <Feather name="check-circle" size={20} color="#059669" />
-              <Text style={styles.resultSuccessText}>AI enhancement complete! 🎉</Text>
-            </View>
-
-            <TouchableOpacity style={styles.promoteBtn} onPress={handlePromote}>
-              <Feather name="image" size={16} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.promoteBtnText}>Add to Product Gallery</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.retryBtn}
-              onPress={() => { setEnhancedUrl(null); setShowAfter(false); setMode(null); setSelectedStyleId(null); setCustomSceneUrl(null); }}
-            >
-              <Feather name="refresh-cw" size={14} color="#7C3AED" style={{ marginRight: 6 }} />
-              <Text style={styles.retryBtnText}>Try a Different Style</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.skipBtn} onPress={() => router.back()}>
-              <Text style={styles.skipBtnText}>Skip & use original image</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-      </ScrollView>
-    </SafeAreaView>
-  );
+  return <SafeAreaView style={st.safe}><View style={st.header}><TouchableOpacity onPress={() => router.back()} style={st.back}><Feather name="arrow-left" size={22} color="#111827" /></TouchableOpacity><View style={{ flex: 1 }}><View style={st.titleRow}><Feather name="zap" size={18} color={PURPLE} /><Text style={st.title}>AI Product Studio</Text></View><Text style={st.sub} numberOfLines={2}>{tab === 'tryon' ? `Put fashion products on AI models - ${productName}` : `Transform your photo into a professional ecommerce image - ${productName}`}</Text></View></View><ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
+    <View style={st.tabs}>{fashion && !isPreview && <TabButton active={tab === 'tryon'} icon="user" label="Virtual Try-On" hint="Recommended" onPress={() => reset('tryon')} />}<TabButton active={tab === 'enhance'} icon="layers" label="Scene Enhancement" hint={fashion ? 'Props and studio' : undefined} onPress={() => reset('enhance')} /></View>
+    {category !== 'generic' && tab === 'enhance' && <View style={st.category}><Text style={st.muted}>AI detected:</Text><Text style={st.badge}>{category}</Text></View>}
+    {fashion && tab === 'enhance' && !isPreview && <View style={st.notice}><Feather name="info" size={15} color="#92400E" /><Text style={st.noticeText}>Clothing detected. For shirts, dresses, sarees, or jeans on a model, use Virtual Try-On.</Text></View>}
+    <View style={st.preview}><View style={st.toggleRow}><PressPill active={!showAfter} label="Before" onPress={() => setShowAfter(false)} /><PressPill active={showAfter} label="After" disabled={!enhanced} onPress={() => enhanced && setShowAfter(true)} /></View><View style={st.imageBox}>{processing ? <Animated.View style={[st.processing, { transform: [{ scale: pulse }] }]}><ActivityIndicator color={PURPLE} size="large" /><Text style={st.processTitle}>AI is working...</Text><Text style={st.processStep}>{steps[step]}</Text>{tab === 'tryon' && <Text style={st.hint}>Virtual try-on can take a few minutes on cold starts.</Text>}<View style={st.dots}>{steps.map((_, i) => <View key={i} style={[st.dot, i === step && st.dotActive]} />)}</View></Animated.View> : <Image source={{ uri: showAfter && enhanced ? enhanced : selectedImage }} style={st.mainImage} contentFit="contain" />}{!processing && showAfter && enhanced && <View style={st.aiBadge}><Text style={st.aiBadgeText}>AI Enhanced</Text></View>}{!processing && !showAfter && <View style={st.original}><Text style={st.originalText}>Original</Text></View>}</View></View>
+    {images.length > 1 && <View style={st.section}><Text style={st.sectionTitle}>{tab === 'tryon' ? 'Select garment image' : 'Select image to enhance'}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false}>{images.map((u: string, i: number) => <TouchableOpacity key={`${u}-${i}`} style={[st.thumbBtn, selectedImage === u && st.thumbActive]} onPress={() => setSelectedImage(u)}><Image source={{ uri: u }} style={st.thumb} /></TouchableOpacity>)}</ScrollView></View>}
+    {tab === 'tryon' && <Tips />}
+    {!enhanced && <><Text style={st.sectionTitle}>{tab === 'tryon' ? 'Upload Custom Model' : 'Upload Custom Scene'}</Text><TouchableOpacity style={[st.upload, mode?.includes('custom') && st.selected]} onPress={() => uploadMedia(tab === 'tryon' ? 'model' : 'scene')} disabled={uploading}><View style={st.uploadIcon}>{uploading ? <ActivityIndicator color={PURPLE} /> : tab === 'tryon' && customModel ? <Image source={{ uri: customModel }} style={st.fill} /> : tab === 'enhance' && customScene ? <Image source={{ uri: customScene }} style={st.fill} /> : <Feather name={tab === 'tryon' ? 'user' : 'image'} size={22} color={PURPLE} />}</View><View style={{ flex: 1 }}><Text style={st.uploadTitle}>{tab === 'tryon' ? customModel ? 'Custom model selected' : '+ Upload My Model' : customScene ? 'Custom scene selected' : '+ Upload Custom Scene'}</Text><Text style={st.muted}>{tab === 'tryon' ? 'Try this product on your own model' : 'Place product in your own background'}</Text></View>{mode?.includes('custom') && <Feather name="check" size={18} color={DARK} />}</TouchableOpacity><View style={st.dividerRow}><View style={st.line} /><Text style={st.dividerText}>{tab === 'tryon' ? 'OR CHOOSE PRESET MODEL' : 'OR CHOOSE A PRESET SCENE'}</Text><View style={st.line} /></View>{assetsLoading ? <ActivityIndicator color={PURPLE} style={{ margin: 24 }} /> : tab === 'tryon' ? <View>{recommendedModels.length > 0 && <><Text style={st.reco}>Best for {segmentLabel(segment)}</Text>{recommendedModels.map(m => <ModelCard key={m._id} model={m} selected={modelId === m._id} recommended onPress={() => { setModelId(m._id); setCustomModel(null); setMode('tryon-model'); }} />)}</>}{otherModels.length > 0 && <Text style={st.all}>All model presets</Text>}{(recommendedModels.length ? otherModels : models).map(m => <ModelCard key={m._id} model={m} selected={modelId === m._id} onPress={() => { setModelId(m._id); setCustomModel(null); setMode('tryon-model'); }} />)}</View> : <View>{recommendedStyles.length > 0 && <><Text style={st.reco}>Best for {category}</Text>{recommendedStyles.map(s => <StyleCard key={s._id} item={s} selected={styleId === s._id} recommended onPress={() => { setStyleId(s._id); setCustomScene(null); setMode('style'); }} />)}</>}{(recommendedStyles.length ? otherStyles : stylesData).length > 0 && <Text style={st.all}>{recommendedStyles.length ? 'All styles' : 'Choose a preset scene'}</Text>}{(recommendedStyles.length ? otherStyles : stylesData).map(s => <StyleCard key={s._id} item={s} selected={styleId === s._id} onPress={() => { setStyleId(s._id); setCustomScene(null); setMode('style'); }} />)}</View>}{tab === 'enhance' && <View style={st.quality}><Text style={st.sectionTitle}>Output quality</Text><View style={st.qualityRow}><Quality active={quality === 'preview'} title="Fast preview" sub="Good for drafts" onPress={() => setQuality('preview')} /><Quality active={quality === 'premium'} title="Premium HD" sub="Sharper scenes" onPress={() => setQuality('premium')} /></View></View>}<TouchableOpacity style={[st.generate, !canGenerate && st.disabled]} disabled={!canGenerate} onPress={runAI}>{processing ? <ActivityIndicator color="#FFF" /> : <><Feather name="zap" size={18} color="#FFF" /><Text style={st.generateText}>{buttonLabel(tab, mode, stylesData, styleId, models, modelId)}</Text></>}</TouchableOpacity></>}
+    {enhanced && !processing && <View style={st.actions}><View style={st.success}><Feather name="check-circle" size={20} color={GREEN} /><Text style={st.successText}>{tab === 'tryon' ? 'Virtual Try-On complete.' : 'AI enhancement complete.'}</Text></View><TouchableOpacity style={st.promote} onPress={saveImage}><Feather name="image" size={16} color="#FFF" /><Text style={st.promoteText}>{isPreview ? 'Use This Image' : 'Save as Primary Image'}</Text></TouchableOpacity><TouchableOpacity style={st.retry} onPress={() => reset(tab)}><Feather name="refresh-cw" size={14} color={DARK} /><Text style={st.retryText}>{tab === 'tryon' ? 'Try Another Model' : 'Try a Different Style'}</Text></TouchableOpacity></View>}
+  </ScrollView></SafeAreaView>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────
-const PURPLE = '#7C3AED';
-const PURPLE_LIGHT = '#EDE9FE';
+function TabButton({ active, icon, label, hint, onPress }: { active: boolean; icon: keyof typeof Feather.glyphMap; label: string; hint?: string; onPress: () => void }) { return <TouchableOpacity style={[st.tab, active && st.tabActive]} onPress={onPress}><Feather name={icon} size={15} color={active ? DARK : '#6B7280'} /><View><Text style={[st.tabText, active && st.tabTextActive]}>{label}</Text>{hint && <Text style={st.tabHint}>{hint}</Text>}</View></TouchableOpacity>; }
+function PressPill({ active, label, disabled, onPress }: { active: boolean; label: string; disabled?: boolean; onPress: () => void }) { return <TouchableOpacity style={[st.pill, active && st.pillActive, disabled && { opacity: 0.45 }]} disabled={disabled} onPress={onPress}><Text style={[st.pillText, active && st.pillTextActive]}>{label}</Text></TouchableOpacity>; }
+function Tips() { return <View style={st.tips}><Text style={st.tipsTitle}>Tips for best try-on results</Text>{['Front-facing flat lay or ghost mannequin', 'Plain white or light background', 'Full garment visible in frame', 'Upper-body models for shirts/tops', 'Lower-body models for jeans/pants', 'Full-body models for dresses/sarees'].map(t => <Text key={t} style={st.good}>OK  {t}</Text>)}{['Close-up face-only portraits', 'Busy backgrounds', 'Cropped garment photos'].map(t => <Text key={t} style={st.bad}>Avoid  {t}</Text>)}</View>; }
+function StyleCard({ item, selected, recommended, onPress }: { item: AiStyle; selected: boolean; recommended?: boolean; onPress: () => void }) { const meta = styleMeta[item.slug] || { icon: 'aperture' as keyof typeof Feather.glyphMap, desc: item.description || item.sceneType || 'Professional scene', best: item.bestFor || 'Products' }; return <TouchableOpacity style={[st.card, recommended && st.cardReco, selected && st.selected]} onPress={onPress}><View style={st.icon}>{item.thumbnailUrl ? <Image source={{ uri: item.thumbnailUrl }} style={st.fill} /> : <Feather name={meta.icon} size={20} color={DARK} />}</View><View style={{ flex: 1 }}><View style={st.cardTitleRow}><Text style={st.cardTitle}>{item.name}</Text>{recommended && <Text style={st.recoPill}>Recommended</Text>}</View><Text style={st.cardSub}>{meta.desc}</Text>{selected && <Text style={st.cardMeta}>Best for: {meta.best}</Text>}</View>{selected && <Feather name="check" size={18} color={DARK} />}</TouchableOpacity>; }
+function ModelCard({ model, selected, recommended, onPress }: { model: AiModel; selected: boolean; recommended?: boolean; onPress: () => void }) { return <TouchableOpacity style={[st.card, recommended && st.cardReco, selected && st.selected]} onPress={onPress}><View style={st.modelThumb}>{model.thumbnailUrl || model.imageUrl ? <Image source={{ uri: model.thumbnailUrl || model.imageUrl }} style={st.fill} /> : <Feather name="user" size={22} color="#9CA3AF" />}</View><View style={{ flex: 1 }}><View style={st.cardTitleRow}><Text style={st.cardTitle}>{model.name}</Text>{recommended && <Text style={st.recoPill}>Recommended</Text>}</View><Text style={st.cardSub}>{model.gender} - {segmentLabel(model.bodySegment)}</Text>{!!model.description && <Text style={st.cardMeta} numberOfLines={2}>{model.description}</Text>}</View>{selected && <Feather name="check" size={18} color={DARK} />}</TouchableOpacity>; }
+function Quality({ active, title, sub, onPress }: { active: boolean; title: string; sub: string; onPress: () => void }) { return <TouchableOpacity style={[st.qualityOption, active && st.qualityActive]} onPress={onPress}><Text style={[st.qualityTitle, active && { color: DARK }]}>{title}</Text><Text style={st.muted}>{sub}</Text></TouchableOpacity>; }
+function buttonLabel(tab: Tab, mode: Mode, stylesData: AiStyle[], styleId: string | null, models: AiModel[], modelId: string | null) { if (tab === 'tryon') { if (mode === 'tryon-custom') return 'Run Virtual Try-On'; if (mode === 'tryon-model') return `Try On ${models.find(m => m._id === modelId)?.name || 'Model'}`; return 'Select a Model to Continue'; } if (mode === 'custom-scene') return 'Place in Custom Scene'; if (mode === 'style') return `Apply ${stylesData.find(s => s._id === styleId)?.name || 'Style'}`; return 'Select a Style to Continue'; }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F5F3FF' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 12,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  headerSub: { fontSize: 12, color: '#6B7280', marginTop: 1 },
-
-  scroll: { padding: 16, paddingBottom: 120 },
-
-  // Preview card
-  previewCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  previewToggleRow: {
-    flexDirection: 'row',
-    padding: 12,
-    gap: 8,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-  },
-  toggleBtnActive: { backgroundColor: PURPLE },
-  toggleBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  toggleBtnTextActive: { color: '#FFF' },
-
-  imagePreviewWrap: {
-    width: '100%',
-    height: 280,
-    backgroundColor: '#F9FAFB',
-    position: 'relative',
-  },
-  previewImage: { width: '100%', height: '100%' },
-
-  processingOverlay: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#F5F3FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  processingInner: { alignItems: 'center', gap: 12 },
-  processingTitle: { fontSize: 17, fontWeight: '700', color: PURPLE },
-  processingStep: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 4 },
-
-  afterBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: PURPLE,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  afterBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-
-  // Section labels
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 2 },
-  sectionSub: { fontSize: 13, color: '#6B7280', marginBottom: 14 },
-
-  // Styles row
-  stylesRow: { marginHorizontal: -16, paddingHorizontal: 16, marginBottom: 16 },
-  styleCard: {
-    width: 100,
-    marginRight: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    padding: 10,
-    position: 'relative',
-  },
-  styleCardSelected: { borderColor: PURPLE, backgroundColor: PURPLE_LIGHT },
-  customStyleCard: { borderStyle: 'dashed', borderColor: PURPLE },
-  styleThumbnail: { width: 64, height: 64, borderRadius: 8, marginBottom: 6 },
-  styleThumbnailPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  stylePlaceholderEmoji: { fontSize: 28 },
-  customSceneThumbnail: { width: 64, height: 64, borderRadius: 8, marginBottom: 6 },
-  customScenePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: PURPLE_LIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  styleCardName: { fontSize: 11, color: '#374151', textAlign: 'center', fontWeight: '500' },
-  styleCardNameSelected: { color: PURPLE, fontWeight: '700' },
-  selectedBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: PURPLE,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Info card
-  infoCard: {
-    backgroundColor: PURPLE_LIGHT,
-    borderRadius: 10,
-    padding: 12,
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-    alignItems: 'flex-start',
-  },
-  infoText: { fontSize: 12, color: '#4C1D95', flex: 1, lineHeight: 18 },
-
-  // Enhance button
-  enhanceBtn: {
-    backgroundColor: PURPLE,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: PURPLE,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  enhanceBtnDisabled: { backgroundColor: '#C4B5FD', shadowOpacity: 0 },
-  enhanceBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-
-  // Result actions
-  resultActions: { gap: 12 },
-  resultSuccessBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ECFDF5',
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  resultSuccessText: { fontSize: 14, fontWeight: '600', color: '#065F46' },
-
-  promoteBtn: {
-    backgroundColor: PURPLE,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promoteBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-
-  retryBtn: {
-    borderWidth: 1.5,
-    borderColor: PURPLE,
-    borderRadius: 12,
-    paddingVertical: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  retryBtnText: { color: PURPLE, fontSize: 14, fontWeight: '600' },
-
-  skipBtn: { alignItems: 'center', paddingVertical: 12 },
-  skipBtnText: { color: '#9CA3AF', fontSize: 13 },
+const st = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#FBFAFF' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E5E7EB' }, back: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }, titleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 }, title: { fontSize: 18, fontWeight: '800', color: '#111827' }, sub: { fontSize: 12, color: '#6B7280', marginTop: 2 }, scroll: { padding: 16, paddingBottom: 42 }, tabs: { flexDirection: 'row', gap: 10, borderBottomWidth: 1, borderColor: '#E5E7EB', marginBottom: 14 }, tab: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: 'transparent', flexShrink: 1 }, tabActive: { borderBottomColor: PURPLE }, tabText: { fontSize: 13, fontWeight: '700', color: '#6B7280' }, tabTextActive: { color: DARK }, tabHint: { fontSize: 10, color: GREEN, fontWeight: '700' }, category: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }, muted: { fontSize: 12, color: '#6B7280' }, badge: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#F3E8FF', color: DARK, fontSize: 12, fontWeight: '800', textTransform: 'capitalize' }, notice: { flexDirection: 'row', gap: 8, backgroundColor: '#FFFBEB', borderColor: '#FDE68A', borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 14 }, noticeText: { flex: 1, color: '#92400E', fontSize: 12, lineHeight: 17 }, preview: { backgroundColor: '#FFF', borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#EDE9FE', marginBottom: 16, elevation: 3 }, toggleRow: { flexDirection: 'row', gap: 8, padding: 12, borderBottomWidth: 1, borderColor: '#F3F4F6' }, pill: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 9, backgroundColor: '#F9FAFB' }, pillActive: { backgroundColor: PURPLE }, pillText: { color: '#9CA3AF', fontWeight: '800', fontSize: 13 }, pillTextActive: { color: '#FFF' }, imageBox: { minHeight: 360, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', position: 'relative' }, mainImage: { width: '100%', height: 360 }, processing: { alignItems: 'center', justifyContent: 'center', padding: 22 }, processTitle: { marginTop: 14, color: DARK, fontWeight: '800', fontSize: 16 }, processStep: { marginTop: 5, color: PURPLE, fontSize: 13, textAlign: 'center' }, hint: { marginTop: 8, color: '#8B5CF6', fontSize: 11, textAlign: 'center' }, dots: { flexDirection: 'row', gap: 5, marginTop: 16 }, dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DDD6FE' }, dotActive: { width: 24, backgroundColor: PURPLE }, aiBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: PURPLE, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }, aiBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800' }, original: { position: 'absolute', bottom: 12, left: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#E5E7EB' }, originalText: { color: '#6B7280', fontSize: 11, fontWeight: '700' }, section: { marginBottom: 16 }, sectionTitle: { fontSize: 12, fontWeight: '800', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }, thumbBtn: { width: 58, height: 58, borderRadius: 12, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden', opacity: 0.62, marginRight: 9 }, thumbActive: { borderColor: PURPLE, opacity: 1 }, thumb: { width: '100%', height: '100%' }, tips: { borderWidth: 1, borderColor: '#EDE9FE', backgroundColor: SOFT, borderRadius: 14, padding: 12, marginBottom: 16 }, tipsTitle: { fontSize: 13, fontWeight: '800', color: DARK, marginBottom: 7 }, good: { color: '#047857', fontSize: 11, lineHeight: 17 }, bad: { color: '#DC2626', fontSize: 11, lineHeight: 17 }, upload: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D1D5DB', backgroundColor: '#FFF', borderRadius: 15, padding: 12, marginBottom: 16 }, selected: { borderStyle: 'solid', borderColor: PURPLE, backgroundColor: SOFT }, uploadIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, uploadTitle: { fontSize: 14, color: DARK, fontWeight: '800' }, fill: { width: '100%', height: '100%' }, dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }, line: { flex: 1, height: 1, backgroundColor: '#E5E7EB' }, dividerText: { fontSize: 10, color: '#9CA3AF', fontWeight: '800' }, reco: { fontSize: 10, color: GREEN, fontWeight: '900', textTransform: 'uppercase', marginBottom: 7 }, all: { fontSize: 10, color: '#9CA3AF', fontWeight: '900', textTransform: 'uppercase', marginTop: 6, marginBottom: 7 }, card: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 11, marginBottom: 9 }, cardReco: { borderColor: '#A7F3D0' }, icon: { width: 46, height: 46, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, modelThumb: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }, cardTitle: { fontSize: 14, color: '#111827', fontWeight: '800', flexShrink: 1 }, recoPill: { overflow: 'hidden', borderRadius: 999, backgroundColor: '#D1FAE5', color: '#047857', fontSize: 9, fontWeight: '900', paddingHorizontal: 6, paddingVertical: 2 }, cardSub: { fontSize: 11, color: '#6B7280', marginTop: 3 }, cardMeta: { fontSize: 10, color: DARK, fontWeight: '700', marginTop: 4 }, quality: { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB', borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 14 }, qualityRow: { flexDirection: 'row', gap: 8 }, qualityOption: { flex: 1, borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#FFF', borderRadius: 10, padding: 10 }, qualityActive: { borderColor: PURPLE, backgroundColor: SOFT }, qualityTitle: { fontSize: 12, fontWeight: '800', color: '#374151' }, generate: { backgroundColor: PURPLE, borderRadius: 14, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 18 }, disabled: { backgroundColor: '#D8B4FE' }, generateText: { color: '#FFF', fontSize: 15, fontWeight: '900', flexShrink: 1, textAlign: 'center' }, actions: { gap: 12, marginBottom: 18 }, success: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1, borderRadius: 13, padding: 13 }, successText: { color: '#065F46', fontWeight: '800', fontSize: 13 }, promote: { backgroundColor: PURPLE, borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, promoteText: { color: '#FFF', fontSize: 15, fontWeight: '900' }, retry: { borderColor: PURPLE, borderWidth: 1.5, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, retryText: { color: DARK, fontSize: 14, fontWeight: '800' },
 });

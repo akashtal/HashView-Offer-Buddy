@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAdminStore } from '@/store/adminStore';
@@ -200,7 +201,7 @@ export default function AdminUsersScreen() {
                 </Text>
             </View>
 
-            <FlatList
+            <FlashList
                 data={filteredUsers}
                 keyExtractor={item => item._id}
                 renderItem={renderItem}

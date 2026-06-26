@@ -135,6 +135,23 @@ function SignInContent() {
                             </div>
                         </div>
 
+                        <div className="flex items-start">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="policies"
+                                    name="policies"
+                                    type="checkbox"
+                                    required
+                                    className="h-4 w-4 text-[#00A651] focus:ring-[#00A651] border-gray-300 rounded"
+                                />
+                            </div>
+                            <div className="ml-2 text-sm">
+                                <label htmlFor="policies" className="text-gray-700">
+                                    I agree to the <Link href="/policies" target="_blank" className="font-medium text-[#00A651] hover:underline">Privacy Policy & Terms</Link>
+                                </label>
+                            </div>
+                        </div>
+
                         <div>
                             <button
                                 type="submit"

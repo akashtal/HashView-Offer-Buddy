@@ -1,11 +1,15 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCartStore } from '@/store/cartStore';
 import ChatButton from '@/components/chat/ChatButton';
 import Toast from 'react-native-toast-message';
+
+const CARD_PADDING = 8;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_WIDTH = (SCREEN_WIDTH - 16 * 2 - CARD_PADDING) / 2; // 2 cols, 16px side padding, gap between
 
 interface RestaurantCardProps {
     id: string;
@@ -52,13 +56,18 @@ function RestaurantCard({
         Toast.show({ type: 'success', text1: 'Added to cart!' });
     };
 
+    const offerLabel = offer?.value ? `${offer.value}% OFF` : offer?.description;
+    const distanceLabel = distance != null && distance < 99999
+        ? (distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`)
+        : null;
+
     return (
         <TouchableOpacity
             style={styles.card}
-            activeOpacity={0.9}
+            activeOpacity={0.88}
             onPress={() => router.push(`/products/${id}` as any)}
         >
-            {/* Image & Offer */}
+            {/* Image */}
             <View style={styles.imageWrap}>
                 <Image
                     source={image || 'https://via.placeholder.com/200'}
@@ -67,11 +76,27 @@ function RestaurantCard({
                     cachePolicy="memory-disk"
                     transition={200}
                 />
-                {offer && (
+                {/* Offer badge — top-left ribbon */}
+                {offerLabel && (
                     <View style={styles.offerBadge}>
-                        <Text style={styles.offerText}>
-                            {offer.value ? `${offer.value}% OFF` : offer.description}
-                        </Text>
+                        <Text style={styles.offerText} numberOfLines={1}>{offerLabel}</Text>
+                    </View>
+                )}
+                {/* Distance pill — top-right */}
+                {distanceLabel && (
+                    <View style={styles.distancePill}>
+                        <Feather name="map-pin" size={9} color="#D97706" />
+                        <Text style={styles.distancePillText}>{distanceLabel}</Text>
+                    </View>
+                )}
+                {/* Rating pill — bottom-left */}
+                {rating != null && (
+                    <View style={styles.ratingPill}>
+                        <Feather name="star" size={9} color="#FFF" />
+                        <Text style={styles.ratingPillText}>{rating}</Text>
+                        {reviewCount != null && reviewCount > 0 && (
+                            <Text style={styles.reviewPillText}>({reviewCount})</Text>
+                        )}
                     </View>
                 )}
             </View>
@@ -80,41 +105,17 @@ function RestaurantCard({
             <View style={styles.info}>
                 <Text style={styles.name} numberOfLines={2}>{name}</Text>
 
-                <View style={styles.metaRow}>
-                    {rating != null && (
-                        <View style={styles.ratingBadge}>
-                            <Feather name="star" size={10} color="#FFF" />
-                            <Text style={styles.ratingText}>{rating}</Text>
-                        </View>
-                    )}
-                    {reviewCount != null && reviewCount > 0 && (
-                        <Text style={styles.reviewsText}>({reviewCount})</Text>
-                    )}
-                    {distance != null && (
-                        <View style={styles.distanceBadge}>
-                            <Feather name="map-pin" size={10} color="#FDB913" />
-                            <Text style={styles.distanceText}>
-                                {distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                {cuisine && (
-                    <Text style={styles.cuisine} numberOfLines={1}>{cuisine}</Text>
-                )}
-
                 {priceForTwo != null && (
                     <Text style={styles.price}>₹{priceForTwo.toLocaleString('en-IN')}</Text>
                 )}
 
+                {/* Actions */}
                 {vendorId && (
                     <View style={styles.actionRow}>
                         <TouchableOpacity onPress={handleAddToCart} style={styles.cartBtn}>
-                            <Feather name="shopping-cart" size={14} color="#FFF" style={styles.cartIcon} />
+                            <Feather name="shopping-cart" size={12} color="#FFF" />
                             <Text style={styles.cartBtnText}>Add</Text>
                         </TouchableOpacity>
-
                         <ChatButton
                             recipientId={vendorId}
                             recipientModel="Vendor"
@@ -129,44 +130,95 @@ function RestaurantCard({
     );
 }
 
-// React.memo prevents re-render when parent state changes (scrolling, filters, loading)
 export default memo(RestaurantCard);
 
 const styles = StyleSheet.create({
     card: {
         backgroundColor: '#FFF',
-        borderRadius: 16,
+        borderRadius: 14,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#EEE',
-        marginBottom: 16,
+        borderColor: '#EBEBEB',
+        marginBottom: CARD_PADDING,
+        // subtle elevation
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
     },
-    imageWrap: { height: 140, backgroundColor: '#F5F5F5', position: 'relative' },
+    imageWrap: {
+        height: 130,
+        backgroundColor: '#F5F5F5',
+        position: 'relative',
+    },
     image: { width: '100%', height: '100%' },
+
+    // Offer ribbon
     offerBadge: {
         position: 'absolute',
-        bottom: 0,
+        top: 0,
         left: 0,
-        backgroundColor: '#FD9139',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderTopRightRadius: 8
+        backgroundColor: '#F97316',
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderBottomRightRadius: 8,
+        maxWidth: '70%',
     },
-    offerText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
+    offerText: { color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
 
-    info: { padding: 12 },
-    name: { fontSize: 15, fontWeight: 'bold', color: '#282C3F', marginBottom: 6 },
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' },
-    ratingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#48C479', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, gap: 4 },
-    ratingText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
-    reviewsText: { fontSize: 11, color: '#686B78' },
-    distanceBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
-    distanceText: { fontSize: 11, fontWeight: 'bold', color: '#FDB913' },
+    // Distance pill
+    distancePill: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        borderRadius: 20,
+    },
+    distancePillText: { fontSize: 9, fontWeight: '700', color: '#D97706' },
 
-    cuisine: { fontSize: 12, color: '#686B78', marginBottom: 4 },
-    price: { fontSize: 14, fontWeight: 'bold', color: '#282C3F', marginTop: 2 },
-    actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-    cartBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#00A651', paddingVertical: 8, borderRadius: 8 },
-    cartIcon: { marginRight: 4 },
-    cartBtnText: { color: '#FFF', fontSize: 13, fontWeight: 'bold' },
+    // Rating pill
+    ratingPill: {
+        position: 'absolute',
+        bottom: 6,
+        left: 6,
+        backgroundColor: '#48C479',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        borderRadius: 20,
+    },
+    ratingPillText: { fontSize: 9, fontWeight: '800', color: '#FFF' },
+    reviewPillText: { fontSize: 9, color: 'rgba(255,255,255,0.8)' },
+
+    // Info section
+    info: { padding: 9, gap: 4 },
+    name: { fontSize: 13, fontWeight: '700', color: '#1C1C2E', lineHeight: 18 },
+    price: { fontSize: 14, fontWeight: '800', color: '#1C1C2E' },
+
+    // Action row
+    actionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+    },
+    cartBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#00A651',
+        paddingVertical: 6,
+        borderRadius: 8,
+        gap: 4,
+    },
+    cartBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
 });

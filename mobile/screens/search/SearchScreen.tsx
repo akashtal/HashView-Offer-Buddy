@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProductStore } from '@/store/productStore';
@@ -20,15 +21,18 @@ export default function SearchScreen() {
     const [categories, setCategories] = useState<any[]>([]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories?parentOnly=true');
+                const response = await axios.get('/api/categories?parentOnly=true', { signal: controller.signal });
                 setCategories(response.data.data.categories || []);
             } catch (error) {
+                if (axios.isCancel(error)) return;
                 console.error('Failed to load categories:', error);
             }
         };
         loadCategories();
+        return () => controller.abort();
     }, []);
 
     useEffect(() => {
@@ -115,7 +119,7 @@ export default function SearchScreen() {
                         ))}
                     </View>
                 ) : products.length > 0 ? (
-                    <FlatList
+                    <FlashList
                         data={products}
                         keyExtractor={(item) => item._id}
                         numColumns={2}

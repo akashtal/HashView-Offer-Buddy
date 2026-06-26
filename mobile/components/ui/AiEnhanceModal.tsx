@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import * as ImagePicker from 'expo-image-picker';
 import Button from './Button';
 
+import { Image } from 'expo-image';
 interface AiStyle {
   _id: string;
   name: string;
@@ -53,9 +54,7 @@ export default function AiEnhanceModal({ visible, onClose, imageUrl, productId, 
 
   const loadStyles = async () => {
     try {
-      const res = await axios.get('/api/ai-styles', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.get('/api/ai-styles', {});
       if (res.data && res.data.data) {
         setAiStyles(res.data.data.styles);
         if (res.data.data.styles.length > 0) {
@@ -128,9 +127,7 @@ export default function AiEnhanceModal({ visible, onClose, imageUrl, productId, 
         productName
       };
 
-      const res = await axios.post('/api/vendor/products/ai-enhance', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.post('/api/vendor/products/ai-enhance', payload, {});
 
       const entryId = res.data.data.aiGalleryEntryId;
       
@@ -148,9 +145,7 @@ export default function AiEnhanceModal({ visible, onClose, imageUrl, productId, 
 
   const pollStatus = async (entryId: string) => {
     try {
-      const res = await axios.get(`/api/vendor/products/ai-enhance/status?productId=${productId}&entryId=${entryId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.get(`/api/vendor/products/ai-enhance/status?productId=${productId}&entryId=${entryId}`, {});
       
       const status = res.data.data.status;
       
@@ -203,7 +198,7 @@ export default function AiEnhanceModal({ visible, onClose, imageUrl, productId, 
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.previewContainer}>
-            <Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="contain" />
+            <Image source={{ uri: imageUrl }} style={styles.previewImage} contentFit="contain" />
             <View style={styles.originalBadge}>
               <Text style={styles.badgeText}>Original</Text>
             </View>

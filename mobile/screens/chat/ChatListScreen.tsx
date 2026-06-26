@@ -5,16 +5,15 @@ import {
     Text,
     StyleSheet,
     ActivityIndicator,
-    FlatList,
     TouchableOpacity,
-    Image,
-    RefreshControl,
-} from 'react-native';
+    RefreshControl } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
 import { Feather } from '@expo/vector-icons';
 
+import { Image } from 'expo-image';
 function formatTime(dateStr: string) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -123,7 +122,7 @@ export default function ChatListScreen() {
                     <Text style={styles.emptySubtitle}>Start chatting with a vendor from a product page</Text>
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={conversations}
                     keyExtractor={(item) => item._id}
                     renderItem={({ item }) => (

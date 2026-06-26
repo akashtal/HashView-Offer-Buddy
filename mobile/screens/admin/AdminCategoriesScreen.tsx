@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAdminStore } from '@/store/adminStore';
@@ -10,6 +10,7 @@ import Loading from '@/components/ui/Loading';
 import Input from '@/components/ui/Input';
 import axios from 'axios';
 
+import { Image } from 'expo-image';
 export default function AdminCategoriesScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuthStore();

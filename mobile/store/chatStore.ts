@@ -64,9 +64,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const token = useAuthStore.getState().token;
             if (!token) return;
 
-            const response = await axios.get('/api/chat/conversations', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await axios.get('/api/chat/conversations', {});
             set({ conversations: response.data.data, isLoading: false });
         } catch (error) {
             console.error('Fetch conversations error:', error);
@@ -89,9 +87,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const token = useAuthStore.getState().token;
             if (!token) return;
 
-            const response = await axios.get(`/api/chat/messages/${conversationId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await axios.get(`/api/chat/messages/${conversationId}`, {});
             set({ messages: response.data.data, isLoading: false });
         } catch (error) {
             console.error('Fetch messages error:', error);
@@ -106,7 +102,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             await axios.post('/api/chat/messages',
                 { conversationId, content, productId },
-                { headers: { Authorization: `Bearer ${token}` } }
+                {}
             );
         } catch (error) {
             console.error('Send message error:', error);
@@ -154,7 +150,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             const response = await axios.post('/api/chat/conversations',
                 { recipientId, recipientModel },
-                { headers: { Authorization: `Bearer ${token}` } }
+                {}
             );
             const conversation = response.data.data;
 
@@ -172,9 +168,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         try {
             const token = useAuthStore.getState().token;
             if (!token) return;
-            const response = await axios.get('/api/chat/messages/unread-count', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await axios.get('/api/chat/messages/unread-count', {});
             set({ unreadCount: response.data.data?.unreadCount ?? 0 });
         } catch (error) {
             console.error('Fetch unread count error:', error);

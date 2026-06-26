@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 
+import { Image } from 'expo-image';
 interface ChatListProps {
     scrollEnabled?: boolean;
 }
@@ -50,7 +52,7 @@ const ChatList: React.FC<ChatListProps> = ({ scrollEnabled = true }) => {
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Messages</Text>
             </View>
-            <FlatList
+            <FlashList
                 scrollEnabled={scrollEnabled}
                 data={conversations}
                 keyExtractor={(item) => item._id}

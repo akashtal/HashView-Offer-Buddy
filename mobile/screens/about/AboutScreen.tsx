@@ -11,7 +11,7 @@ export default function AboutScreen() {
                 <View style={styles.hero}>
                     <Text style={styles.heroTitle}>Putting Savings Back in Your Pocket</Text>
                     <Text style={styles.heroSubtitle}>
-                        offers buddy was created out of a simple frustration: it's too hard to find genuinely
+                        offers buddy was created out of a simple frustration: it&apos;s too hard to find genuinely
                         good deals nearby. We realized that local businesses have great offers, but shoppers
                         waste time and fuel hunting for them.
                     </Text>
@@ -25,7 +25,7 @@ export default function AboutScreen() {
                         </View>
                         <Text style={styles.cardTitle}>Transparency</Text>
                         <Text style={styles.cardText}>
-                            We provide direct links and clear photos. No bait-and-switch. You see exactly what's on offer.
+                            We provide direct links and clear photos. No bait-and-switch. You see exactly what&apos;s on offer.
                         </Text>
                     </View>
 
@@ -54,7 +54,7 @@ export default function AboutScreen() {
                 <View style={styles.closing}>
                     <Text style={styles.closingTitle}>We are offers buddy</Text>
                     <Text style={styles.closingText}>
-                        And we're dedicated to helping you shop smarter, not harder.
+                        And we&apos;re dedicated to helping you shop smarter, not harder.
                     </Text>
                 </View>
             </ScrollView>

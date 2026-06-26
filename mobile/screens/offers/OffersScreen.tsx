@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
@@ -51,7 +52,7 @@ export default function OffersScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={offerProducts}
                     keyExtractor={(item) => item._id}
                     numColumns={2}

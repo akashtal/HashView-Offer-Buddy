@@ -1,7 +1,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
+
+const secureStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return await SecureStore.getItemAsync(name);
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await SecureStore.setItemAsync(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await SecureStore.deleteItemAsync(name);
+  },
+};
 
 interface User {
   id: string;
@@ -168,6 +180,14 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
+          const { token } = get();
+          if (token) {
+            const { registerForPushNotifications, unregisterPushToken } = require('../services/notifications.service');
+            const pushToken = await registerForPushNotifications();
+            if (pushToken) {
+              await unregisterPushToken(pushToken, token);
+            }
+          }
           await axios.post('/api/auth/logout');
         } catch (error) {
           console.error('Logout error:', error);
@@ -181,7 +201,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
           });
-          delete axios.defaults.headers.common['Authorization'];
+          
         }
       },
 
@@ -247,9 +267,8 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
-        user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),

@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCartStore } from '@/store/cartStore';
@@ -8,6 +8,7 @@ import { useCartStore } from '@/store/cartStore';
 // Design system components (will be converted to RN in components phase)
 import ChatButton from '@/components/chat/ChatButton';
 
+import { Image } from 'expo-image';
 export default function CartScreen() {
     const router = useRouter();
     const { items, removeItem, updateQuantity, clearCart, getTotal, syncCart } = useCartStore();
@@ -56,7 +57,7 @@ export default function CartScreen() {
 
             <ScrollView contentContainerStyle={styles.container}>
                 {/* Cart Items */}
-                {items.map((item) => (
+                {items?.map((item) => (
                     <View key={item.productId} style={styles.itemCard}>
                         <TouchableOpacity onPress={() => router.push(`/products/${item.productId}`)}>
                             <Image
@@ -101,7 +102,7 @@ export default function CartScreen() {
                     </View>
                     <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Total Items</Text>
-                        <Text style={styles.summaryValue}>{items.reduce((s, i) => s + i.quantity, 0)}</Text>
+                        <Text style={styles.summaryValue}>{items?.reduce((s, i) => s + i.quantity, 0)}</Text>
                     </View>
                     <View style={[styles.summaryRow, styles.totalRow]}>
                         <Text style={styles.totalLabel}>Estimated Value</Text>

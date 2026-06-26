@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
-  View, Text, Image, TouchableOpacity, ScrollView, 
+  View, Text, TouchableOpacity, ScrollView, 
   ActivityIndicator, StyleSheet, TextInput, Share, Dimensions 
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import ChatButton from '@/components/chat/ChatButton';
 import Toast from 'react-native-toast-message';
 
+import { Image } from 'expo-image';
 const { width } = Dimensions.get('window');
 
 // Types
@@ -267,7 +268,7 @@ export default function ProductDetailScreen() {
             <Image
                 source={{ uri: product.images?.[activeImage] || 'https://via.placeholder.com/400' }}
                 style={styles.mainImage}
-                resizeMode="contain"
+                contentFit="contain"
             />
             {/* Wishlist & Share */}
             <View style={styles.imageActions}>
@@ -293,7 +294,7 @@ export default function ProductDetailScreen() {
                     onPress={() => setActiveImage(idx)}
                     style={[styles.thumbnailButton, activeImage === idx && styles.thumbnailActive]}
                 >
-                    <Image source={{ uri: img }} style={styles.thumbnailImage} resizeMode="cover" />
+                    <Image source={{ uri: img }} style={styles.thumbnailImage} contentFit="cover" />
                 </TouchableOpacity>
             ))}
         </ScrollView>
@@ -494,7 +495,7 @@ export default function ProductDetailScreen() {
                                             <Text style={styles.reviewUserName}>{review.userName}</Text>
                                             {review.isVerified && <Feather name="check-circle" size={14} color="#22C55E" />}
                                         </View>
-                                        <Text style={styles.reviewBody}>"{review.reviewText}"</Text>
+                                        <Text style={styles.reviewBody}>&quot;{review.reviewText}&quot;</Text>
                                         <Text style={styles.reviewDate}>
                                             Posted on {new Date(review.createdAt).toLocaleDateString()}
                                         </Text>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 
+import { Image } from 'expo-image';
 export default function ChatWindow() {
     const router = useRouter();
     const { activeConversationId, messages, conversations, sendMessage, setActiveConversation, isLoading } = useChatStore();
@@ -12,7 +14,7 @@ export default function ChatWindow() {
     
     const [content, setContent] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<FlashListRef<any>>(null);
 
     const activeConversation = conversations.find(c => c._id === activeConversationId);
     const otherParticipant = activeConversation?.participants.find((p: any) => String(p.participantId) !== String(user?.id));
@@ -97,7 +99,7 @@ export default function ChatWindow() {
                     <ActivityIndicator size="large" color="#4F46E5" />
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     ref={flatListRef}
                     data={messages}
                     keyExtractor={(item) => item._id}
@@ -146,7 +148,7 @@ export default function ChatWindow() {
 
             {/* Suggested Chips */}
             <View style={styles.suggestionsWrapper}>
-                <FlatList
+                <FlashList
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     data={["Hi, is this available?", "What is the best price?", "Can you share more photos?", "Do you deliver?"]}

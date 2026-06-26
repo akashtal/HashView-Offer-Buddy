@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -11,8 +11,8 @@ import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
-import AiEnhanceModal from '@/components/ui/AiEnhanceModal';
 
+import { Image } from 'expo-image';
 export default function VendorProductEditScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -48,7 +48,6 @@ export default function VendorProductEditScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
-    const [showAiModal, setShowAiModal] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated || user?.role !== 'vendor') {
@@ -385,7 +384,7 @@ export default function VendorProductEditScreen() {
                             {images.length > 0 && (
                                 <TouchableOpacity
                                     style={styles.aiEnhanceBanner}
-                                    onPress={() => setShowAiModal(true)}
+                                    onPress={() => router.push({ pathname: '/vendor/products/ai-enhance', params: { imageUrl: images[0], productId: id, productName: formData.title || 'product' } } as any)}
                                 >
                                     <View style={styles.aiEnhanceBannerLeft}>
                                         <Text style={styles.aiEnhanceBannerIcon}>✨</Text>
@@ -413,17 +412,6 @@ export default function VendorProductEditScreen() {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-
-            <AiEnhanceModal
-                visible={showAiModal}
-                onClose={() => setShowAiModal(false)}
-                imageUrl={images[0] || ''}
-                productId={id}
-                productName={formData.title}
-                onSuccess={(newImageUrl) => {
-                    setImages(prev => [newImageUrl, ...prev]);
-                }}
-            />
         </SafeAreaView>
     );
 }

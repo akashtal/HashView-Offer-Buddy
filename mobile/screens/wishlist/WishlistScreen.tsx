@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useWishlistStore } from '@/store/wishlistStore';
@@ -68,7 +69,7 @@ export default function WishlistScreen() {
                 <Text style={styles.title}>My Wishlist ({products.length})</Text>
             </View>
             {/* Renders product cards using the shared ProductCard component — consistent design */}
-            <FlatList
+            <FlashList
                 data={products}
                 keyExtractor={(item) => item._id}
                 numColumns={2}

@@ -7,15 +7,27 @@
     "icon": "./assets/images/logo.png",
     "scheme": "offers-buddy",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.offersbuddy.app"
+      "bundleIdentifier": "com.offersbuddy.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Offers Buddy needs access to your camera to take photos for product listings and your profile.",
+        "NSPhotoLibraryUsageDescription": "Offers Buddy needs access to your photo library to upload product images and update your avatar.",
+        "NSLocationWhenInUseUsageDescription": "Offers Buddy needs your location to show you the best deals and shops near you.",
+        "NSMicrophoneUsageDescription": "Offers Buddy needs microphone access to record videos for your product listings."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#FFFFFF"
       },
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.offersbuddy.app",
@@ -46,6 +58,12 @@
           "ios": {
             "newArchEnabled": true
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Offers Buddy to use your location to show nearby deals."
         }
       ]
     ],

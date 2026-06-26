@@ -17,6 +17,8 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -27,7 +29,7 @@ Notifications.setNotificationHandler({
  * Returns the token string or null if permission is denied.
  */
 export async function registerForPushNotifications(): Promise<string | null> {
-  // Push notifications don't work on web or simulators — only real devices
+  // Push notifications don't work on web or simulators - only real devices
   if (!Device.isDevice) {
     console.warn('[Notifications] Not a real device. Push notifications may not work.');
   }
@@ -72,7 +74,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   } catch (error) {
     console.error('[Notifications] Error getting Expo push token:', error);
     if (!Device.isDevice) {
-      console.warn('⚠️ Must use physical device for Push Notifications');
+      console.warn('Must use physical device for Push Notifications');
     }
     return null;
   }
@@ -93,7 +95,7 @@ export async function syncPushTokenWithBackend(
     await axios.post(
       `${API_URL}/api/notifications/register-token`,
       { token, platform },
-      { headers: { Authorization: `Bearer ${authToken}` } }
+      {}
     );
     console.log('[Notifications] Push token registered with backend.');
   } catch (error) {
@@ -111,7 +113,7 @@ export async function unregisterPushToken(
   try {
     await axios.delete(`${API_URL}/api/notifications/unregister-token`, {
       data: { token },
-      headers: { Authorization: `Bearer ${authToken}` },
+      
     });
     console.log('[Notifications] Push token unregistered from backend.');
   } catch (error) {

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { Image } from 'expo-image';
 import {
     Animated,
     Easing,
-    Image,
     StyleSheet,
     Text,
-    View,
+    View 
 } from 'react-native';
 
 interface AnimatedSplashScreenProps {
@@ -83,7 +83,7 @@ export default function AnimatedSplashScreen({ onFinish }: AnimatedSplashScreenP
                 <Image
                     source={require('@/assets/images/logo.png')}
                     style={styles.logo}
-                    resizeMode="contain"
+                    contentFit="contain"
                 />
             </Animated.View>
 

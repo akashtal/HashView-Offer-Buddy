@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 
+import { Image } from 'expo-image';
 interface Category {
     _id: string;
     name: string;

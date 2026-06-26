@@ -117,6 +117,22 @@ export default function SignUpPage() {
                             </div>
                         </div>
 
+                        <div className="flex items-start">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="policies"
+                                    name="policies"
+                                    type="checkbox"
+                                    required
+                                    className="h-4 w-4 text-[#00A651] focus:ring-[#00A651] border-gray-300 rounded"
+                                />
+                            </div>
+                            <div className="ml-2 text-sm">
+                                <label htmlFor="policies" className="text-gray-700">
+                                    I agree to the <Link href="/policies#terms" target="_blank" className="font-medium text-[#00A651] hover:underline">Terms of Service</Link> and <Link href="/policies#privacy" target="_blank" className="font-medium text-[#00A651] hover:underline">Privacy Policy</Link>
+                                </label>
+                            </div>
+                        </div>
 
 
                         <div>
@@ -135,12 +151,6 @@ export default function SignUpPage() {
                             </button>
                         </div>
                     </form>
-
-                    <div className="mt-4 text-center">
-                        <p className="text-xs text-gray-500">
-                            By creating an account, you agree to our <a href="#" className="underline">Terms of Service</a> and <a href="#" className="underline">Privacy Policy</a>.
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>

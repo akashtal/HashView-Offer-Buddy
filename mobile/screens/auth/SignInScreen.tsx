@@ -5,17 +5,30 @@ import { Feather } from '@expo/vector-icons';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import AuthTabs from '@/components/auth/AuthTabs';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema } from '@/utils/validation';
+import * as z from 'zod';
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function SignInScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ from?: string }>();
     const { login } = useAuthStore();
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const { control, handleSubmit, formState: { errors } } = useForm({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: '',
+            password: '',
+        }
+    });
+
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
-    const [error, setError] = useState('');
+    const [agreeToPolicies, setAgreeToPolicies] = useState(false);
+    const [apiError, setApiError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const scrollViewRef = useRef<ScrollView>(null);
@@ -47,16 +60,18 @@ export default function SignInScreen() {
         };
     }, []);
 
-    const handleSignIn = async () => {
-        if (!email || !password) {
-            setError('Please enter your email and password.');
+    const onSubmit = async (data: LoginFormValues) => {
+        setIsLoading(true);
+        setApiError('');
+
+        if (!agreeToPolicies) {
+            setApiError('Please agree to the Privacy Policy & Terms to continue.');
+            setIsLoading(false);
             return;
         }
-        setIsLoading(true);
-        setError('');
 
         try {
-            const role = await login(email, password);
+            const role = await login(data.email, data.password);
             if (role === 'admin') {
                 router.replace('/admin/dashboard' as any);
             } else if (role === 'vendor') {
@@ -65,7 +80,7 @@ export default function SignInScreen() {
                 router.replace((params.from as any) || '/');
             }
         } catch (err: any) {
-            setError(err.message || 'Invalid credentials. Please try again.');
+            setApiError(err.message || 'Invalid credentials. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -95,62 +110,78 @@ export default function SignInScreen() {
                     <AuthTabs />
                     <Text style={styles.title}>Sign in to your account</Text>
                     <Text style={styles.subtitle}>
-                        Don't have one?{' '}
+                        Don&apos;t have one?{' '}
                         <Link href="/(tabs)/signup" style={styles.link}>Create a new account</Link>
                     </Text>
 
-                    {error !== '' && (
+                    {apiError !== '' && (
                         <View style={styles.errorBox}>
                             <Feather name="alert-circle" size={14} color="#C62828" />
-                            <Text style={styles.errorText}>{error}</Text>
+                            <Text style={styles.errorText}>{apiError}</Text>
                         </View>
                     )}
 
                     {/* Email */}
                     <Text style={styles.label}>Email address</Text>
-                    <View style={styles.inputRow}>
-                        <Feather name="mail" size={18} color="#888" style={styles.inputIcon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="you@example.com"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            onFocus={(e) => {
-                                (e.target as any)?.measureLayout?.(
-                                    scrollViewRef.current,
-                                    (_x: number, y: number) => scrollToInput(y),
-                                    () => { }
-                                );
-                            }}
-                        />
-                    </View>
+                    <Controller
+                        control={control}
+                        name="email"
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <View style={[styles.inputRow, errors.email && styles.inputErrorRow]}>
+                                <Feather name="mail" size={18} color={errors.email ? "#C62828" : "#888"} style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="you@example.com"
+                                    onBlur={onBlur}
+                                    onChangeText={onChange}
+                                    value={value}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => { }
+                                        );
+                                    }}
+                                />
+                            </View>
+                        )}
+                    />
+                    {errors.email && <Text style={styles.validationError}>{errors.email.message}</Text>}
 
                     {/* Password */}
                     <Text style={styles.label}>Password</Text>
-                    <View style={styles.inputRow}>
-                        <Feather name="lock" size={18} color="#888" style={styles.inputIcon} />
-                        <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder="••••••••"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={!showPassword}
-                            autoCapitalize="none"
-                            onFocus={(e) => {
-                                (e.target as any)?.measureLayout?.(
-                                    scrollViewRef.current,
-                                    (_x: number, y: number) => scrollToInput(y),
-                                    () => { }
-                                );
-                            }}
-                        />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#888" />
-                        </TouchableOpacity>
-                    </View>
+                    <Controller
+                        control={control}
+                        name="password"
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <View style={[styles.inputRow, errors.password && styles.inputErrorRow]}>
+                                <Feather name="lock" size={18} color={errors.password ? "#C62828" : "#888"} style={styles.inputIcon} />
+                                <TextInput
+                                    style={[styles.input, { flex: 1 }]}
+                                    placeholder="••••••••"
+                                    onBlur={onBlur}
+                                    onChangeText={onChange}
+                                    value={value}
+                                    secureTextEntry={!showPassword}
+                                    autoCapitalize="none"
+                                    onFocus={(e) => {
+                                        (e.target as any)?.measureLayout?.(
+                                            scrollViewRef.current,
+                                            (_x: number, y: number) => scrollToInput(y),
+                                            () => { }
+                                        );
+                                    }}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#888" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    />
+                    {errors.password && <Text style={styles.validationError}>{errors.password.message}</Text>}
 
                     {/* Options row */}
                     <View style={styles.optionsRow}>
@@ -163,8 +194,20 @@ export default function SignInScreen() {
                         <Link href="/(tabs)/forgot-password" style={styles.link}>Forgot your password?</Link>
                     </View>
 
+                    {/* Policies row */}
+                    <View style={{ marginTop: 16 }}>
+                        <TouchableOpacity style={styles.rememberRow} onPress={() => setAgreeToPolicies(!agreeToPolicies)}>
+                            <View style={[styles.checkbox, agreeToPolicies && styles.checkboxChecked]}>
+                                {agreeToPolicies && <Feather name="check" size={12} color="#FFF" />}
+                            </View>
+                            <Text style={styles.rememberText}>
+                                I agree to the <Link href={"/policies" as any} style={styles.link}>Privacy Policy & Terms</Link>
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* Submit */}
-                    <TouchableOpacity style={styles.submitBtn} onPress={handleSignIn} disabled={isLoading}>
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading}>
                         {isLoading ? (
                             <ActivityIndicator color="#FFF" />
                         ) : (
@@ -195,8 +238,10 @@ const styles = StyleSheet.create({
     link: { color: '#00A651', fontWeight: '600' },
     errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFEBEE', borderRadius: 8, padding: 12, marginBottom: 16 },
     errorText: { flex: 1, fontSize: 13, color: '#C62828' },
+    validationError: { fontSize: 12, color: '#C62828', marginTop: 4, marginLeft: 2 },
     label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6, marginTop: 14 },
     inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DDD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#FAFAFA' },
+    inputErrorRow: { borderColor: '#C62828', backgroundColor: '#FFF5F5' },
     inputIcon: { marginRight: 8 },
     input: { flex: 1, fontSize: 14, color: '#333' },
     optionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },

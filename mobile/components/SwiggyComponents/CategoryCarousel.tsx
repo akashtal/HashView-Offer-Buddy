@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getCategoryIcon } from '@/utils/category-icons';
 
+import { Image } from 'expo-image';
 interface CategoryCarouselProps {
     onCategorySelect?: (categoryId: string) => void;
     selectedCategory?: string;

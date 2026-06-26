@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
@@ -114,7 +115,7 @@ export default function ProductListScreen() {
                     ))}
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={products}
                     keyExtractor={(item) => item._id}
                     numColumns={2}
@@ -148,8 +149,8 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#282C3F' },
     countText: { fontSize: 13, color: '#888', marginTop: 2 },
     skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
-    grid: { padding: 8, paddingBottom: 40 },
-    cardWrapper: { width: '50%', padding: 6 },
+    grid: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 80 },
+    cardWrapper: { flex: 1, margin: 4 },
     empty: { alignItems: 'center', paddingVertical: 60 },
     emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#555', marginTop: 14 },
     emptyText: { color: '#888', marginTop: 6 },

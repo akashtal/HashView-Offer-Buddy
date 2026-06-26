@@ -4,20 +4,19 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
     TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator,
-    Image,
-} from 'react-native';
+    ActivityIndicator } from 'react-native';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
 import { Feather } from '@expo/vector-icons';
 import { pusherClient } from '@/utils/pusher-client';
 
+import { Image } from 'expo-image';
 function formatMsgTime(dateStr: string) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -68,7 +67,7 @@ export default function ChatRoomScreen() {
 
     const [inputText, setInputText] = React.useState('');
     const [sending, setSending] = React.useState(false);
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<FlashListRef<any>>(null);
 
     const currentUserId = user?.id || '';
     const conversation = conversations.find((c) => c._id === id);
@@ -170,7 +169,7 @@ export default function ChatRoomScreen() {
                         <Text style={styles.emptyText}>Say hello! Start the conversation.</Text>
                     </View>
                 ) : (
-                    <FlatList
+                    <FlashList
                         ref={flatListRef}
                         data={messages}
                         keyExtractor={(item) => item._id}

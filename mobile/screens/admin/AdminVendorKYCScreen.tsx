@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, Linking } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -269,7 +270,7 @@ export default function AdminVendorKYCScreen() {
                     <Text style={styles.loadingText}>Loading KYC data...</Text>
                 </View>
             ) : (
-                <FlatList
+                <FlashList
                     data={vendors}
                     keyExtractor={item => item._id}
                     renderItem={renderItem}
@@ -290,7 +291,7 @@ export default function AdminVendorKYCScreen() {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Reject KYC</Text>
                         <Text style={styles.modalDesc}>
-                            Please provide a reason for rejecting {rejectModal?.shopName}'s KYC documents.
+                            Please provide a reason for rejecting {rejectModal?.shopName}&apos;s KYC documents.
                         </Text>
 
                         <TextInput

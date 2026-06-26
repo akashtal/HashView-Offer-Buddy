@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +12,7 @@ import Card, { CardHeader, CardBody } from '@/components/ui/Card';
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete';
 import axios from 'axios';
 
+import { Image } from 'expo-image';
 export default function VendorOnboardingScreen() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuthStore();

@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Badge from '@/components/ui/Badge';
 import ChatButton from '@/components/chat/ChatButton';
 import { useCartStore } from '@/store/cartStore';
 import Toast from 'react-native-toast-message';
@@ -52,8 +51,7 @@ function ProductCard({ product }: ProductCardProps) {
         Toast.show({ type: 'success', text1: 'Added to cart!' });
     };
 
-    // useMemo prevents recalculating price on every render
-    const { hasDiscount, discountPct, formattedPrice } = useMemo(() => {
+    const { hasDiscount, discountPct, displayPrice } = useMemo(() => {
         const hasDiscount = Boolean(
             product.price?.original &&
             product.price?.discounted &&
@@ -61,13 +59,21 @@ function ProductCard({ product }: ProductCardProps) {
         );
         const discountPct = hasDiscount && product.price
             ? Math.round(((product.price.original! - product.price.discounted!) / product.price.original!) * 100)
-            : 0;
+            : (product.offer?.value || 0);
         const displayPrice = product.price?.discounted || product.price?.original || 0;
-        return { hasDiscount, discountPct, formattedPrice: `₹${displayPrice.toLocaleString('en-IN')}` };
-    }, [product.price]);
+        return { hasDiscount, discountPct, displayPrice };
+    }, [product.price, product.offer]);
+
+    const distanceLabel = product.distance != null && product.distance < 99999
+        ? (product.distance < 1 ? `${(product.distance * 1000).toFixed(0)}m` : `${product.distance.toFixed(1)}km`)
+        : null;
 
     return (
-        <TouchableOpacity style={styles.card} onPress={() => router.push(`/products/${product._id}` as any)} activeOpacity={0.9}>
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push(`/products/${product._id}` as any)}
+            activeOpacity={0.88}
+        >
             {/* Image */}
             <View style={styles.imageContainer}>
                 <Image
@@ -77,44 +83,50 @@ function ProductCard({ product }: ProductCardProps) {
                     cachePolicy="memory-disk"
                     transition={200}
                 />
-                {product.offer && (
-                    <View style={styles.offerBadgeWrap}>
-                        <Badge variant="danger" size="sm">
-                            <Feather name="tag" size={10} color="#C62828" /> {product.offer.description}
-                        </Badge>
+
+                {/* Discount badge — top-right */}
+                {discountPct > 0 && (
+                    <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>{discountPct}% OFF</Text>
                     </View>
                 )}
-                {hasDiscount && (
-                    <View style={styles.discountBadgeWrap}>
-                        <Badge variant="success" size="sm">{discountPct}% OFF</Badge>
+
+                {/* Distance pill — bottom-left */}
+                {distanceLabel && (
+                    <View style={styles.distancePill}>
+                        <Feather name="map-pin" size={9} color="#00A651" />
+                        <Text style={styles.distancePillText}>{distanceLabel}</Text>
                     </View>
                 )}
             </View>
 
             {/* Content */}
             <View style={styles.content}>
+                {/* Title */}
                 <Text style={styles.title} numberOfLines={2}>{product.title}</Text>
 
-                {/* Vendor Row */}
+                {/* Vendor */}
                 <View style={styles.vendorRow}>
-                    <View style={styles.vendorLeft}>
-                        {product.vendorId.shopLogo ? (
-                            <Image source={product.vendorId.shopLogo} style={styles.vendorLogo} contentFit="cover" cachePolicy="memory-disk" />
-                        ) : (
-                            <View style={styles.vendorLogoFallback}>
-                                <Text style={styles.vendorLogoText}>{product.vendorId.shopName[0]}</Text>
-                            </View>
-                        )}
-                        <Text style={styles.vendorName} numberOfLines={1}>{product.vendorId.shopName}</Text>
-                    </View>
+                    {product.vendorId.shopLogo ? (
+                        <Image source={product.vendorId.shopLogo} style={styles.vendorLogo} contentFit="cover" cachePolicy="memory-disk" />
+                    ) : (
+                        <View style={styles.vendorLogoFallback}>
+                            <Text style={styles.vendorLogoText}>{product.vendorId.shopName[0]}</Text>
+                        </View>
+                    )}
+                    <Text style={styles.vendorName} numberOfLines={1}>{product.vendorId.shopName}</Text>
                 </View>
 
                 {/* Price */}
                 {product.price && (
                     <View style={styles.priceRow}>
-                        <Text style={styles.price}>{formattedPrice}</Text>
+                        <Text style={styles.price}>
+                            ₹{displayPrice.toLocaleString('en-IN')}
+                        </Text>
                         {hasDiscount && (
-                            <Text style={styles.originalPrice}>₹{product.price.original?.toLocaleString('en-IN')}</Text>
+                            <Text style={styles.originalPrice}>
+                                ₹{product.price.original?.toLocaleString('en-IN')}
+                            </Text>
                         )}
                     </View>
                 )}
@@ -122,10 +134,9 @@ function ProductCard({ product }: ProductCardProps) {
                 {/* Actions */}
                 <View style={styles.actionRow}>
                     <TouchableOpacity onPress={handleAddToCart} style={styles.cartBtn}>
-                        <Feather name="shopping-cart" size={14} color="#FFF" style={styles.cartIcon} />
+                        <Feather name="shopping-cart" size={12} color="#FFF" />
                         <Text style={styles.cartBtnText}>Add</Text>
                     </TouchableOpacity>
-
                     <ChatButton
                         recipientId={product.vendorId._id}
                         recipientModel="Vendor"
@@ -135,49 +146,97 @@ function ProductCard({ product }: ProductCardProps) {
                     />
                 </View>
 
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <View style={styles.footerItem}>
-                        <Feather name="map-pin" size={12} color="#888" />
-                        <Text style={styles.footerText}>{product.vendorId.location?.city || 'Nearby'}</Text>
+                {/* City */}
+                {product.vendorId.location?.city && (
+                    <View style={styles.cityRow}>
+                        <Feather name="map-pin" size={10} color="#AAA" />
+                        <Text style={styles.cityText} numberOfLines={1}>{product.vendorId.location.city}</Text>
                     </View>
-                    {product.analytics && (
-                        <View style={styles.footerItem}>
-                            <Feather name="eye" size={12} color="#888" />
-                            <Text style={styles.footerText}>{product.analytics.views} views</Text>
-                        </View>
-                    )}
-                </View>
+                )}
             </View>
         </TouchableOpacity>
     );
 }
 
-// React.memo prevents re-render when parent state changes (scroll position, filter updates, loading)
 export default memo(ProductCard);
 
 const styles = StyleSheet.create({
-    card: { backgroundColor: '#FFF', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EEE', marginBottom: 4 },
-    imageContainer: { position: 'relative', height: 160, backgroundColor: '#F5F5F5' },
+    card: {
+        backgroundColor: '#FFF',
+        borderRadius: 14,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#EBEBEB',
+        marginBottom: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+
+    // Image
+    imageContainer: { position: 'relative', height: 130, backgroundColor: '#F5F5F5' },
     image: { width: '100%', height: '100%' },
-    offerBadgeWrap: { position: 'absolute', top: 8, left: 8 },
-    discountBadgeWrap: { position: 'absolute', top: 8, right: 8 },
-    content: { padding: 12 },
-    title: { fontSize: 14, fontWeight: '600', color: '#282C3F', marginBottom: 8, lineHeight: 20 },
-    vendorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-    vendorLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 },
-    vendorLogo: { width: 20, height: 20, borderRadius: 10 },
-    vendorLogoFallback: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFF8E1', justifyContent: 'center', alignItems: 'center' },
-    vendorLogoText: { fontSize: 10, fontWeight: 'bold', color: '#FDB913' },
-    vendorName: { fontSize: 12, color: '#666', flex: 1 },
-    priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 8 },
-    price: { fontSize: 18, fontWeight: 'bold', color: '#FDB913' },
-    originalPrice: { fontSize: 13, color: '#999', textDecorationLine: 'line-through' },
-    actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    cartBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#00A651', paddingVertical: 8, borderRadius: 8 },
-    cartIcon: { marginRight: 4 },
-    cartBtnText: { color: '#FFF', fontSize: 13, fontWeight: 'bold' },
-    footer: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderColor: '#EEE' },
-    footerItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    footerText: { fontSize: 11, color: '#888' },
+
+    // Discount badge (top-right)
+    discountBadge: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: '#EF4444',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderBottomLeftRadius: 8,
+    },
+    discountText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+
+    // Distance pill (bottom-left)
+    distancePill: {
+        position: 'absolute',
+        bottom: 6,
+        left: 6,
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        borderRadius: 20,
+    },
+    distancePillText: { fontSize: 9, fontWeight: '700', color: '#00A651' },
+
+    // Content
+    content: { padding: 9, gap: 5 },
+    title: { fontSize: 12, fontWeight: '700', color: '#1C1C2E', lineHeight: 17 },
+
+    // Vendor
+    vendorRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    vendorLogo: { width: 18, height: 18, borderRadius: 9 },
+    vendorLogoFallback: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#FFF8E1', justifyContent: 'center', alignItems: 'center' },
+    vendorLogoText: { fontSize: 9, fontWeight: 'bold', color: '#FDB913' },
+    vendorName: { fontSize: 11, color: '#888', flex: 1 },
+
+    // Price
+    priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+    price: { fontSize: 15, fontWeight: '800', color: '#FDB913' },
+    originalPrice: { fontSize: 11, color: '#BBB', textDecorationLine: 'line-through' },
+
+    // Actions
+    actionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    cartBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#00A651',
+        paddingVertical: 6,
+        borderRadius: 8,
+        gap: 4,
+    },
+    cartBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+
+    // City footer
+    cityRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    cityText: { fontSize: 10, color: '#AAA', flex: 1 },
 });

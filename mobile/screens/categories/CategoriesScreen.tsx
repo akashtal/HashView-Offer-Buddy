@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
@@ -8,6 +9,7 @@ import axios from 'axios';
 // Design system components (will be converted to RN in components phase)
 import Loading from '@/components/ui/Loading';
 
+import { Image } from 'expo-image';
 export default function CategoriesScreen() {
     const router = useRouter();
     const [categories, setCategories] = useState<any[]>([]);
@@ -40,7 +42,7 @@ export default function CategoriesScreen() {
                 <Text style={styles.subtitle}>Explore products and offers across various categories</Text>
             </View>
 
-            <FlatList
+            <FlashList
                 data={categories}
                 keyExtractor={(item) => item._id}
                 numColumns={2}
@@ -52,7 +54,7 @@ export default function CategoriesScreen() {
                     >
                         <View style={styles.imageContainer}>
                             {item.image ? (
-                                <Image source={{ uri: item.image }} style={styles.categoryImage} resizeMode="cover" />
+                                <Image source={{ uri: item.image }} style={styles.categoryImage} contentFit="cover" />
                             ) : (
                                 <View style={styles.iconFallback}>
                                     <Feather name="package" size={36} color="#888" />

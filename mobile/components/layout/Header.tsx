@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -8,6 +8,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useChatStore } from '@/store/chatStore';
 import { useLocation } from '@/context/LocationContext';
 
+import { Image } from 'expo-image';
 export default function Header() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -60,7 +61,7 @@ export default function Header() {
         {/* Top Bar */}
         <View style={styles.topRow}>
           {/* Logo */}
-          <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('@/assets/images/logo.png')} style={styles.logo} contentFit="contain" />
 
           {/* Location */}
           <TouchableOpacity style={styles.locationWrap} onPress={requestLocation}>

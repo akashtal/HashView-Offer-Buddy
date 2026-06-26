@@ -211,7 +211,7 @@ export default function VendorRegisterScreen() {
 
                     <View style={styles.footerBox}>
                         <Text style={styles.footerText}>
-                            Looking for verified leads? Join India's fastest growing B2B network.
+                            Looking for verified leads? Join India&apos;s fastest growing B2B network.
                         </Text>
                         <View style={styles.footerRow}>
                             <Text style={styles.footerRowText}>Already registered? </Text>

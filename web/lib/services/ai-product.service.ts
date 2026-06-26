@@ -633,9 +633,19 @@ export async function checkEnhancementStatus(
 export async function promoteAiImage(
   productId: string,
   enhancedUrl: string
-): Promise<void> {
+): Promise<string[]> {
   await connectDB();
-  await Product.findByIdAndUpdate(productId, {
-    $addToSet: { images: enhancedUrl },
-  });
+  const promotedUrl = enhancedUrl.trim();
+  if (!promotedUrl) throw new Error('Enhanced image URL is required');
+
+  const product = await Product.findById(productId);
+  if (!product) throw new Error('Product not found');
+
+  product.images = [
+    promotedUrl,
+    ...(product.images || []).filter((url) => url !== promotedUrl),
+  ];
+  await product.save();
+
+  return product.images;
 }
