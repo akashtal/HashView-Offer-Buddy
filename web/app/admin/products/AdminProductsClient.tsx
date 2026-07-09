@@ -120,9 +120,13 @@ export default function AdminProductsClient({
                                     </td>
                                     <td className="py-3 px-4">
                                         <div className="font-medium">
-                                            ₹{product.price?.discounted || product.price?.original}
+                                            {(product.price?.discounted !== undefined || product.price?.original !== undefined) ? (
+                                                <>₹{product.price?.discounted !== undefined ? product.price.discounted : product.price?.original}</>
+                                            ) : (
+                                                <span className="text-gray-400 italic font-normal text-sm">Not set</span>
+                                            )}
                                         </div>
-                                        {product.price?.discounted && (
+                                        {(product.price?.discounted !== undefined && product.price?.original !== undefined) && (
                                             <div className="text-xs text-gray-500 line-through">₹{product.price.original}</div>
                                         )}
                                     </td>

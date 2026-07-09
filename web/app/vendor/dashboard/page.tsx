@@ -399,9 +399,9 @@ function VendorDashboardContent() {
                       <h3 className="font-semibold text-lg text-secondary mb-2 line-clamp-2">
                         {product.title}
                       </h3>
-                      {product.price && (
+                      {(product.price?.discounted !== undefined || product.price?.original !== undefined) && (
                         <p className="text-xl font-bold text-primary mb-3">
-                          {formatCurrency(product.price.discounted || product.price.original)}
+                          {formatCurrency(product.price.discounted !== undefined ? product.price.discounted : (product.price.original ?? 0))}
                         </p>
                       )}
                       <div className="flex items-center justify-between text-sm text-gray-600 mb-4">

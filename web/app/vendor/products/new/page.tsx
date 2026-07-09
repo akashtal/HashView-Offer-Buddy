@@ -238,8 +238,8 @@ export default function NewProductPage() {
             // Validate
             if (!formData.category) throw new Error('Please select a category');
 
-            const priceOriginal = parseFloat(formData.priceOriginal);
-            const priceDiscounted = formData.priceDiscounted ? parseFloat(formData.priceDiscounted) : undefined;
+            const priceOriginal = formData.priceOriginal !== '' && !isNaN(parseFloat(formData.priceOriginal)) ? parseFloat(formData.priceOriginal) : undefined;
+            const priceDiscounted = formData.priceDiscounted !== '' && !isNaN(parseFloat(formData.priceDiscounted)) ? parseFloat(formData.priceDiscounted) : undefined;
 
             if (images.length === 0) throw new Error('Please upload at least one image');
 
@@ -249,17 +249,25 @@ export default function NewProductPage() {
                 category: formData.category,
                 subcategory: selectedSubcategory || undefined,
                 images,
-                price: {
-                    original: priceOriginal,
-                    currency: 'INR'
-                },
                 isActive: true
             };
 
+            if (priceOriginal !== undefined || priceDiscounted !== undefined) {
+                payload.price = {
+                    original: priceOriginal,
+                    currency: 'INR'
+                };
+            } else {
+                payload.price = { currency: 'INR' };
+            }
+
             // Add offer/discount if specified
             if (hasDiscount) {
-                if (priceDiscounted && priceDiscounted >= priceOriginal) {
+                if (priceDiscounted !== undefined && priceOriginal !== undefined && priceDiscounted >= priceOriginal) {
                     throw new Error('Discounted price must be less than original price');
+                }
+                if (!payload.price) {
+                    payload.price = { currency: 'INR' };
                 }
                 payload.price.discounted = priceDiscounted;
 
@@ -561,14 +569,13 @@ export default function NewProductPage() {
 
                                 <div className="space-y-4">
                                     <Input
-                                        label="Original Price (₹)"
+                                        label="Original Price (₹) (Optional)"
                                         name="priceOriginal"
                                         type="number"
                                         min="0"
                                         placeholder="1000"
                                         value={formData.priceOriginal}
                                         onChange={handleChange}
-                                        required
                                     />
 
                                     <div className="flex items-center gap-2">

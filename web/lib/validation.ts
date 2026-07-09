@@ -110,8 +110,8 @@ export const createProductSchema = z.object({
   subcategory: z.string().optional(),
   price: z
     .object({
-      original: z.number().positive().optional(),
-      discounted: z.number().positive().optional(),
+      original: z.number().nonnegative().optional(),
+      discounted: z.number().nonnegative().optional(),
       currency: z.string().default('INR'),
     })
     .optional(),
