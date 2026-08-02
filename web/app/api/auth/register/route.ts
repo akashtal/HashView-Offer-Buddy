@@ -14,9 +14,12 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = registerSchema.parse(body);
 
+    // Normalize email
+    const normalizedEmail = validatedData.email.toLowerCase().trim();
+
     // Check if user already exists
     const existingUser = await User.findOne({
-      email: validatedData.email,
+      email: normalizedEmail,
       role: validatedData.role
     });
 
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await User.create({
       name: validatedData.name,
-      email: validatedData.email,
+      email: normalizedEmail,
       password: hashedPassword,
       phone: validatedData.phone,
       role: validatedData.role,

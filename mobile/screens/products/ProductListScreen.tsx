@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -85,7 +85,7 @@ export default function ProductListScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             {/* Filter Bar */}
             <View style={styles.filterBar}>
                 <View style={styles.resultsHeader}>
@@ -138,7 +138,7 @@ export default function ProductListScreen() {
                     )}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 

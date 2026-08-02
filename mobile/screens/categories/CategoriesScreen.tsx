@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -36,7 +36,7 @@ export default function CategoriesScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.header}>
                 <Text style={styles.title}>Browse by Category</Text>
                 <Text style={styles.subtitle}>Explore products and offers across various categories</Text>
@@ -66,7 +66,7 @@ export default function CategoriesScreen() {
                     </TouchableOpacity>
                 )}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 

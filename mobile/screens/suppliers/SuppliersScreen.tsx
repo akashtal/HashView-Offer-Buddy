@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -39,7 +39,7 @@ export default function SuppliersScreen() {
         : suppliers;
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
                 {/* Banner */}
                 <View style={styles.banner}>
@@ -110,7 +110,7 @@ export default function SuppliersScreen() {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 

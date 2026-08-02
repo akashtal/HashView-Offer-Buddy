@@ -1,4 +1,4 @@
-import { Stack, router } from 'expo-router';
+import { Stack, router, useRouter } from 'expo-router';
 import { View } from 'react-native';
 import axios from 'axios';
 import Toast from 'react-native-toast-message';
@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import AnimatedSplashScreen from '@/components/ui/AnimatedSplashScreen';
 import { registerForPushNotifications, syncPushTokenWithBackend } from '@/services/notifications.service';
+import * as Notifications from 'expo-notifications';
 
 // Connect Axios to the web backend using the environment variable defined in mobile/.env
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -50,6 +51,7 @@ axios.interceptors.response.use(
 );
 
 export default function RootLayout() {
+  const router = useRouter();
   const fetchUser = useAuthStore((state) => state.fetchUser);
   const [appReady, setAppReady] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
@@ -83,6 +85,17 @@ export default function RootLayout() {
       })();
     }
   }, [appReady, isAuthenticated, token]);
+
+  // Handle notification taps
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.url) {
+        router.push(data.url as any);
+      }
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   // While native splash is up, render a black screen to prevent white flash
   if (!appReady) return <View style={{ flex: 1, backgroundColor: '#000' }} />;

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
 
     // Content
     content: { padding: 9, gap: 5 },
-    title: { fontSize: 12, fontWeight: '700', color: '#1C1C2E', lineHeight: 17 },
+    title: { fontSize: 12, fontWeight: '700', color: '#1C1C2E', lineHeight: 17, height: 34 },
 
     // Vendor
     vendorRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },

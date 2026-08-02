@@ -14,8 +14,11 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = loginSchema.parse(body);
 
+    // Normalize email for case-insensitive login
+    const normalizedEmail = validatedData.email.toLowerCase().trim();
+
     // Find users (could be multiple if same email has different roles)
-    const users = await User.find({ email: validatedData.email });
+    const users = await User.find({ email: normalizedEmail });
 
     if (!users || users.length === 0) {
       return NextResponse.json(
