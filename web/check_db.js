@@ -1,5 +1,5 @@
 const { MongoClient } = require('mongodb');
-const uri = 'mongodb://offerbuddy:offerbuddy@ac-eayytps-shard-00-00.z8ecdoe.mongodb.net:27017,ac-eayytps-shard-00-01.z8ecdoe.mongodb.net:27017,ac-eayytps-shard-00-02.z8ecdoe.mongodb.net:27017/OfferBuddy?ssl=true&authSource=admin&appName=OfferBuddy';
+const uri = ';
 
 async function main() {
     const client = new MongoClient(uri);
